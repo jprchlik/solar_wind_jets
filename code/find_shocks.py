@@ -16,8 +16,20 @@ import statsmodels.api as sm
 
 
 
+#Training set shock times to give a value of 1 for logit fitting
 shock_times = pd.read_table('shock_times.txt')
 shock_times['start_time_dt'] = pd.to_datetime(shock_times.start_time)
+
+
+#final all soho files in 30second cadence directory
+f_full = glob('../soho/data/30sec_cad/2*txt')
+#read in all soho files in 30sec_cad directory
+df_full = (pd.read_table(f,skiprows=28,engine='python',delim_whitespace=True) for f in f_full)
+#create one large array with all soho information
+full_df = pd.concat(df_full,ignore_index=True)
+#only keep with values in the Time frame
+full_df = full_df[full_df['DOY:HH:MM:SS'] >  0]
+
 
 
 #find all soho files in data directory
@@ -25,6 +37,14 @@ f_soho = glob('../soho/data/*txt')
 
 #read in all soho files in data directory
 df_file = (pd.read_table(f,skiprows=28,engine='python',delim_whitespace=True) for f in f_soho)
+
+#convert columns to datetime column
+full_df['time_dt'] = pd.to_datetime('20'+full_df['YY'].astype('int').map("{:02}".format)+':'+full_df['DOY:HH:MM:SS'],format='%Y:%j:%H:%M:%S',errors='coerce')
+#full_df['time_str'] = full_df['time_dt'].dt.strftime('%Y/%m/%dT%H:%M:%S')
+#set index to be time
+full_df.set_index(full_df['time_dt'],inplace=True)
+
+
 
 #create one large array with all soho information in range
 soho_df = pd.concat(df_file,ignore_index=True)
@@ -48,6 +68,7 @@ for i in shock_times.start_time_dt:
 
 
 
+#Do parameter calculation for the 2016 year (training year)
 #calculate difference in parameters
 soho_df['del_time'] = soho_df['time_dt'].diff(-1).values.astype('double')/1.e9
 soho_df['del_speed'] = np.abs(soho_df['SPEED'].diff(-1)/soho_df.del_time/soho_df.SPEED)
@@ -55,6 +76,16 @@ soho_df['del_Np'] = np.abs(soho_df['Np'].diff(-1)/soho_df.del_time/soho_df.Np)
 soho_df['del_Vth'] = np.abs(soho_df['Vth'].diff(-1)/soho_df.del_time/soho_df.Vth)
 #create an array of constants that hold a place for the intercept 
 soho_df['intercept'] = 1 
+
+#Do parameter calculation for all previous years 
+#calculate difference in parameters
+full_df['del_time'] = full_df['time_dt'].diff(-1).values.astype('double')/1.e9
+full_df['del_speed'] = np.abs(full_df['SPEED'].diff(-1)/full_df.del_time/full_df.SPEED)
+full_df['del_Np'] = np.abs(full_df['Np'].diff(-1)/full_df.del_time/full_df.Np)
+full_df['del_Vth'] = np.abs(full_df['Vth'].diff(-1)/full_df.del_time/full_df.Vth)
+#create an array of constants that hold a place for the intercept 
+full_df['intercept'] = 1 
+
 
 
 #mask for training set
@@ -95,6 +126,10 @@ mono_df['p_shock'] = sh_rs.predict(mono_df[['mono_speed','mono_np','mono_vt','in
 soho_df['predict'] = sh_rs.predict(soho_df[use_cols])
 #get predictions for training set
 soho_df_train['predict'] = sh_rs.predict(soho_df_train[use_cols])
+#get predictions for the Mission long CELIAS mission
+full_df['predict'] = sh_rs.predict(full_df[use_cols])
+best_df = full_df[full_df.predict >= 0.90]
+best_df.to_csv('../soho/archive_shocks.csv',sep=';')
 
 
 #create figure object
