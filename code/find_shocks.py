@@ -73,8 +73,12 @@ sh_rs_pre = logit_pre.fit()
 #get predictions for training set
 soho_df_train['shock2'] = sh_rs_pre.predict(soho_df_train[use_cols])
 
+#do not replace shock training set 0 values
+soho_df_train['shock2'][soho_df_train.shock == 0] = 0
+
+
 #use the predictions from the training set to build a better model
-logit = sm.Logit(soho_df_train['shock'].round(),soho_df_train[use_cols])
+logit = sm.Logit(soho_df_train['shock2'].round(),soho_df_train[use_cols])
 sh_rs = logit.fit()
 
 
@@ -120,12 +124,16 @@ fancy_plot(ax[2])
 
 ###########
 #BOKEH PLOT
+#For the training set
 ###########
 from bokeh.models import HoverTool, ColumnDataSource
 from bokeh.plotting import figure, show,save
 from bokeh.layouts import column,gridplot
 
 
+##########################################
+#Create parameters for comparing data sets
+##########################################
 source = ColumnDataSource(data=soho_df_train)
 tools = "pan,wheel_zoom,box_select,reset,hover,save,box_zoom"
 
@@ -166,6 +174,30 @@ p4.xaxis.axis_label = 'UT Date'
 p4.yaxis.axis_label = 'Shock'
                                    
                                    
-                                   
 save(gridplot([p1,p2],[p3,p4]),filename='bokeh_training_plot.html')
+
+###########################
+# Plotting for the full set
+###########################
+
+source1 = ColumnDataSource(data=soho_df)
+tools = "pan,wheel_zoom,box_select,reset,hover,save,box_zoom"
+
+tool_tips = [("Date","@time_str"),
+             ("Del. Np","@del_Np"),
+             ("Del. Speed","@del_speed"),
+             ("Del. Vth","@del_Vth"),
+             ("Predict","@predict"),
+             ]
+
+p5 = figure(title='SOHO CELIAS SHOCKS',tools=tools,x_axis_type="datetime")
+p5.plot_width = 1200
+p5.scatter('time_dt','predict',color='black',source=source1)
+p5.select_one(HoverTool).tooltips = tool_tips
+p5.xaxis.axis_label = 'UT Date'
+p5.yaxis.axis_label = 'Shock'
+                                   
+                                   
+save(p5,filename='bokeh_full_plot.html')
+
 
