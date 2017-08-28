@@ -69,11 +69,17 @@ use_cols = ['del_speed','del_Np','del_Vth','intercept']
 
 #build rough preliminary shock model based on observations
 logit_pre = sm.Logit(soho_df_train['shock'],soho_df_train[use_cols])
-sh_rs = logit_pre.fit()
+sh_rs_pre = logit_pre.fit()
 #get predictions for training set
-soho_df_train['shock2'] = sh_rs.predict(soho_df_train[use_cols])
+soho_df_train['shock2'] = sh_rs_pre.predict(soho_df_train[use_cols])
+
+#use the predictions from the training set to build a better model
+logit = sm.Logit(soho_df_train['shock'].round(),soho_df_train[use_cols])
+sh_rs = logit.fit()
+
 
 #crate monotonically increasing data frame
+#(NEED TO UPDATE TO LINES OF CONSTANT PROBABILITY)
 mono_df = pd.DataFrame()
 mono_df['mono_speed'] = np.linspace(0,0.010,100)
 mono_df['mono_np'] = np.linspace(0,0.2,100)
@@ -108,7 +114,7 @@ ax[2].plot(mono_df.mono_speed,mono_df.p_shock,color='red')
 ax[2].set_xlabel(r'$\triangle$w$_\mathrm{p}$/w$_\mathrm{p}$ ')
 fancy_plot(ax[2])
 
-plt.show()
+#plt.show()
 
 
 
@@ -117,9 +123,11 @@ plt.show()
 ###########
 from bokeh.models import HoverTool, ColumnDataSource
 from bokeh.plotting import figure, show,save
-from bokeh.layouts import column
+from bokeh.layouts import column,gridplot
 
-tools = "pan,wheel_zoom,xbox_select,reset,hover,save"
+
+source = ColumnDataSource(data=soho_df_train)
+tools = "pan,wheel_zoom,box_select,reset,hover,save,box_zoom"
 
 tool_tips = [("Date","@time_str"),
              ("Del. Np","@del_Np"),
@@ -130,26 +138,34 @@ tool_tips = [("Date","@time_str"),
 
 
 p1 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-p1.plot_width = 1200
-p1.scatter('del_Np','shock',color='black',source=soho_df_train)
+#p1.plot_width = 1200
+p1.scatter('del_Np','shock',color='black',source=source)
 p1.select_one(HoverTool).tooltips = tool_tips
 p1.xaxis.axis_label = 'Delta Np/Np'
 p1.yaxis.axis_label = 'Shock'
                                    
 p2 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-p2.plot_width = 1200
-p2.scatter('del_Vth','shock',color='black',source=soho_df_train)
+#p2.plot_width = 1200
+p2.scatter('del_Vth','shock',color='black',source=source)
 p2.select_one(HoverTool).tooltips = tool_tips
 p2.xaxis.axis_label = 'Delta Vt/Vt'
 p2.yaxis.axis_label = 'Shock'
                                    
 p3 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-p3.plot_width = 1200
-p3.scatter('del_speed','shock',color='black',source=soho_df_train)
+#p3.plot_width = 1200
+p3.scatter('del_speed','shock',color='black',source=source)
 p3.select_one(HoverTool).tooltips = tool_tips
 p3.xaxis.axis_label = 'Delta |V|/|V|'
 p3.yaxis.axis_label = 'Shock'
                                    
+p4 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
+#p4.plot_width = 1200
+p4.scatter('time_dt','shock',color='black',source=source)
+p4.select_one(HoverTool).tooltips = tool_tips
+p4.xaxis.axis_label = 'UT Date'
+p4.yaxis.axis_label = 'Shock'
                                    
-save(column(p1,p2,p3),filename='bokeh_training_plot.html')
+                                   
+                                   
+save(gridplot([p1,p2],[p3,p4]),filename='bokeh_training_plot.html')
 
