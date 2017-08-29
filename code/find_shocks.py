@@ -39,7 +39,7 @@ else:
 #read in full mission long soho information
 if full_soho:
     #final all soho files in 30second cadence directory
-    f_full = glob('../soho/data/30sec_cad/formatted_txt/2*txt')
+    f_full = glob('../soho/data/30sec_cad/formatted_txt/*txt')
     #read in all soho files in 30sec_cad directory
     df_full = (pd.read_table(f,engine='python',delim_whitespace=True) for f in f_full)
     #create one large array with all soho information
