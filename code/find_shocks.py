@@ -14,15 +14,54 @@ import matplotlib.pyplot as plt
 from datetime import datetime,timedelta
 import statsmodels.api as sm
 
-
-
+##SET UP BOOLEANS
 #Use my training days
 mytrain = True 
 #Use full soho mission files
-full_soho = True 
-
+full_soho = False
 #create bokeh
 create_bokeh = True 
+
+
+#format input dataframe
+def format_df(inpt_df,span='3600s'):
+    #Do parameter calculation for the 2016 year (training year)
+    inpt_df['del_time'] = inpt_df['time_dt'].diff(-1).values.astype('double')/1.e9
+
+    #calculate difference in parameters
+    inpt_df['ldel_speed'] = np.abs(inpt_df['SPEED']*inpt_df['SPEED'].diff(-1)/inpt_df.del_time)
+    inpt_df['ldel_Np'] = np.abs(inpt_df['Np'].diff(-1)/inpt_df.del_time)
+    inpt_df['ldel_Vth'] = np.abs(inpt_df['Vth'].diff(-1)/inpt_df.del_time)
+
+    #Find difference on otherside
+    inpt_df['del_speed'] = np.abs(inpt_df['SPEED']*inpt_df['SPEED'].diff(1)/inpt_df.del_time)
+    inpt_df['del_Np'] = np.abs(inpt_df['Np'].diff(1)/inpt_df.del_time)
+    inpt_df['del_Vth'] = np.abs(inpt_df['Vth'].diff(1)/inpt_df.del_time)
+    
+    #calculate variance normalized parameters
+    inpt_df['std_speed'] = inpt_df.SPEED*inpt_df.SPEED.rolling(span,min_periods=3).std()/float(span[:-1])
+    inpt_df['std_Np'] = inpt_df.Np.rolling(span,min_periods=3).std()/float(span[:-1])
+    inpt_df['std_Vth'] = inpt_df.Vth.rolling(span,min_periods=3).std()/float(span[:-1])
+    
+    #Significance of the variation in the wind parameters
+    inpt_df['sig_speed'] = inpt_df.del_speed/inpt_df.std_speed
+    inpt_df['sig_Np'] = inpt_df.del_Np/inpt_df.std_Np
+    inpt_df['sig_Vth'] = inpt_df.del_Vth/inpt_df.std_Vth
+    
+    #fill pesky nans and infs with 0 values
+    inpt_df['sig_speed'].replace(np.inf,np.nan,inplace=True)
+    inpt_df['sig_Np'].replace(np.inf,np.nan,inplace=True)
+    inpt_df['sig_Vth'].replace(np.inf,np.nan,inplace=True)
+    inpt_df['sig_speed'].fillna(value=0.0,inplace=True)
+    inpt_df['sig_Np'].fillna(value=0.0,inplace=True)
+    inpt_df['sig_Vth'].fillna(value=0.0,inplace=True)
+    
+    #create an array of constants that hold a place for the intercept 
+    inpt_df['intercept'] = 1 
+    return inpt_df
+
+
+
 
 #Training set shock times to give a value of 1 for logit fitting
 if mytrain:
@@ -85,94 +124,61 @@ for i in shock_times.start_time_dt:
 
 
 
-#Do parameter calculation for the 2016 year (training year)
-#calculate difference in parameters
-soho_df['del_time'] = soho_df['time_dt'].diff(-1).values.astype('double')/1.e9
-soho_df['del_speed'] = np.abs(soho_df['SPEED'].diff(-1)/soho_df.del_time)
-soho_df['del_Np'] = np.abs(soho_df['Np'].diff(-1)/soho_df.del_time)
-soho_df['del_Vth'] = np.abs(soho_df['Vth'].diff(-1)/soho_df.del_time)
-
-#calculate variance normalized parameters
 #divide to get into usits of seconds
 span = '3600s'
-soho_df['std_speed'] = soho_df.SPEED.rolling(span,min_periods=3).std()/float(span[:-1])
-soho_df['std_Np'] = soho_df.Np.rolling(span,min_periods=3).std()/float(span[:-1])
-soho_df['std_Vth'] = soho_df.Vth.rolling(span,min_periods=3).std()/float(span[:-1])
+soho_df = format_df(soho_df,span=span)
 
-#Significance of the variation in the wind parameters
-soho_df['sig_speed'] = soho_df.del_speed/soho_df.std_speed
-soho_df['sig_Np'] = soho_df.del_Np/soho_df.std_Np
-soho_df['sig_Vth'] = soho_df.del_Vth/soho_df.std_Vth
-
-#fill pesky nans and infs with 0 values
-soho_df['sig_speed'].replace(np.inf,np.nan,inplace=True)
-soho_df['sig_Np'].replace(np.inf,np.nan,inplace=True)
-soho_df['sig_Vth'].replace(np.inf,np.nan,inplace=True)
-soho_df['sig_speed'].fillna(value=0.0,inplace=True)
-soho_df['sig_Np'].fillna(value=0.0,inplace=True)
-soho_df['sig_Vth'].fillna(value=0.0,inplace=True)
-
-#create an array of constants that hold a place for the intercept 
-soho_df['intercept'] = 1 
 
 #Do parameter calculation for all previous years 
 #calculate difference in parameters
 if full_soho:
-    full_df['del_time'] = full_df['time_dt'].diff(-1).values.astype('double')/1.e9
-    full_df['del_speed'] = np.abs(full_df['SPEED'].diff(-1)/full_df.del_time)
-    full_df['del_Np'] = np.abs(full_df['Np'].diff(-1)/full_df.del_time)
-    full_df['del_Vth'] = np.abs(full_df['Vth'].diff(-1)/full_df.del_time)
-    #Significance of the variation in the wind parameters
-    full_df['sig_speed'] = full_df.del_speed/full_df.std_speed
-    full_df['sig_Np'] = full_df.del_Np/full_df.std_Np
-    full_df['sig_Vth'] = full_df.del_Vth/full_df.std_Vth
-    
-    #fill pesky nans and infs with 0 values
-    full_df['sig_speed'].replace(np.inf,np.nan,inplace=True)
-    full_df['sig_Np'].replace(np.inf,np.nan,inplace=True)
-    full_df['sig_Vth'].replace(np.inf,np.nan,inplace=True)
-    full_df['sig_speed'].fillna(value=0.0,inplace=True)
-    full_df['sig_Np'].fillna(value=0.0,inplace=True)
-    full_df['sig_Vth'].fillna(value=0.0,inplace=True)
-    #create an array of constants that hold a place for the intercept 
-    full_df['intercept'] = 1 
-
-
+    full_df = format_df(full_df,span=span)
 
 #mask for training set
-train = ((soho_df.time_dt >= datetime(2016,6,5,0)) & (soho_df.time_dt <= datetime(2016,12,31,0)) & (soho_df.del_time < 60.) & (soho_df.shock == 1))
-no_sh = ((soho_df.time_dt >= datetime(2016,6,14,12)) & (soho_df.time_dt <= datetime(2016,6,16,0)) & (soho_df.del_time < 60.) & (soho_df.shock == 0))
-#no_sh = ((soho_df.time_dt >= datetime(2016,6,5,0)) & (soho_df.time_dt <= datetime(2017,1,1,0)) & (soho_df.del_time < 60.) & (soho_df.shock == 0))
+if mytrain:
+    train = ((soho_df.time_dt >= datetime(2016,6,5,0)) & (soho_df.time_dt <= datetime(2016,12,31,0)) & (soho_df.del_time < 60.) & (soho_df.shock == 1))
+    no_sh = ((soho_df.time_dt >= datetime(2016,6,14,12)) & (soho_df.time_dt <= datetime(2016,6,16,0)) & (soho_df.del_time < 60.) & (soho_df.shock == 0))
+else:
+    train = ((soho_df.time_dt >= datetime(2016,1,1,0)) & (soho_df.time_dt <= datetime(2017,1,1,0)) & (soho_df.del_time < 60.) & (soho_df.shock == 1))
+    no_sh = ((soho_df.time_dt >= datetime(2016,1,1,0)) & (soho_df.time_dt <= datetime(2017,1,1,0)) & (soho_df.del_time < 60.) & (soho_df.shock == 0))
 
 #training set
 soho_df_train = soho_df[((train) | (no_sh))]#plot range 
 
 
-use_cols = ['sig_speed','sig_Np','sig_Vth','intercept']
+use_cols = ['sig_speed','sig_Np','sig_Vth','del_speed','del_Np','del_Vth','intercept']
 
 #build rough preliminary shock model based on observations
 logit_pre = sm.Logit(soho_df_train['shock'],soho_df_train[use_cols])
 sh_rs_pre = logit_pre.fit()
-#get predictions for training set
-soho_df_train['shock2'] = sh_rs_pre.predict(soho_df_train[use_cols])
-
-#do not replace shock training set 0 values
-soho_df_train['shock2'][soho_df_train.shock == 0] = 0
-
 
 #use the predictions from the training set to build a better model
-logit = sm.Logit(soho_df_train['shock2'].round(),soho_df_train[use_cols])
-sh_rs = logit.fit()
+if mytrain:
+    #get predictions for training set
+    soho_df_train['shock2'] = sh_rs_pre.predict(soho_df_train[use_cols])
+    
+    #do not replace shock training set 0 values
+    soho_df_train['shock2'][soho_df_train.shock == 0] = 0
+
+    #use the predictions from the training set to build a better model
+    logit = sm.Logit(soho_df_train['shock2'].round(),soho_df_train[use_cols])
+    sh_rs = logit.fit()
+else:
+    #use first model
+    sh_rs = sh_rs_pre
 
 
 #crate monotonically increasing data frame
 #(NEED TO UPDATE TO LINES OF CONSTANT PROBABILITY)
 mono_df = pd.DataFrame()
-mono_df['mono_speed'] = np.linspace(0,soho_df.sig_speed.max(),100)
-mono_df['mono_np'] = np.linspace(0,soho_df.sig_Np.max(),100)
-mono_df['mono_vt'] = np.linspace(0,soho_df.sig_Vth.max(),100)
-mono_df['int'] = 1
-mono_df['p_shock'] = sh_rs.predict(mono_df[['mono_speed','mono_np','mono_vt','int']])
+mono_df['sig_speed'] = np.linspace(0,soho_df.sig_speed.max(),100)
+mono_df['sig_Np'] = np.linspace(0,soho_df.sig_Np.max(),100)
+mono_df['sig_Vth'] = np.linspace(0,soho_df.sig_Vth.max(),100)
+mono_df['del_speed'] = np.linspace(0,soho_df.del_speed.max(),100)
+mono_df['del_Np'] = np.linspace(0,soho_df.del_Np.max(),100)
+mono_df['del_Vth'] = np.linspace(0,soho_df.del_Vth.max(),100)
+mono_df['intercept'] = 1
+mono_df['p_shock'] = sh_rs.predict(mono_df[use_cols])
 
 #get predictions for full set
 soho_df['predict'] = sh_rs.predict(soho_df[use_cols])
@@ -190,19 +196,19 @@ fig,ax = plt.subplots(ncols=3,figsize=(7*3.,8))
 
 #plot solar wind speed
 ax[0].scatter(soho_df_train.sig_speed,soho_df_train.shock,color='black')
-ax[0].plot(mono_df.mono_speed,mono_df.p_shock,color='red')
+ax[0].plot(mono_df.sig_speed,mono_df.p_shock,color='red')
 ax[0].set_xlabel(r'$\triangle |\mathrm{V}|$ [km/s]')
 fancy_plot(ax[0])
 
 #plot solar wind density
 ax[1].scatter(soho_df_train.sig_Np,soho_df_train.shock,color='black')
-ax[1].plot(mono_df.mono_speed,mono_df.p_shock,color='red')
+ax[1].plot(mono_df.sig_Np,mono_df.p_shock,color='red')
 ax[1].set_xlabel(r'$\triangle$n$_\mathrm{p}$/n$_\mathrm{p}$')
 fancy_plot(ax[1])
 
 #Thermal Speed
 ax[2].scatter(soho_df_train.sig_Vth,soho_df_train.shock,color='black')
-ax[2].plot(mono_df.mono_speed,mono_df.p_shock,color='red')
+ax[2].plot(mono_df.sig_Vth,mono_df.p_shock,color='red')
 ax[2].set_xlabel(r'$\triangle$w$_\mathrm{p}$/w$_\mathrm{p}$ ')
 fancy_plot(ax[2])
 
