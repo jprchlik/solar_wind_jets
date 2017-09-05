@@ -19,7 +19,7 @@ import statsmodels.api as sm
 #Use my training days
 mytrain = True 
 #Use full soho mission files
-full_soho = True 
+full_soho = False
 
 #create bokeh
 create_bokeh = False
@@ -91,6 +91,18 @@ soho_df['del_time'] = soho_df['time_dt'].diff(-1).values.astype('double')/1.e9
 soho_df['del_speed'] = np.abs(soho_df['SPEED'].diff(-1)/soho_df.del_time/soho_df.SPEED)
 soho_df['del_Np'] = np.abs(soho_df['Np'].diff(-1)/soho_df.del_time/soho_df.Np)
 soho_df['del_Vth'] = np.abs(soho_df['Vth'].diff(-1)/soho_df.del_time/soho_df.Vth)
+
+#calculate variance normalized parameters
+#divide to get into usits of seconds
+soho_df['std_speed'] = soho_df.SPEED.rolling('10m',min_periods=3.).std()/360.
+soho_df['std_Np'] = soho_df.Np.rolling('10m',min_periods=3.).std()/360.
+soho_df['std_Vth'] = soho_df.Vth.rolling('10m',min_periods=3.).std()/360.
+
+#Significance of the variation in the wind parameters
+soho_df['sig_speed'] = soho_df.del_speed/soho_df.std_speed
+soho_df['sig_Np'] = soho_df.del_Np/soho_df.std_Np
+soho_df['sig_Vth'] = soho_df.del_Vth/soho_df.std_Vth
+
 #create an array of constants that hold a place for the intercept 
 soho_df['intercept'] = 1 
 
@@ -114,7 +126,7 @@ no_sh = ((soho_df.time_dt >= datetime(2016,6,14,12)) & (soho_df.time_dt <= datet
 soho_df_train = soho_df[((train) | (no_sh))]#plot range 
 
 
-use_cols = ['del_speed','del_Np','del_Vth','intercept']
+use_cols = ['sig_speed','sig_Np','sig_Vth','intercept']
 
 #build rough preliminary shock model based on observations
 logit_pre = sm.Logit(soho_df_train['shock'],soho_df_train[use_cols])
