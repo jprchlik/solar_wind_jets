@@ -23,6 +23,14 @@ full_soho = False
 create_bokeh = True 
 
 
+
+#Use shock spotter shock times
+shock_times = pd.read_table('shock_spotter_events.txt',delim_whitespace=True)
+shock_times = shock_times[shock_times.P > .5]
+shock_times['start_time_dt'] = pd.to_datetime(shock_times.YY.astype('str')+'/'+shock_times.MM.astype('str')+'/'+shock_times.DD.astype('str')+'T'+shock_times.HHMM.astype('str'),format='%Y/%b/%dT%H%M')
+    
+
+
 #format input dataframe
 def format_df(inpt_df,span='3600s'):
     #Do parameter calculation for the 2016 year (training year)
@@ -100,9 +108,17 @@ soho_df['time_str'] = soho_df['time_dt'].dt.strftime('%Y/%m/%dT%H:%M:%S')
 soho_df.set_index(soho_df['time_dt'],inplace=True)
 
 
+soho_df['shock'] = 0
+#locate shocks and update parameter to 1
+for i in shock_times.start_time_dt:
+    #less than 120s seconds away from shock claim as part of shock (output in nano seconds by default)
+    shock, = np.where(np.abs(((soho_df.time_dt-i).values/1.e9).astype('float')) < 70.)
+    soho_df['shock'][shock] = 1
+
+
 
 #sigma just range (range to scan sigmas in training set)
-sig_jump = np.arange(5,1305,100)
+sig_jump = np.arange(5,1305,10)
 sig_cnts = np.zeros(sig_jump.size)
 
 #columns to use for training 
@@ -179,45 +195,60 @@ from bokeh.layouts import column,gridplot
 #Create parameters for comparing data sets
 ##########################################
 if create_bokeh:
-    source = ColumnDataSource(data=soho_df[(soho_df.predict_shock_28005 > .1)])
+    source = ColumnDataSource(data=soho_df[((soho_df.predict_shock_905 > .1) | (soho_df.shock == 1))])
     tools = "pan,wheel_zoom,box_select,reset,hover,save,box_zoom"
     
     tool_tips = [("Date","@time_str"),
                  ("Del. Np","@sig_Np"),
                  ("Del. Speed","@sig_speed"),
                  ("Del. Vth","@sig_Vth"),
-                 ("Predict","@predict_shock_28005"),
+                 ("Predict","@predict_shock_905"),
                  ]
     
     
     p1 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    #p1.plot_width = 1200
     p1.scatter('sig_Np','sig_Vth',color='black',source=source)
     p1.select_one(HoverTool).tooltips = tool_tips
     p1.xaxis.axis_label = 'Delta Np/Np'
     p1.yaxis.axis_label = 'Delta Vth/Vth'
                                        
     p2 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    #p2.plot_width = 1200
     p2.scatter('sig_Vth','sig_speed',color='black',source=source)
     p2.select_one(HoverTool).tooltips = tool_tips
     p2.xaxis.axis_label = 'Delta Vt/Vt'
     p2.yaxis.axis_label = 'Delta |V|/V'
                                        
     p3 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    #p3.plot_width = 1200
     p3.scatter('sig_speed','sig_Np',color='black',source=source)
     p3.select_one(HoverTool).tooltips = tool_tips
     p3.xaxis.axis_label = 'Delta |V|/|V|'
     p3.yaxis.axis_label = 'Delta Np/Np'
                                        
     p4 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    #p4.plot_width = 1200
-    p4.scatter('time_dt','predict_shock_28005',color='black',source=source)
+    p4.scatter('shock','predict_shock_905',color='black',source=source)
     p4.select_one(HoverTool).tooltips = tool_tips
-    p4.xaxis.axis_label = 'UT Date'
-    p4.yaxis.axis_label = 'Shock'
+    p4.xaxis.axis_label = 'SOHO DB SHOCK'
+    p4.yaxis.axis_label = 'My Shock'
                                        
+    p5 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
+    p5.scatter('SPEED','Np',color='black',source=source)
+    p5.select_one(HoverTool).tooltips = tool_tips
+    p5.xaxis.axis_label = '|V| [km/s]'
+    p5.yaxis.axis_label = 'Np [cm^-3]'
+
+    p6 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
+    p6.scatter('SPEED','Vth',color='black',source=source)
+    p6.select_one(HoverTool).tooltips = tool_tips
+    p6.xaxis.axis_label = '|V| [km/s]'
+    p6.yaxis.axis_label = 'Vth [km/s]'
                                        
-    save(gridplot([p1,p2],[p3,p4]),filename='bokeh_training_plot_sigma.html')
+    p7 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
+    p7.scatter('Np','Vth',color='black',source=source)
+    p7.select_one(HoverTool).tooltips = tool_tips
+    p7.xaxis.axis_label = 'Np [cm^-3]'
+    p7.yaxis.axis_label = 'Vth [km/s]'
+
+
+
+    save(gridplot([p1,p2],[p3,p4],[p5,p6],[p7,]),filename='bokeh_training_plot_sigma.html')
     
