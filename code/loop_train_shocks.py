@@ -34,7 +34,7 @@ shock_times['start_time_dt'] = pd.to_datetime(shock_times.YY.astype('str')+'/'+s
 #format input dataframe
 def format_df(inpt_df,span='3600s'):
     #Do parameter calculation for the 2016 year (training year)
-    inpt_df['del_time'] = inpt_df['time_dt'].diff(-1).values.astype('double')/1.e9
+    inpt_df['del_time'] = np.abs(inpt_df['time_dt'].diff(-1).values.astype('double')/1.e9)
 
     #calculate difference in parameters
     inpt_df['ldel_speed'] = np.abs(inpt_df['SPEED']*inpt_df['SPEED'].diff(-1)/inpt_df.del_time)
@@ -47,9 +47,9 @@ def format_df(inpt_df,span='3600s'):
     inpt_df['del_Vth'] = np.abs(inpt_df['Vth'].diff(1)/inpt_df.del_time)
     
     #calculate variance normalized parameters
-    inpt_df['std_speed'] = inpt_df.SPEED*inpt_df.SPEED.rolling(span,min_periods=3).std()/float(span[:-1])
-    inpt_df['std_Np'] = inpt_df.Np.rolling(span,min_periods=3).std()/float(span[:-1])
-    inpt_df['std_Vth'] = inpt_df.Vth.rolling(span,min_periods=3).std()/float(span[:-1])
+    inpt_df['std_speed'] = inpt_df.SPEED*inpt_df.SPEED.rolling(span,min_periods=3).std()/inpt_df.del_time#/float(span[:-1])
+    inpt_df['std_Np'] = inpt_df.Np.rolling(span,min_periods=3).std()/inpt_df.del_time#/float(span[:-1])
+    inpt_df['std_Vth'] = inpt_df.Vth.rolling(span,min_periods=3).std()/inpt_df.del_time#/float(span[:-1])
     
     #Significance of the variation in the wind parameters
     inpt_df['sig_speed'] = inpt_df.del_speed/inpt_df.std_speed
@@ -112,13 +112,13 @@ soho_df['shock'] = 0
 #locate shocks and update parameter to 1
 for i in shock_times.start_time_dt:
     #less than 120s seconds away from shock claim as part of shock (output in nano seconds by default)
-    shock, = np.where(np.abs(((soho_df.time_dt-i).values/1.e9).astype('float')) < 70.)
+    shock, = np.where(np.abs(((soho_df.time_dt-i).values/1.e9).astype('float')) < 10.)
     soho_df['shock'][shock] = 1
 
 
 
 #sigma just range (range to scan sigmas in training set)
-sig_jump = np.arange(5,1305,10)
+sig_jump = np.linspace(3,9,100)
 sig_cnts = np.zeros(sig_jump.size)
 
 #columns to use for training 
@@ -130,7 +130,7 @@ soho_df = format_df(soho_df,span=span)
 #locate shocks and update parameter to 1
 for j,i in enumerate(sig_jump):
     #shock name with sigma values
-    var = 'shock_{0:1d}'.format(i)
+    var = 'shock_{0:3.2f}'.format(i).replace('.','')
 
     #Create variable where identifies shock
     soho_df[var] = 0
@@ -195,14 +195,14 @@ from bokeh.layouts import column,gridplot
 #Create parameters for comparing data sets
 ##########################################
 if create_bokeh:
-    source = ColumnDataSource(data=soho_df[((soho_df.predict_shock_905 > .1) | (soho_df.shock == 1))])
+    source = ColumnDataSource(data=soho_df[((soho_df.predict_shock_718 > .1) | (soho_df.shock == 1))])
     tools = "pan,wheel_zoom,box_select,reset,hover,save,box_zoom"
     
     tool_tips = [("Date","@time_str"),
                  ("Del. Np","@sig_Np"),
                  ("Del. Speed","@sig_speed"),
                  ("Del. Vth","@sig_Vth"),
-                 ("Predict","@predict_shock_905"),
+                 ("Predict","@predict_shock_718"),
                  ]
     
     
@@ -225,7 +225,7 @@ if create_bokeh:
     p3.yaxis.axis_label = 'Delta Np/Np'
                                        
     p4 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    p4.scatter('shock','predict_shock_905',color='black',source=source)
+    p4.scatter('shock','predict_shock_718',color='black',source=source)
     p4.select_one(HoverTool).tooltips = tool_tips
     p4.xaxis.axis_label = 'SOHO DB SHOCK'
     p4.yaxis.axis_label = 'My Shock'
