@@ -95,7 +95,8 @@ if full_ACE:
 
 #find all ACE files in data directory
 f_aces = '../ace/data/ace_min_b2016.txt'
-#f_wind = glob('../ACE/data/*txt')
+f_aces = '../ace/data/ACE_swepam_level2_data_64sec_2016.txt'
+#f_wind = ACE_swepam_level2_data_64sec_2016.txtglob('../ACE/data/*txt')
 
 aces_nm = ['year','day','hour','minute','num_imf_ave','per_interp','cpmv_flag',
            'time_shift','phi_norm_x','phi_norm_y','phi_norm_z','mag_b','Bx','By',
@@ -107,16 +108,25 @@ aces_nm = ['year','day','hour','minute','num_imf_ave','per_interp','cpmv_flag',
 
 
 #read in all ACE files in data directory
-aces_df = pd.read_table(f_aces,engine='c',names=aces_nm,delim_whitespace=True) 
+aces_df = pd.read_table(f_aces,engine='c',header=0,delim_whitespace=True,skiprows=38) 
+
+#drop bogus first row
+aces_df.drop(aces_df.index[0],inplace=True)
 
 #get the speed of the wind
-aces_df['SPEED'] = np.sqrt(np.power(aces_df.Vx.values,2)+np.power(aces_df.Vy.values,2)+np.power(aces_df.Vz,2))
+aces_df['SPEED'] = aces_df['proton_speed'] # np.sqrt(np.power(aces_df.Vx.values,2)+np.power(aces_df.Vy.values,2)+np.power(aces_df.Vz,2))
+aces_df['Np'] = aces_df['proton_density']
+aces_df['Tth'] = aces_df['proton_temp']
+aces_df['day'] = aces_df['day'].astype('int').map('{:03d}'.format)
+aces_df['hour'] = aces_df['hr'].astype('int').map('{:02d}'.format)
+aces_df['minute'] = aces_df['min'].astype('int').map('{:02d}'.format)
+aces_df['second'] = aces_df['sec'].astype('int').map('{:02d}'.format)
 
 
 #remove fill values
-p_den = aces_df.Np < 990.
-p_tth = aces_df.Tth < 9990.
-p_spd = ((aces_df.Vx < 9990.) & (aces_df.Vy < 9990.) & (aces_df.Vz < 9990.))
+p_den = aces_df.Np > -9990.
+p_tth = aces_df.Tth > -9990.
+p_spd = aces_df.SPEED > -9990.
 
 aces_df = aces_df[((p_den) & (p_tth) & (p_spd))]
 
@@ -133,7 +143,7 @@ aces_df['Vth'] = np.sqrt(2.*kb*aces_df.Tth/(mp)) #k in units of proton mass*(km/
 #wind_df = pd.concat(f_wind,ignore_index=True)
 
 #convert columns to datetime column
-aces_df['time_dt'] = pd.to_datetime(aces_df['year'].astype('str')+aces_df['day'].astype('str')+aces_df['hour'].astype('str')+aces_df['minute'].astype('str'),format='%Y%j%H%M')
+aces_df['time_dt'] = pd.to_datetime(aces_df['year'].astype('str')+aces_df['day'].astype('str')+aces_df['hour']+aces_df['minute']+aces_df['second'],format='%Y%j%H%M%S')
 aces_df['time_str'] = aces_df['time_dt'].dt.strftime('%Y/%m/%dT%H:%M:%S')
 #set index to be time
 aces_df.set_index(aces_df['time_dt'],inplace=True)
