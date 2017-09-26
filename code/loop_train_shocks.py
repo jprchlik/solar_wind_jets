@@ -151,6 +151,9 @@ for j,i in enumerate(sig_jump):
    
 
 
+#save output
+soho_df.to_pickle('../soho/data/y2016_formatted.pic')
+
 
 
 #Do parameter calculation for all previous years 
@@ -177,8 +180,8 @@ ax.set_yscale('log')
 ax.set_ylim([.5,2E6])
 fancy_plot(ax)
 
-fig.savefig('num_events_sig_cut.png',bbox_inches='tight',bbox_pad=0.1)
-fig.savefig('num_events_sig_cut.eps',bbox_inches='tight',bbox_pad=0.1)
+fig.savefig('../plots/num_events_sig_cut.png',bbox_inches='tight',bbox_pad=0.1)
+fig.savefig('../plots/num_events_sig_cut.eps',bbox_inches='tight',bbox_pad=0.1)
 
 
 
@@ -250,5 +253,5 @@ if create_bokeh:
 
 
 
-    save(gridplot([p1,p2],[p3,p4],[p5,p6],[p7,]),filename='bokeh_training_plot_sigma.html')
+    save(gridplot([p1,p2],[p3,p4],[p5,p6],[p7,]),filename='../plots/bokeh_training_plot_sigma.html')
     
