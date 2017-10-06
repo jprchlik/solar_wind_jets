@@ -83,9 +83,6 @@ if full_Wind:
     full_df = full_df[full_df['DOY:HH:MM:SS'] >  0]
     
     
-    
-    
-    
     #convert columns to datetime column
     full_df['time_dt'] = pd.to_datetime(full_df['YY'].astype('int').map("{:02}".format)+':'+full_df['DOY:HH:MM:SS'],format='%y:%j:%H:%M:%S',errors='coerce')
     #full_df['time_str'] = full_df['time_dt'].dt.strftime('%Y/%m/%dT%H:%M:%S')
@@ -110,8 +107,12 @@ wind_df = pd.read_table(f_wind,engine='c',names=wind_nm,
 
 #remove fill values
 p_flag = wind_df.flag > 1.
+#remove fill values
+p_den = wind_df.Np < 9990.
+p_vth = wind_df.Vth < 9990.
+p_spd = wind_df.SPEED < 9990.
 
-wind_df = wind_df[p_flag]
+wind_df = wind_df[((p_flag) & (p_den) & (p_vth) & (p_spd)) ]
 
 
 amu = 1.660538921e-27#kg/amu
