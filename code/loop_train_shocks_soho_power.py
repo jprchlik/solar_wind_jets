@@ -48,8 +48,18 @@ def format_df(inpt_df,span='3600s'):
 
     #get the Energy Change per second
     inpt_df['power'] = inpt_df.del_Np*inpt_df.SPEED**2.+2.*inpt_df.del_speed*inpt_df.Np*inpt_df.SPEED
-    
-    
+    inpt_df['Np_power'] = inpt_df.del_Np*inpt_df.SPEED**2.
+    inpt_df['speed_power'] = 2.*inpt_df.del_speed*inpt_df.Np*inpt_df.SPEED
+    inpt_df['Npth_power'] = inpt_df.del_Np*inpt_df.Vth**2.
+    inpt_df['Vth_power'] = 2.*inpt_df.del_Vth*inpt_df.Np*inpt_df.Vth
+
+    #absolute value of the power
+    inpt_df['abs_power'] = np.abs(inpt_df.power)
+    inpt_df['Np_abs_power'] = np.abs(inpt_df.Np_power)
+    inpt_df['speed_abs_power'] =  np.abs(inpt_df.speed_power)
+    inpt_df['Npth_abs_power'] = np.abs(inpt_df.Npth_power)
+    inpt_df['Vth_abs_power'] =  np.abs(inpt_df.Vth_power)
+
     #calculate variance normalized parameters
     inpt_df['std_speed'] = inpt_df.SPEED*inpt_df.SPEED.rolling(span,min_periods=3).std()/inpt_df.del_time#/float(span[:-1])
     inpt_df['std_Np'] = inpt_df.Np.rolling(span,min_periods=3).std()/inpt_df.del_time#/float(span[:-1])
@@ -112,35 +122,47 @@ soho_df['time_str'] = soho_df['time_dt'].dt.strftime('%Y/%m/%dT%H:%M:%S')
 soho_df.set_index(soho_df['time_dt'],inplace=True)
 
 #smooth to 1 minutes to removed small scale variation
-soho_df['Np']    = soho_df['Np'].rolling('90s').mean()
-soho_df['SPEED'] = soho_df['SPEED'].rolling('90s').mean()
-soho_df['Vth']   = soho_df['Vth'].rolling('90s').mean()   
+#soho_df['Np']    = soho_df['Np'].rolling('90s').mean()
+#soho_df['SPEED'] = soho_df['SPEED'].rolling('90s').mean()
+#soho_df['Vth']   = soho_df['Vth'].rolling('90s').mean()   
 
 
 soho_df['shock'] = 0
 #locate shocks and update parameter to 1
 for i in shock_times.start_time_dt:
     #less than 120s seconds away from shock claim as part of shock (output in nano seconds by default)
-    shock, = np.where(np.abs(((soho_df.time_dt-i).values/1.e9).astype('float')) < 10.)
+    shock, = np.where(np.abs(((soho_df.time_dt-i).values/1.e9).astype('float')) < 70.)
     soho_df['shock'][shock] = 1
 
 
 
-#sigma just range (range to scan sigmas in training set)
-#sig_jump = np.linspace(3,9,100)
-top_evt  = np.percentile(soho_df.power,[99.0,100.])
-sig_jum   = np.linspace(top_evt[0],top_evt[1],10)
-sig_cnts = np.zeros(sig_jump.size)
-
-#columns to use for training 
-use_cols = ['sig_speed','sig_Np','sig_Vth','intercept']
-use_cols = ['power','intercept']
 
 span = '3600s'
 soho_df = format_df(soho_df,span=span)
 
+#columns to use for training 
+use_cols = ['sig_speed','sig_Np','sig_Vth','intercept']
+use_cols = ['power','intercept']
+use_cols = ['Np_abs_power','speed_abs_power','Npth_abs_power' ,'Vth_abs_power','intercept']
+
+
+#cut non finite power values
+soho_df = soho_df[np.isfinite(soho_df.power)]
+
+#sigma just range (range to scan sigmas in training set)
+#sig_jump = np.linspace(3,9,100)
+#top_evts  = np.percentile(soho_df.abs_power,[99.0,100.])
+#sig_jump   = np.linspace(top_evts[0],top_evts[1],10)
+#Get events by percentile range
+samp = 10
+sig_cnts = np.zeros(samp)
+p_ran = np.linspace(99.9,100,samp)
+p_dct = {}
+for i in use_cols: p_dct[i] = np.percentile(soho_df[i],p_ran)
+
+
 #locate shocks and update parameter to 1
-for j,i in enumerate(sig_jump):
+for j,i in enumerate(p_ran):
     #shock name with sigma values
     var = 'shock_{0:3.2f}'.format(i).replace('.','')
 
@@ -150,9 +172,13 @@ for j,i in enumerate(sig_jump):
     #Create variable where identifies shock
     soho_df[var] = 0
 
+    #loop over variable to drived logic for fitting
+    log_test = [False]*len(soho_df.index)
+    for p in use_cols: log_test = ((log_test) | (soho_df[p] > p_dct[p][j]))
+
     #Train that all events with a jump greater than n sigma per 30s are initially marked as shocks
     #soho_df[var][((soho_df.sig_speed > i) | (soho_df.sig_Np > i) | (soho_df.sig_Vth > i))] = 1
-    soho_df[var][(soho_df.power > i) ] = 1
+    soho_df[var][log_test] = 1
     
     #build rough preliminary shock model based on observations
     try:
@@ -191,8 +217,8 @@ if full_soho:
 fig,ax = plt.subplots(figsize=(12,7))
 
 #plot solar wind speed
-ax.scatter(sig_jump,sig_cnts,color='black')
-ax.set_xlabel(r'Power Training [J/s]')
+ax.scatter(p_ran,sig_cnts,color='black')
+ax.set_xlabel(r'Event Percentile [$\%$]')
 ax.set_ylabel(r'\# of Events (2016)')
 ax.set_yscale('log')
 ax.set_ylim([.5,2E6])
@@ -216,7 +242,7 @@ from bokeh.layouts import column,gridplot
 #Create parameters for comparing data sets
 ##########################################
 if create_bokeh:
-    source = ColumnDataSource(data=soho_df[((soho_df.predict_shock_718 > .1) | (soho_df.shock == 1))])
+    source = ColumnDataSource(data=soho_df[((soho_df["predict_{0}".format(p_var)] > .1) | (soho_df.shock == 1))])
     tools = "pan,wheel_zoom,box_select,reset,hover,save,box_zoom"
     
     tool_tips = [("Date","@time_str"),
@@ -271,13 +297,29 @@ if create_bokeh:
     p7.yaxis.axis_label = 'Vth [km/s]'
 
     p8 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    p8.scatter('Np','power',color='black',source=source)
+    p8.scatter('Np_power','speed_power',color='black',source=source)
     p8.select_one(HoverTool).tooltips = tool_tips
-    p8.xaxis.axis_label = 'Np [cm^-3]'
-    p8.yaxis.axis_label = 'Vth [km/s]'
+    p8.xaxis.axis_label = 'Np Power [~J/s]'
+    p8.yaxis.axis_label = 'Speed Power [~J/s]'
 
+    p11 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
+    p11.scatter('Npth_power','Vth_power',color='black',source=source)
+    p11.select_one(HoverTool).tooltips = tool_tips
+    p11.xaxis.axis_label = 'Np Th Power [~J/s]'
+    p11.yaxis.axis_label = 'Vth Power [~J/s]'
 
+    p9 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
+    p9.scatter('time_dt','shock'.format(p_var),color='black',source=source)
+    p9.select_one(HoverTool).tooltips = tool_tips
+    p9.yaxis.axis_label = 'SOHO DB SHOCK'
+    p9.xaxis.axis_label = 'Time'
+                                       
 
+    p10 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
+    p10.scatter('time_dt','predict_{0}'.format(p_var),color='black',source=source)
+    p10.select_one(HoverTool).tooltips = tool_tips
+    p10.yaxis.axis_label = 'Predict SHOCK'
+    p10.xaxis.axis_label = 'Time'
 
-    save(gridplot([p1,p2],[p3,p4],[p5,p6],[p7,]),filename='../plots/bokeh_power_training_plot_soho.html')
+    save(gridplot([p1,p2],[p3,p4],[p5,p6],[p7,p8],[p9,p10],[p11]),filename='../plots/bokeh_power_training_plot_soho.html')
     
