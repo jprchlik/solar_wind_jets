@@ -107,6 +107,11 @@ soho_df['time_str'] = soho_df['time_dt'].dt.strftime('%Y/%m/%dT%H:%M:%S')
 #set index to be time
 soho_df.set_index(soho_df['time_dt'],inplace=True)
 
+#smooth to 1 minutes to removed small scale variation
+soho_df['Np']    = soho_df['Np'].rolling('90s').mean()
+soho_df['SPEED'] = soho_df['SPEED'].rolling('90s').mean()
+soho_df['Vth']   = soho_df['Vth'].rolling('90s').mean()   
+
 
 soho_df['shock'] = 0
 #locate shocks and update parameter to 1
