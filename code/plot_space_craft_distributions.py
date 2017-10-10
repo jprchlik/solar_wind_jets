@@ -14,9 +14,9 @@ import matplotlib.pyplot as plt
 
 d_fmt = '../{0}/data/y2016_formatted.pic'
 
-sc = ['ACE','Wind','SOHO']
-colors = ['red','black','teal','blue']
-marker = ['o','D','s','^']
+sc = ['ACE','Wind','SOHO','DSCOVR']
+colors = ['red','black','teal','blue','purple']
+marker = ['o','D','s','^','p']
 
 cdict = {}
 bdict = {}
@@ -26,6 +26,7 @@ fig, ax = plt.subplots()
 
 
 for j,i in enumerate(sc):
+    print i.lower()
 
     df = pd.read_pickle(d_fmt.format(i.lower()))
     bdict[i] = df
