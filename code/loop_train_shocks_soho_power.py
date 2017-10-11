@@ -107,219 +107,339 @@ if full_soho:
     full_df.set_index(full_df['time_dt'],inplace=True)
 
 
-#find all soho files in data directory
-f_soho = glob('../soho/data/*txt')
-#read in all soho files in data directory
-df_file = (pd.read_table(f,skiprows=28,engine='python',delim_whitespace=True) for f in f_soho)
+#set use to use all spacecraft
+craft = ['wind','ace','dscovr','soho']
 
-#create one large array with all soho information in range
-soho_df = pd.concat(df_file,ignore_index=True)
-
-#convert columns to datetime column
-soho_df['time_dt'] = pd.to_datetime('20'+soho_df['YY'].astype('str')+':'+soho_df['DOY:HH:MM:SS'],format='%Y:%j:%H:%M:%S')
-soho_df['time_str'] = soho_df['time_dt'].dt.strftime('%Y/%m/%dT%H:%M:%S')
-#set index to be time
-soho_df.set_index(soho_df['time_dt'],inplace=True)
-
-#smooth to 1 minutes to removed small scale variation
-#soho_df['Np']    = soho_df['Np'].rolling('90s').mean()
-#soho_df['SPEED'] = soho_df['SPEED'].rolling('90s').mean()
-#soho_df['Vth']   = soho_df['Vth'].rolling('90s').mean()   
+#space craft to use n sigma events to train power on other spacecraft
+#change craft order to change trainer 
+trainer = craft[0]
 
 
-soho_df['shock'] = 0
-#locate shocks and update parameter to 1
-for i in shock_times.start_time_dt:
-    #less than 120s seconds away from shock claim as part of shock (output in nano seconds by default)
-    shock, = np.where(np.abs(((soho_df.time_dt-i).values/1.e9).astype('float')) < 70.)
-    soho_df['shock'][shock] = 1
+for k in craft:
 
+    #for reading in each space craft separately 
+    if k == 'soho':
+        #find all soho files in data directory
+        f_soho = glob('../soho/data/*txt')
+        #read in all soho files in data directory
+        df_file = (pd.read_table(f,skiprows=28,engine='python',delim_whitespace=True) for f in f_soho)
+        
+        #create one large array with all soho information in range
+        plms_df = pd.concat(df_file,ignore_index=True)
+        
+        #convert columns to datetime column
+        plms_df['time_dt'] = pd.to_datetime('20'+plms_df['YY'].astype('str')+':'+plms_df['DOY:HH:MM:SS'],format='%Y:%j:%H:%M:%S')
+        plms_df['time_str'] = plms_df['time_dt'].dt.strftime('%Y/%m/%dT%H:%M:%S')
+    #read in ace data
+    elif k == 'ace': 
+        f_aces = '../ace/data/ACE_swepam_level2_data_64sec_2016.txt'
+        
+        aces_nm = ['year','day','hour','minute','num_imf_ave','per_interp','cpmv_flag',
+                   'time_shift','phi_norm_x','phi_norm_y','phi_norm_z','mag_b','Bx','By',
+                   'Bz','s_By','s_Bz','rms_time_shift','rms_phase_front','rms_mag_b',
+                   'rms_field_vec','num_plasma_ave','f_speed','Vx','Vy','Vz','Np','Tth',
+                   'X','Y','Z','Xt','Yt','Zt','rms','dbot1','dbot2']
+        
+        #read in all ACE files in data directory
+        plms_df = pd.read_table(f_aces,engine='c',header=0,delim_whitespace=True,skiprows=38) 
+        #drop bogus first row
+        plms_df.drop(plms_df.index[0],inplace=True)
+        
+        #get the speed of the wind
+        plms_df['SPEED'] = plms_df['proton_speed'] # np.sqrt(np.power(plms_df.Vx.values,2)+np.power(plms_df.Vy.values,2)+np.power(plms_df.Vz,2))
+        plms_df['Np'] = plms_df['proton_density']
+        plms_df['Tth'] = plms_df['proton_temp']
+        plms_df['day'] = plms_df['day'].astype('int').map('{:03d}'.format)
+        plms_df['hour'] = plms_df['hr'].astype('int').map('{:02d}'.format)
+        plms_df['minute'] = plms_df['min'].astype('int').map('{:02d}'.format)
+        plms_df['second'] = plms_df['sec'].astype('int').map('{:02d}'.format)
+        
+        
+        #remove fill values
+        p_den = plms_df.Np > -9990.
+        p_tth = plms_df.Tth > -9990.
+        p_spd = plms_df.SPEED > -9990.
+        
+        plms_df = plms_df[((p_den) & (p_tth) & (p_spd))]
 
+        amu = 1.660538921e-27#kg/amu
+        mp  = 1.00727647*amu #proton mass to kg
+        kb  = 1.38047e-29  #boltzmann's constant in units kg/(km/s)^2/K
+        
+        #make Vth value
+        plms_df['Vth'] = np.sqrt(2.*kb*plms_df.Tth/(mp)) #k in units of proton mass*(km/s)^2/K
+        
+        #convert columns to datetime column
+        plms_df['time_dt'] = pd.to_datetime(plms_df['year'].astype('str')+plms_df['day'].astype('str')+plms_df['hour']+plms_df['minute']+plms_df['second'],format='%Y%j%H%M%S')
+        plms_df['time_str'] = plms_df['time_dt'].dt.strftime('%Y/%m/%dT%H:%M:%S')
+        #set index to be time
+        plms_df.set_index(plms_df['time_dt'],inplace=True)
+        #fix index not monotonic
+        plms_df.sort_index(inplace=True) #.reindex(newIndex.sort_values(), method='ffill')
 
+    #read in wind data
+    elif k == 'wind':
+        #find all Wind files in data directory
+        f_wind = '../wind/data/wind_swe_2m_sw2016.asc'
+        
+        wind_nm = ['year','day','flag','SPEED','u_SPEED','Vx','u_Vx','Vy','u_Vy',
+                   'Vz','u_Vz','Vth','u_Vth','Np','u_Np','Bx','By','Bz','X','Y','Z']
+        wind_cl = [0,1,2,3,4,5,6,7,8,9,10,11,12,21,22,48,49,50,53,54,55]
+         
+        
+        
+        #read in all Wind files in data directory
+        plms_df = pd.read_table(f_wind,engine='c',names=wind_nm,
+                                usecols=wind_cl,delim_whitespace=True) 
+        
+        #remove fill values
+        p_flag = plms_df.flag > 1.
+        #remove fill values
+        p_den = plms_df.Np < 9990.
+        p_vth = plms_df.Vth < 9990.
+        p_spd = plms_df.SPEED < 9990.
+        
+        plms_df = plms_df[((p_flag) & (p_den) & (p_vth) & (p_spd)) ]
+        
+        
+        amu = 1.660538921e-27#kg/amu
+        mp  = 1.00727647*amu #proton mass to kg
+        kb  = 1.38047e-29  #boltzmann's constant in units kg/(km/s)^2/K
+        
+        
+        #convert columns to datetime column
+        dt = [timedelta(days=i)+datetime(2015,12,31,0,0,0) for i in plms_df.day]
+        plms_df['time_dt'] =  dt
 
-span = '3600s'
-soho_df = format_df(soho_df,span=span)
+    elif k == 'dscovr':
+        #find all DSCOVR files in data directory
+        f_dscovr = '../dscovr/data/dscovr_h1_fc_2016.txt'
+        
+        #read in all DSCOVR files in data directory
+        plms_df = pd.read_table(f_dscovr,engine='python',delim_whitespace=True)
+        #convert columns to datetime column
+        plms_df['time_dt'] = pd.to_datetime(plms_df['YEAR'].map('{:02}'.format)+':'+plms_df['MO'].map('{:02}'.format)+plms_df['DD'].map('{:02}'.format)+
+                                              plms_df['HR'].map('{:02}'.format)+plms_df['MN'].map('{:02}'.format)+plms_df['SC'].map('{:02}'.format),format='%Y:%m%d%H%M%S')
+        
+        #smooth to 1 minutes to removed small scale variation
+        plms_df['SPEED'] = np.sqrt(plms_df.Vx**2+plms_df.Vy**2+plms_df.Vz**2)
+        #remove fill values
+        p_den = plms_df.Np < 9990.
+        p_vth = plms_df.Vth < 9990.
+        p_spd = plms_df.SPEED < 9990.
+        
+        plms_df = plms_df[((p_flag) & (p_den) & (p_vth) & (p_spd)) ]
+        
+        
+        plms_df['time_str'] = plms_df['time_dt'].dt.strftime('%Y/%m/%dT%H:%M:%S')
+        #set index to be time
+        plms_df.set_index(plms_df['time_dt'],inplace=True)
+                
+        
 
-#columns to use for training 
-use_cols = ['sig_speed','sig_Np','sig_Vth','intercept']
-use_cols = ['power','intercept']
-use_cols = ['Np_abs_power','speed_abs_power','Npth_abs_power' ,'Vth_abs_power','intercept']
-
-
-#cut non finite power values
-soho_df = soho_df[np.isfinite(soho_df.power)]
-
-#sigma just range (range to scan sigmas in training set)
-#sig_jump = np.linspace(3,9,100)
-#top_evts  = np.percentile(soho_df.abs_power,[99.0,100.])
-#sig_jump   = np.linspace(top_evts[0],top_evts[1],10)
-#Get events by percentile range
-samp = 10
-sig_cnts = np.zeros(samp)
-p_ran = np.linspace(99.9,100,samp)
-p_dct = {}
-for i in use_cols: p_dct[i] = np.percentile(soho_df[i],p_ran)
-
-
-#locate shocks and update parameter to 1
-for j,i in enumerate(p_ran):
-    #shock name with sigma values
-    var = 'shock_{0:3.2f}'.format(i).replace('.','')
-
-    #keep the 99% pertile value for later
-    if j == 0: p_var = var
-
-    #Create variable where identifies shock
-    soho_df[var] = 0
-
-    #loop over variable to drived logic for fitting
-    log_test = [False]*len(soho_df.index)
-    for p in use_cols: log_test = ((log_test) | (soho_df[p] > p_dct[p][j]))
-
-    #Train that all events with a jump greater than n sigma per 30s are initially marked as shocks
-    #soho_df[var][((soho_df.sig_speed > i) | (soho_df.sig_Np > i) | (soho_df.sig_Vth > i))] = 1
-    soho_df[var][log_test] = 1
-    
-    #build rough preliminary shock model based on observations
-    try:
-        logit = sm.Logit(soho_df[var],soho_df[use_cols])
-        sh_rs = logit.fit()                                         #divide to get into usits of seconds
-    except:
-        sig_cnts[j] = np.nan
-        continue
-
-    #get predictions for full set
-    soho_df['predict_'+var] = sh_rs.predict(soho_df[use_cols])
-    events, = np.where(soho_df['predict_'+var] > 0.990)
-    if events.size > 0: sig_cnts[j] = events.size
-   
-
-
-#save output
-soho_df.to_pickle('../soho/data/y2016_formatted.pic')
-
-
-
-#Do parameter calculation for all previous years 
-#calculate difference in parameters
-if full_soho:
-    full_df = format_df(full_df,span=span)
-
-
-#get predictions for the Mission long CELIAS mission
-if full_soho: 
-    full_df['predict'] = sh_rs.predict(full_df[use_cols])
-    best_df = full_df[full_df.predict >= 0.90]
-    best_df.to_csv('../soho/archive_shocks.csv',sep=';')
-
-
-#create figure object
-fig,ax = plt.subplots(figsize=(12,7))
-
-#plot solar wind speed
-ax.scatter(p_ran,sig_cnts,color='black')
-ax.set_xlabel(r'Event Percentile [$\%$]')
-ax.set_ylabel(r'\# of Events (2016)')
-ax.set_yscale('log')
-ax.set_ylim([.5,2E6])
-fancy_plot(ax)
-
-fig.savefig('../plots/soho_num_events_power_cut.png',bbox_inches='tight',bbox_pad=0.1)
-fig.savefig('../plots/soho_num_events_power_cut.eps',bbox_inches='tight',bbox_pad=0.1)
-
-
-
-###########
-#BOKEH PLOT
-#For the training set
-###########
-from bokeh.models import HoverTool, ColumnDataSource
-from bokeh.plotting import figure, show,save
-from bokeh.layouts import column,gridplot
-
-
-##########################################
-#Create parameters for comparing data sets
-##########################################
-if create_bokeh:
-    source = ColumnDataSource(data=soho_df[((soho_df["predict_{0}".format(p_var)] > .1) | (soho_df.shock == 1))])
-    tools = "pan,wheel_zoom,box_select,reset,hover,save,box_zoom"
-    
-    tool_tips = [("Date","@time_str"),
-                 ("Del. Np","@sig_Np"),
-                 ("Del. Speed","@sig_speed"),
-                 ("Del. Vth","@sig_Vth"),
-                 ("Predict","@predict_{0}".format(p_var)),
-                 ("Power","@power"),
-                 ]
+    #set index to be time
+    plms_df.set_index(plms_df['time_dt'],inplace=True)
     
     
-    p1 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    p1.scatter('sig_Np','sig_Vth',color='black',source=source)
-    p1.select_one(HoverTool).tooltips = tool_tips
-    p1.xaxis.axis_label = 'Delta Np/sig(Np)'
-    p1.yaxis.axis_label = 'Delta Vth/sig(Vth)'
-                                       
-    p2 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    p2.scatter('sig_Vth','sig_speed',color='black',source=source)
-    p2.select_one(HoverTool).tooltips = tool_tips
-    p2.xaxis.axis_label = 'Delta Vt/sig(Vt)'
-    p2.yaxis.axis_label = 'Delta |V|/sig(V)'
-                                       
-    p3 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    p3.scatter('sig_speed','sig_Np',color='black',source=source)
-    p3.select_one(HoverTool).tooltips = tool_tips
-    p3.xaxis.axis_label = 'Delta |V|/sig(V)'
-    p3.yaxis.axis_label = 'Delta Np/sig(Np)'
-                                       
-    p4 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    p4.scatter('shock','predict_{0}'.format(p_var),color='black',source=source)
-    p4.select_one(HoverTool).tooltips = tool_tips
-    p4.xaxis.axis_label = 'SOHO DB SHOCK'
-    p4.yaxis.axis_label = 'My Shock'
-                                       
-    p5 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    p5.scatter('SPEED','Np',color='black',source=source)
-    p5.select_one(HoverTool).tooltips = tool_tips
-    p5.xaxis.axis_label = '|V| [km/s]'
-    p5.yaxis.axis_label = 'Np [cm^-3]'
-
-    p6 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    p6.scatter('SPEED','Vth',color='black',source=source)
-    p6.select_one(HoverTool).tooltips = tool_tips
-    p6.xaxis.axis_label = '|V| [km/s]'
-    p6.yaxis.axis_label = 'Vth [km/s]'
-                                       
-    p7 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    p7.scatter('Np','Vth',color='black',source=source)
-    p7.select_one(HoverTool).tooltips = tool_tips
-    p7.xaxis.axis_label = 'Np [cm^-3]'
-    p7.yaxis.axis_label = 'Vth [km/s]'
-
-    p8 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    p8.scatter('Np_power','speed_power',color='black',source=source)
-    p8.select_one(HoverTool).tooltips = tool_tips
-    p8.xaxis.axis_label = 'Np Power [~J/s]'
-    p8.yaxis.axis_label = 'Speed Power [~J/s]'
-
-    p11 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    p11.scatter('Npth_power','Vth_power',color='black',source=source)
-    p11.select_one(HoverTool).tooltips = tool_tips
-    p11.xaxis.axis_label = 'Np Th Power [~J/s]'
-    p11.yaxis.axis_label = 'Vth Power [~J/s]'
-
-    p9 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    p9.scatter('time_dt','shock'.format(p_var),color='black',source=source)
-    p9.select_one(HoverTool).tooltips = tool_tips
-    p9.yaxis.axis_label = 'SOHO DB SHOCK'
-    p9.xaxis.axis_label = 'Time'
-                                       
-
-    p10 = figure(title='SOHO CELIAS SHOCKS',tools=tools)
-    p10.scatter('time_dt','predict_{0}'.format(p_var),color='black',source=source)
-    p10.select_one(HoverTool).tooltips = tool_tips
-    p10.yaxis.axis_label = 'Predict SHOCK'
-    p10.xaxis.axis_label = 'Time'
-
-    save(gridplot([p1,p2],[p3,p4],[p5,p6],[p7,p8],[p9,p10],[p11]),filename='../plots/bokeh_power_training_plot_soho.html')
     
+    
+    plms_df['shock'] = 0
+    #locate shocks and update parameter to 1
+    for i in shock_times.start_time_dt:
+        #less than 120s seconds away from shock claim as part of shock (output in nano seconds by default)
+        shock, = np.where(np.abs(((plms_df.time_dt-i).values/1.e9).astype('float')) < 70.)
+        plms_df['shock'][shock] = 1
+    
+    
+    
+    
+    span = '3600s'
+    plms_df = format_df(plms_df,span=span)
+    
+    #columns to use for training 
+    trn_cols = ['sig_speed','sig_Np','sig_Vth','intercept']
+    #columns to use in the model
+    use_cols = ['Np_abs_power','speed_abs_power','Npth_abs_power' ,'Vth_abs_power','intercept']
+    
+    
+    #cut non finite power values
+    plms_df = plms_df[np.isfinite(plms_df.power)]
+    
+
+    #do training on first input using sigma of events
+    if k == trainer:
+        samp = 10
+        sig_cnts = np.zeros(samp)
+        p_ran = np.linspace(3,8,samp)
+        p_dct = {}
+        log_m = {}
+        #for i in use_cols: p_dct[i] = np.percentile(plms_df[i],p_ran)
+        for i in trn_cols: p_dct[i] = p_ran
+        
+        #locate shocks and update parameter to 1
+        for j,i in enumerate(p_ran):
+            #shock name with sigma values
+            var = 'shock_{0:3.2f}'.format(i).replace('.','')
+        
+            #keep n sigma events for bokeh plots
+            if j == 5: p_var = var
+        
+            #Create variable where identifies shock
+            plms_df[var] = 0
+        
+            #loop over variable to drived logic for fitting
+            log_test = [False]*len(plms_df.index)
+            for p in trn_cols: log_test = ((log_test) | (plms_df[p] > p_dct[p][j]))
+        
+            #Train that all events with a jump greater than n sigma initially marked as shocks
+            plms_df[var][log_test] = 1
+            
+            #build rough preliminary shock model based on observations
+            try:
+                logit = sm.Logit(plms_df[var],plms_df[use_cols])
+                sh_rs = logit.fit()                                         #divide to get into units of seconds
+                log_m['predict_'+var] = sh_rs
+            except:
+                sig_cnts[j] = np.nan
+                continue
+        
+            #get predictions for full set
+            plms_df['predict_'+var] = sh_rs.predict(plms_df[use_cols])
+            events, = np.where(plms_df['predict_'+var] > 0.990)
+            if events.size > 0: sig_cnts[j] = events.size
+        #use the training model on all other space craft
+    else:
+        for t in log_m.keys(): plms_df[t] = log_m[t].predict(plms_df[use_cols])
+    
+    
+    #save output
+    plms_df.to_pickle('../{0}/data/y2016_power_formatted.pic'.format(k))
+    
+    
+    
+    #Do parameter calculation for all previous years 
+    #calculate difference in parameters
+    if full_soho:
+        full_df = format_df(full_df,span=span)
+    
+    
+    #get predictions for the Mission long CELIAS mission
+    if full_soho: 
+        full_df['predict'] = sh_rs.predict(full_df[use_cols])
+        best_df = full_df[full_df.predict >= 0.90]
+        best_df.to_csv('../soho/archive_shocks.csv',sep=';')
+    
+    
+    #create figure object
+    ####fig,ax = plt.subplots(figsize=(12,7))
+    ####
+    #####plot solar wind speed
+    ####ax.scatter(p_ran,sig_cnts,color='black')
+    ####ax.set_xlabel(r'Event Percentile n$\sigma$')
+    ####ax.set_ylabel(r'\# of Events (2016)')
+    ####ax.set_yscale('log')
+    ####ax.set_ylim([.5,2E6])
+    ####fancy_plot(ax)
+    ####
+    ####fig.savefig('../plots/{0}_num_events_power_cut.png'.format(k),bbox_inches='tight',bbox_pad=0.1)
+    ####fig.savefig('../plots/{0}_num_events_power_cut.eps'.format(k),bbox_inches='tight',bbox_pad=0.1)
+    
+    
+    
+    ###########
+    #nBOKEH PLOT
+    #For the training set
+    ###########
+    from bokeh.models import HoverTool, ColumnDataSource
+    from bokeh.plotting import figure, show,save
+    from bokeh.layouts import column,gridplot
+    
+    
+    ##########################################
+    #Create parameters for comparing data sets
+    ##########################################
+    if create_bokeh:
+        source = ColumnDataSource(data=plms_df[((plms_df["predict_{0}".format(p_var)] > .1) | (plms_df.shock == 1))])
+        tools = "pan,wheel_zoom,box_select,reset,hover,save,box_zoom"
+        
+        tool_tips = [("Date","@time_str"),
+                     ("Del. Np","@sig_Np"),
+                     ("Del. Speed","@sig_speed"),
+                     ("Del. Vth","@sig_Vth"),
+                     ("Predict","@predict_{0}".format(p_var)),
+                     ("Power","@power"),
+                     ]
+        
+
+        #figure title
+        fig_title = '{0} Discontinuities'.format(k.upper())
+        
+        p1 = figure(title=fig_title,tools=tools)
+        p1.scatter('sig_Np','sig_Vth',color='black',source=source)
+        p1.select_one(HoverTool).tooltips = tool_tips
+        p1.xaxis.axis_label = 'Delta Np/sig(Np)'
+        p1.yaxis.axis_label = 'Delta Vth/sig(Vth)'
+                                           
+        p2 = figure(title=fig_title,tools=tools)
+        p2.scatter('sig_Vth','sig_speed',color='black',source=source)
+        p2.select_one(HoverTool).tooltips = tool_tips
+        p2.xaxis.axis_label = 'Delta Vt/sig(Vt)'
+        p2.yaxis.axis_label = 'Delta |V|/sig(V)'
+                                           
+        p3 = figure(title=fig_title,tools=tools)
+        p3.scatter('sig_speed','sig_Np',color='black',source=source)
+        p3.select_one(HoverTool).tooltips = tool_tips
+        p3.xaxis.axis_label = 'Delta |V|/sig(V)'
+        p3.yaxis.axis_label = 'Delta Np/sig(Np)'
+                                           
+        p4 = figure(title=fig_title,tools=tools)
+        p4.scatter('shock','predict_{0}'.format(p_var),color='black',source=source)
+        p4.select_one(HoverTool).tooltips = tool_tips
+        p4.xaxis.axis_label = '{0} DB SHOCK'
+        p4.yaxis.axis_label = 'My Shock'
+                                           
+        p5 = figure(title=fig_title,tools=tools)
+        p5.scatter('SPEED','Np',color='black',source=source)
+        p5.select_one(HoverTool).tooltips = tool_tips
+        p5.xaxis.axis_label = '|V| [km/s]'
+        p5.yaxis.axis_label = 'Np [cm^-3]'
+    
+        p6 = figure(title=fig_title,tools=tools)
+        p6.scatter('SPEED','Vth',color='black',source=source)
+        p6.select_one(HoverTool).tooltips = tool_tips
+        p6.xaxis.axis_label = '|V| [km/s]'
+        p6.yaxis.axis_label = 'Vth [km/s]'
+                                           
+        p7 = figure(title=fig_title,tools=tools)
+        p7.scatter('Np','Vth',color='black',source=source)
+        p7.select_one(HoverTool).tooltips = tool_tips
+        p7.xaxis.axis_label = 'Np [cm^-3]'
+        p7.yaxis.axis_label = 'Vth [km/s]'
+    
+        p8 = figure(title=fig_title,tools=tools)
+        p8.scatter('Np_power','speed_power',color='black',source=source)
+        p8.select_one(HoverTool).tooltips = tool_tips
+        p8.xaxis.axis_label = 'Np Power [~J/s]'
+        p8.yaxis.axis_label = 'Speed Power [~J/s]'
+    
+        p11 = figure(title=fig_title,tools=tools)
+        p11.scatter('Npth_power','Vth_power',color='black',source=source)
+        p11.select_one(HoverTool).tooltips = tool_tips
+        p11.xaxis.axis_label = 'Np Th Power [~J/s]'
+        p11.yaxis.axis_label = 'Vth Power [~J/s]'
+    
+        p9 = figure(title=fig_title,tools=tools)
+        p9.scatter('time_dt','shock'.format(p_var),color='black',source=source)
+        p9.select_one(HoverTool).tooltips = tool_tips
+        p9.yaxis.axis_label = '{0} DB SHOCK'
+        p9.xaxis.axis_label = 'Time'
+                                           
+    
+        p10 = figure(title=fig_title,tools=tools)
+        p10.scatter('time_dt','predict_{0}'.format(p_var),color='black',source=source)
+        p10.select_one(HoverTool).tooltips = tool_tips
+        p10.yaxis.axis_label = 'Predict SHOCK'
+        p10.xaxis.axis_label = 'Time'
+    
+        save(gridplot([p1,p2],[p3,p4],[p5,p6],[p7,p8],[p9,p10],[p11]),filename='../plots/bokeh_power_training_plot_{0}.html'.format(k))
+        
