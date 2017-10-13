@@ -256,7 +256,7 @@ for k in craft:
     span = '3600s'
     plms_df = format_df(plms_df,span=span)
     
-    #columns to use for training 
+    #columns to use for training and secondary model
     trn_cols = ['sig_speed','sig_Np','sig_Vth','intercept']
     #columns to use in the model
     use_cols = ['Np_abs_power','speed_abs_power','Npth_abs_power' ,'Vth_abs_power','intercept']
@@ -268,11 +268,21 @@ for k in craft:
 
     #do training on first input using sigma of events
     if k == trainer:
+  
+        #set up sampling over sigma events
         samp = 10
         sig_cnts = np.zeros(samp)
         p_ran = np.linspace(3,8,samp)
+   
+ 
+        #create dictionaries for sigma training level
         p_dct = {}
+
+        #prediction for logit model as a fucntion of power and sigma training
         log_m = {}
+        #log_p = {}
+        #log_s = {}
+
         #for i in use_cols: p_dct[i] = np.percentile(plms_df[i],p_ran)
         for i in trn_cols: p_dct[i] = p_ran
         
@@ -282,7 +292,7 @@ for k in craft:
             var = 'shock_{0:3.2f}'.format(i).replace('.','')
         
             #keep n sigma events for bokeh plots
-            if j == 5: p_var = var
+            if j == 3: p_var = var
         
             #Create variable where identifies shock
             plms_df[var] = 0
@@ -296,20 +306,37 @@ for k in craft:
             
             #build rough preliminary shock model based on observations
             try:
-                logit = sm.Logit(plms_df[var],plms_df[use_cols])
-                sh_rs = logit.fit()                                         #divide to get into units of seconds
-                log_m['predict_'+var] = sh_rs
+                #First use a power model
+                logit_p = sm.Logit(plms_df[var],plms_df[use_cols])
+                sh_rs_p = logit_p.fit()                                         #divide to get into units of seconds
+                #next use the local vairation model
+                logit_s = sm.Logit(plms_df[var],plms_df[trn_cols])
+                sh_rs_s = logit_s.fit()                                         #divide to get into units of seconds
+
+                #store in model array
+                log_m['predict_power_'+var] = sh_rs_p
+                log_m['predict_sigma_'+var] = sh_rs_s
             except:
                 sig_cnts[j] = np.nan
                 continue
         
             #get predictions for full set
-            plms_df['predict_'+var] = sh_rs.predict(plms_df[use_cols])
+            plms_df['predict_power_'+var] = sh_rs_p.predict(plms_df[use_cols])
+            plms_df['predict_sigma_'+var] = sh_rs_s.predict(plms_df[trn_cols])
+            plms_df['predict_'+var] = plms_df['predict_power_'+var].values*plms_df['predict_sigma_'+var].values
+                                      
             events, = np.where(plms_df['predict_'+var] > 0.990)
             if events.size > 0: sig_cnts[j] = events.size
         #use the training model on all other space craft
     else:
-        for t in log_m.keys(): plms_df[t] = log_m[t].predict(plms_df[use_cols])
+        for j,i in enumerate(p_ran):
+            try:
+                var = 'shock_{0:3.2f}'.format(i).replace('.','')
+                plms_df['predict_power_'+var] = log_m['predict_power_'+var].predict(plms_df[use_cols])
+                plms_df['predict_sigma_'+var] = log_m['predict_sigma_'+var].predict(plms_df[trn_cols])
+                plms_df['predict_'+var] = plms_df['predict_power_'+var].values*plms_df['predict_sigma_'+var].values
+            except KeyError:
+                continue
     
     
     #save output
@@ -359,14 +386,16 @@ for k in craft:
     #Create parameters for comparing data sets
     ##########################################
     if create_bokeh:
-        source = ColumnDataSource(data=plms_df[((plms_df["predict_{0}".format(p_var)] > .1) | (plms_df.shock == 1))])
+        source = ColumnDataSource(data=plms_df[(((plms_df["predict_sigma_{0}".format(p_var)] > .1) & ((plms_df["predict_power_{0}".format(p_var)] > .1))) | (plms_df.shock == 1))])
         tools = "pan,wheel_zoom,box_select,reset,hover,save,box_zoom"
         
         tool_tips = [("Date","@time_str"),
                      ("Del. Np","@sig_Np"),
                      ("Del. Speed","@sig_speed"),
                      ("Del. Vth","@sig_Vth"),
-                     ("Predict","@predict_{0}".format(p_var)),
+                     ("Predict Sigma","@predict_sigma_{0}".format(p_var)),
+                     ("Predict Power","@predict_power_{0}".format(p_var)),
+                     ("Predict Total","@predict_{0}".format(p_var)),
                      ("Power","@power"),
                      ]
         
