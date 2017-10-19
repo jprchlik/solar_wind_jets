@@ -273,6 +273,9 @@ for k in craft:
         samp = 10
         sig_cnts = np.zeros(samp)
         p_ran = np.linspace(3,8,samp)
+
+        #settle on 5 sigma events in Wind
+        p_ran = [4.5]
    
  
         #create dictionaries for sigma training level
@@ -292,7 +295,7 @@ for k in craft:
             var = 'shock_{0:3.2f}'.format(i).replace('.','')
         
             #keep n sigma events for bokeh plots
-            if j == 3: p_var = var
+            if j == 0: p_var = var
         
             #Create variable where identifies shock
             plms_df[var] = 0
