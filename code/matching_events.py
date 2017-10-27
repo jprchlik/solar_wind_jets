@@ -15,11 +15,11 @@ trainer = craft[0]
 
 
 #sigma level to use from wind training
-sig_l = 4.5
+sig_l = 5.0
 #use sig_l to create shock prediction variable in dataframes
 p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 #fractional p value to call an "event"
-p_val = 0.68
+p_val = 0.999
 
 #read in all spacraft events
 for k in craft: plsm[k] = pd.read_pickle('../{0}/data/y2016_power_formatted.pic'.format(k))
