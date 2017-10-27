@@ -41,6 +41,46 @@ def format_df(inpt_df,span='3600s'):
     inpt_df['ldel_Np'] = np.abs(inpt_df['Np'].diff(-1)/inpt_df.del_time)
     inpt_df['ldel_Vth'] = np.abs(inpt_df['Vth'].diff(-1)/inpt_df.del_time)
 
+    #calculat plasma parameters rolling median
+    inpt_df['roll_med_speed'] = inpt_df['SPEED'].rolling(span,min_periods=3).median()
+    inpt_df['roll_med_Np']    = inpt_df['Np'].rolling(span,min_periods=3).median()
+    inpt_df['roll_med_Vth']   = inpt_df['Vth'].rolling(span,min_periods=3).median()
+
+    #calculate difference in plasma parameters from rolling median
+    inpt_df['diff_med_speed'] = inpt_df.SPEED-inpt_df.roll_med_speed
+    inpt_df['diff_med_Np']    = inpt_df.Np-inpt_df.roll_med_Np
+    inpt_df['diff_med_Vth']   = inpt_df.Vth-inpt_df.roll_med_Vth
+
+    #calculate sigma in plasma parameters from rollin median
+    inpt_df['diff_sig_speed'] = np.sqrt((inpt_df.diff_med_speed**2.).rolling(span,min_periods=3).median())
+    inpt_df['diff_sig_Np']    = np.sqrt((inpt_df.diff_med_Np   **2.).rolling(span,min_periods=3).median()) 
+    inpt_df['diff_sig_Vth']   = np.sqrt((inpt_df.diff_med_Vth  **2.).rolling(span,min_periods=3).median()) 
+
+    #calculate snr in plasma parameters from rollin median
+    inpt_df['diff_snr_speed'] = np.abs(inpt_df.diff_med_speed)/inpt_df.diff_sig_speed 
+    inpt_df['diff_snr_Np']    = np.abs(inpt_df.diff_med_Np)/inpt_df.diff_sig_Np 
+    inpt_df['diff_snr_Vth']   = np.abs(inpt_df.diff_med_Vth)/inpt_df.diff_sig_Vth 
+
+    #calculate B parameters rollin median
+    inpt_df['roll_med_Bx'] = inpt_df['Bx'].rolling(span,min_periods=3).median()
+    inpt_df['roll_med_By'] = inpt_df['By'].rolling(span,min_periods=3).median()
+    inpt_df['roll_med_Bz'] = inpt_df['Bz'].rolling(span,min_periods=3).median()
+
+    #calculate difference B parameters from rollin median
+    inpt_df['diff_med_Bx'] = inpt_df.Bx-inpt_df.roll_med_Bx
+    inpt_df['diff_med_By'] = inpt_df.By-inpt_df.roll_med_By
+    inpt_df['diff_med_Bz'] = inpt_df.Bz-inpt_df.roll_med_Bz
+
+    #calculate sigma in B parameters from rollin median
+    inpt_df['diff_sig_Bx'] = np.sqrt((inpt_df.diff_med_Bx**2.).rolling(span,min_periods=3).median())
+    inpt_df['diff_sig_By'] = np.sqrt((inpt_df.diff_med_By**2.).rolling(span,min_periods=3).median())
+    inpt_df['diff_sig_Bz'] = np.sqrt((inpt_df.diff_med_Bz**2.).rolling(span,min_periods=3).median())
+
+    #calculate snr in B parameters from rollin median
+    inpt_df['diff_snr_Bx'] = np.abs(inpt_df.diff_med_Bx)/inpt_df.diff_sig_Bx 
+    inpt_df['diff_snr_By'] = np.abs(inpt_df.diff_med_By)/inpt_df.diff_sig_By 
+    inpt_df['diff_snr_Bz'] = np.abs(inpt_df.diff_med_Bz)/inpt_df.diff_sig_Bz 
+
     #calculate difference B parameters
     inpt_df['del_Bx'] = np.abs(inpt_df['Bx'].diff(-1)/inpt_df.del_time)
     inpt_df['del_By'] = np.abs(inpt_df['By'].diff(-1)/inpt_df.del_time)
@@ -86,18 +126,16 @@ def format_df(inpt_df,span='3600s'):
     inpt_df['sig_Bz'] = inpt_df.del_Bz/inpt_df.std_Bz
     
     #fill pesky nans and infs with 0 values
-    inpt_df['sig_speed'].replace(np.inf,np.nan,inplace=True)
-    inpt_df['sig_Np'].replace(np.inf,np.nan,inplace=True)
-    inpt_df['sig_Vth'].replace(np.inf,np.nan,inplace=True)
-    inpt_df['sig_speed'].fillna(value=0.0,inplace=True)
-    inpt_df['sig_Np'].fillna(value=0.0,inplace=True)
-    inpt_df['sig_Vth'].fillna(value=0.0,inplace=True)
-    inpt_df['sig_Bx'].replace(np.inf,np.nan,inplace=True)
-    inpt_df['sig_By'].replace(np.inf,np.nan,inplace=True)
-    inpt_df['sig_Bz'].replace(np.inf,np.nan,inplace=True)
-    inpt_df['sig_Bx'].fillna(value=0.0,inplace=True)
-    inpt_df['sig_By'].fillna(value=0.0,inplace=True)
-    inpt_df['sig_Bz'].fillna(value=0.0,inplace=True)
+    key_fill = ['sig_speed','sig_Np','sig_Vth', 
+                'diff_snr_speed','diff_snr_Np','diff_snr_Vth',
+                'sig_Bx','sig_By','sig_Bz',
+                'diff_snr_Bx','diff_snr_By','diff_snr_Bz']
+
+    #loop through and replace fill values with 0
+    for i in key_fill: 
+        inpt_df[i].replace(np.inf,np.nan,inplace=True)
+        inpt_df[i].fillna(value=0.0,inplace=True)
+
     
     #create an array of constants that hold a place for the intercept 
     inpt_df['intercept'] = 1 
@@ -123,7 +161,7 @@ if full_soho:
     
     #convert columns to datetime column
     full_df['time_dt'] = pd.to_datetime(full_df['YY'].astype('int').map("{:02}".format)+':'+full_df['DOY:HH:MM:SS'],format='%y:%j:%H:%M:%S',errors='coerce')
-    #full_df['time_str'] = full_df['time_dt'].dt.strftime('%Y/%m/%dT%H:%M:%S')
+    full_df['time_str'] = full_df['time_dt'].dt.strftime('%Y/%m/%dT%H:%M:%S')
     #set index to be time
     full_df.set_index(full_df['time_dt'],inplace=True)
 
@@ -143,12 +181,24 @@ for k in craft:
     plms_df = pd.read_table('../comb_data/{0}_h1_fc_2016.txt'.format(k),delim_whitespace=True)
     plms_df['time_dt'] = pd.to_datetime(plms_df['YEAR'].map('{:02}'.format)+':'+plms_df['MO'].map('{:02}'.format)+plms_df['DD'].map('{:02}'.format)+plms_df['HR'].map('{:02}'.format)+plms_df['MN'].map('{:02}'.format)+plms_df['SC'].map('{:02}'.format),format='%Y:%m%d%H%M%S')
         
+    plms_df['time_str'] = plms_df['time_dt'].dt.strftime('%Y/%m/%dT%H:%M:%S')
 
     #calculate SPEED for all but CELIAS/SOHO
     if k !='soho': plms_df['SPEED'] = np.sqrt(plms_df.Vx**2.+plms_df.Vy**2+plms_df.Vz**2.)
     #set index to be time
     plms_df.set_index(plms_df['time_dt'],inplace=True)
     
+    #check quality 
+    p_den = plms_df.Np > -9990.
+    p_vth = plms_df.Vth > -9990.
+    p_spd = plms_df.SPEED > -9990.
+    p_bfx = plms_df.Bx > -9990.
+    p_bfy = plms_df.Bz > -9990.
+    p_bfz = plms_df.Bz > -9990.
+    
+    #only keep times with good data
+    if k != 'soho': plms_df = plms_df[((p_den) & (p_vth) & (p_spd) & (p_bfx) & (p_bfy) & (p_bfz))]
+    else: plms_df = plms_df[((p_den) & (p_vth) & (p_spd))]
     
     
     
@@ -166,10 +216,11 @@ for k in craft:
     plms_df = format_df(plms_df,span=span)
     
     #columns to use for training and secondary model
-    trn_cols = ['sig_Bx','sig_By','sig_Bz','intercept']
+    trn_cols = ['diff_snr_Bx','diff_snr_By','diff_snr_Bz','intercept']
     #columns to use in the model
     use_cols = ['Np_abs_power','speed_abs_power','Npth_abs_power' ,'Vth_abs_power','sig_speed','sig_Np','sig_Vth','intercept']
-    
+    #use median smoothing columns
+    use_cols = ['diff_snr_speed','diff_snr_Vth','diff_snr_Np','intercept']
     
     #cut non finite power values
     plms_df = plms_df[np.isfinite(plms_df.power)]
@@ -184,7 +235,7 @@ for k in craft:
         p_ran = np.linspace(3,8,samp)
 
         #settle on 3 sigma events in Wind
-        p_ran = [3.0]
+        p_ran = [3.0,4.0,5.0]
    
  
         #create dictionaries for sigma training level
@@ -251,7 +302,8 @@ for k in craft:
                 var = 'shock_{0:3.2f}'.format(i).replace('.','')
                 plms_df['predict_power_'+var] = log_m['predict_power_'+var].predict(plms_df[use_cols])
                 plms_df['predict_sigma_'+var] = log_m['predict_sigma_'+var].predict(plms_df[trn_cols])
-                plms_df['predict_'+var] = plms_df['predict_power_'+var].values*plms_df['predict_sigma_'+var].values
+                if k == 'soho': plms_df['predict_'+var] =plms_df['predict_power_'+var].values
+                else: plms_df['predict_'+var] = plms_df['predict_power_'+var].values
             except KeyError:
                 continue
     
