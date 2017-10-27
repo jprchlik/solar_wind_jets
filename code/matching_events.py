@@ -7,7 +7,7 @@ plsm = {}
 
 
 #set use to use all spacecraft
-craft = ['wind','ace','dscovr','soho']
+craft = ['wind','dscovr','ace','soho']
 
 #space craft to use n sigma events to find other events
 #change craft order to change trainer 
@@ -38,6 +38,7 @@ window = {}
 window['dscovr'] = pd.to_timedelta('60 minutes')
 window['ace'] = pd.to_timedelta('60 minutes')
 window['soho'] = pd.to_timedelta('60 minutes')
+window['wind'] = pd.to_timedelta('60 minutes')
 
 #space craft to match with trainer soho
 craft.remove(trainer)
