@@ -22,7 +22,7 @@ full_soho = False
 #create bokeh
 create_bokeh = True 
 #Normalize all to 90s cadence
-smooth = True
+smooth = False
 
 
 
@@ -53,15 +53,45 @@ def format_df(inpt_df,span='3600s'):
     inpt_df['diff_med_Np']    = inpt_df.Np-inpt_df.roll_med_Np
     inpt_df['diff_med_Vth']   = inpt_df.Vth-inpt_df.roll_med_Vth
 
+    #calculate difference in plasma parameters from rolling median
+    inpt_df['roll_diff_med_speed'] = inpt_df.diff_med_speed.rolling(span,min_periods=3).median()
+    inpt_df['roll_diff_med_Np']    = inpt_df.diff_med_Np.rolling(span,min_periods=3).median()
+    inpt_df['roll_diff_med_Vth']   = inpt_df.diff_med_Vth.rolling(span,min_periods=3).median()
+
+    #calculate acceleration in plasma parameters from rolling median
+    inpt_df['accl_diff_speed'] = inpt_df.diff_med_speed-inpt_df.roll_diff_med_speed
+    inpt_df['accl_diff_Np']    = inpt_df.diff_med_Np-inpt_df.roll_diff_med_Np
+    inpt_df['accl_diff_Vth']   = inpt_df.diff_med_Vth-inpt_df.roll_diff_med_Vth
+
     #calculate sigma in plasma parameters from rollin median
     inpt_df['diff_sig_speed'] = np.sqrt((inpt_df.diff_med_speed**2.).rolling(span,min_periods=3).median())
     inpt_df['diff_sig_Np']    = np.sqrt((inpt_df.diff_med_Np   **2.).rolling(span,min_periods=3).median()) 
     inpt_df['diff_sig_Vth']   = np.sqrt((inpt_df.diff_med_Vth  **2.).rolling(span,min_periods=3).median()) 
 
+    #calculate acceleration in plasma parameters from rolling median
+    inpt_df['accl_sig_speed'] = np.sqrt((inpt_df['accl_diff_speed']**2.).rolling(span,min_periods=3).median()) 
+    inpt_df['accl_sig_Np']    = np.sqrt((inpt_df['accl_diff_Np']   **2.).rolling(span,min_periods=3).median()) 
+    inpt_df['accl_sig_Vth']   = np.sqrt((inpt_df['accl_diff_Vth']  **2.).rolling(span,min_periods=3).median()) 
+
     #calculate snr in plasma parameters from rollin median
     inpt_df['diff_snr_speed'] = np.abs(inpt_df.diff_med_speed)/inpt_df.diff_sig_speed 
     inpt_df['diff_snr_Np']    = np.abs(inpt_df.diff_med_Np)/inpt_df.diff_sig_Np 
     inpt_df['diff_snr_Vth']   = np.abs(inpt_df.diff_med_Vth)/inpt_df.diff_sig_Vth 
+
+    #calculate snr in plasma acceleration parameters from rollin median
+    inpt_df['accl_snr_speed'] = np.abs(inpt_df.accl_sig_speed)/inpt_df.accl_sig_speed
+    inpt_df['accl_snr_Np']    = np.abs(inpt_df.accl_sig_Np   )/inpt_df.accl_sig_Np   
+    inpt_df['accl_snr_Vth']   = np.abs(inpt_df.accl_sig_Vth  )/inpt_df.accl_sig_Vth
+
+    #calculate power in the diffence for paramaters
+    inpt_df['diff_pow_speed'] = (np.abs(inpt_df.diff_med_speed)/inpt_df.del_time)*(2.*inpt_df.roll_med_Np)
+    inpt_df['diff_pow_Np']    = (np.abs(inpt_df.diff_med_Np)   /inpt_df.del_time)*(inpt_df.roll_med_speed**2.+inpt_df.roll_med_Vth**2.)
+    inpt_df['diff_pow_Vth']   = (np.abs(inpt_df.diff_med_Vth)  /inpt_df.del_time)*(2.*inpt_df.roll_med_Np)
+                             
+    #calculate increase in power in the diffence for paramaters
+    inpt_df['diff_acc_speed'] = (np.abs(inpt_df.diff_med_speed.diff(-1))/inpt_df.del_time)*(2.*inpt_df.roll_med_Np)
+    inpt_df['diff_acc_Np']    = (np.abs(inpt_df.diff_med_Np.diff(-1))   /inpt_df.del_time)*(inpt_df.roll_med_speed**2.+inpt_df.roll_med_Vth**2.)
+    inpt_df['diff_acc_Vth']   = (np.abs(inpt_df.diff_med_Vth.diff(-1))  /inpt_df.del_time)*(2.*inpt_df.roll_med_Np)
 
     #calculate B parameters rollin median
     inpt_df['roll_med_Bx'] = inpt_df['Bx'].rolling(span,min_periods=3).median()
@@ -84,9 +114,9 @@ def format_df(inpt_df,span='3600s'):
     inpt_df['diff_snr_Bz'] = np.abs(inpt_df.diff_med_Bz)/inpt_df.diff_sig_Bz 
 
     #calculate difference B parameters
-    inpt_df['del_Bx'] = np.abs(inpt_df['Bx'].diff(-1)/inpt_df.del_time)
-    inpt_df['del_By'] = np.abs(inpt_df['By'].diff(-1)/inpt_df.del_time)
-    inpt_df['del_Bz'] = np.abs(inpt_df['Bz'].diff(-1)/inpt_df.del_time)
+    inpt_df['del_Bx'] = np.abs(inpt_df['Bx'].diff(1)/inpt_df.del_time)
+    inpt_df['del_By'] = np.abs(inpt_df['By'].diff(1)/inpt_df.del_time)
+    inpt_df['del_Bz'] = np.abs(inpt_df['Bz'].diff(1)/inpt_df.del_time)
 
     #Find difference on otherside
     inpt_df['del_speed'] = np.abs(inpt_df['SPEED'].diff(1)/inpt_df.del_time)
@@ -108,19 +138,19 @@ def format_df(inpt_df,span='3600s'):
     inpt_df['Vth_abs_power'] =  np.abs(inpt_df.Vth_power)
 
     #calculate variance normalized parameters
-    inpt_df['std_speed'] = inpt_df.SPEED.rolling(span,min_periods=3).std()/inpt_df.del_time#/float(span[:-1])
-    inpt_df['std_Np'] = inpt_df.Np.rolling(span,min_periods=3).std()/inpt_df.del_time#/float(span[:-1])
-    inpt_df['std_Vth'] = inpt_df.Vth.rolling(span,min_periods=3).std()/inpt_df.del_time#/float(span[:-1])
+    inpt_df['std_speed'] = inpt_df.roll_med_speed/inpt_df.del_time
+    inpt_df['std_Np']    = inpt_df.roll_med_Np   /inpt_df.del_time
+    inpt_df['std_Vth']   = inpt_df.roll_med_Vth  /inpt_df.del_time
 
     #calculate standard dev in B parameters
-    inpt_df['std_Bx'] = inpt_df.Bx.rolling(span,min_periods=3).std()/inpt_df.del_time
-    inpt_df['std_By'] = inpt_df.By.rolling(span,min_periods=3).std()/inpt_df.del_time
-    inpt_df['std_Bz'] = inpt_df.Bz.rolling(span,min_periods=3).std()/inpt_df.del_time
+    inpt_df['std_Bx'] = inpt_df.diff_sig_Bx
+    inpt_df['std_By'] = inpt_df.diff_sig_By
+    inpt_df['std_Bz'] = inpt_df.diff_sig_Bz
     
     #Significance of the variation in the wind parameters
     inpt_df['sig_speed'] = inpt_df.del_speed/inpt_df.std_speed
-    inpt_df['sig_Np'] = inpt_df.del_Np/inpt_df.std_Np
-    inpt_df['sig_Vth'] = inpt_df.del_Vth/inpt_df.std_Vth
+    inpt_df['sig_Np']    = inpt_df.del_Np/inpt_df.std_Np
+    inpt_df['sig_Vth']   = inpt_df.del_Vth/inpt_df.std_Vth
 
     #significance of variation in B parameters
     inpt_df['sig_Bx'] = inpt_df.del_Bx/inpt_df.std_Bx
@@ -131,7 +161,9 @@ def format_df(inpt_df,span='3600s'):
     key_fill = ['sig_speed','sig_Np','sig_Vth', 
                 'diff_snr_speed','diff_snr_Np','diff_snr_Vth',
                 'sig_Bx','sig_By','sig_Bz',
-                'diff_snr_Bx','diff_snr_By','diff_snr_Bz']
+                'diff_snr_Bx','diff_snr_By','diff_snr_Bz',
+                'diff_pow_speed','diff_pow_Np','diff_pow_Vth', 
+                'diff_acc_speed','diff_acc_Np','diff_acc_Vth']  
 
     #loop through and replace fill values with 0
     for i in key_fill: 
@@ -225,10 +257,16 @@ for k in craft:
     
     #columns to use for training and secondary model
     trn_cols = ['diff_snr_Bx','diff_snr_By','diff_snr_Bz','intercept']
+    #columns to use for training and secondary model (J. Prchlik 2017/10/30) and switched back
+    trn_cols = ['diff_snr_Bx','diff_snr_By','diff_snr_Bz','sig_Bx','sig_By','sig_Bz','intercept']
     #columns to use in the model
     use_cols = ['Np_abs_power','speed_abs_power','Npth_abs_power' ,'Vth_abs_power','sig_speed','sig_Np','sig_Vth','intercept']
     #use median smoothing columns
     use_cols = ['diff_snr_speed','diff_snr_Vth','diff_snr_Np','intercept']
+    #use median smoothing columns and spike and switched back (J. Prchlik 2017/10/30)
+    #use_cols = ['diff_snr_speed','diff_snr_Vth','diff_snr_Np','sig_speed','sig_Vth','sig_Np','intercept']
+    #use median power and acceleration of the solar wind
+    #use_cols = ['diff_pow_speed','diff_pow_Vth','diff_pow_Np','diff_acc_speed','diff_acc_Vth','diff_acc_Np','intercept']
     
     #cut non finite power values
     plms_df = plms_df[np.isfinite(plms_df.power)]
@@ -271,6 +309,8 @@ for k in craft:
             #loop over variable to drived logic for fitting
             log_test = [False]*len(plms_df.index)
             for p in trn_cols: log_test = ((log_test) | (plms_df[p] > p_dct[p][j]))
+            #Switch to static logic for training columns J. Prchlik 2017/10/30 and switched back
+            #log_test = (((plms_df['diff_snr_Bx'] >= i) & (plms_df['sig_Bx'] >= p_ran[0])) | ((plms_df['diff_snr_By'] >= i) & (plms_df['sig_Bx'] >= p_ran[0])) | ((plms_df['diff_snr_Bz'] >= i) & (plms_df['sig_Bz'] >= p_ran[0])))
         
             #Train that all events with a jump greater than n sigma initially marked as shocks
             plms_df[var][log_test] = 1
@@ -404,7 +444,7 @@ for k in craft:
         p4 = figure(title=fig_title,tools=tools)
         p4.scatter('shock','predict_{0}'.format(p_var),color='black',source=source)
         p4.select_one(HoverTool).tooltips = tool_tips
-        p4.xaxis.axis_label = '{0} DB SHOCK'
+        p4.xaxis.axis_label = 'Shock DB SHOCK'
         p4.yaxis.axis_label = 'My Shock'
                                            
         p5 = figure(title=fig_title,tools=tools)
@@ -431,16 +471,10 @@ for k in craft:
         p8.xaxis.axis_label = 'Np Power [~J/s]'
         p8.yaxis.axis_label = 'Speed Power [~J/s]'
     
-        p11 = figure(title=fig_title,tools=tools)
-        p11.scatter('Npth_power','Vth_power',color='black',source=source)
-        p11.select_one(HoverTool).tooltips = tool_tips
-        p11.xaxis.axis_label = 'Np Th Power [~J/s]'
-        p11.yaxis.axis_label = 'Vth Power [~J/s]'
-    
         p9 = figure(title=fig_title,tools=tools)
         p9.scatter('time_dt','shock'.format(p_var),color='black',source=source)
         p9.select_one(HoverTool).tooltips = tool_tips
-        p9.yaxis.axis_label = '{0} DB SHOCK'
+        p9.yaxis.axis_label = 'Shock DB SHOCK'
         p9.xaxis.axis_label = 'Time'
                                            
     
@@ -450,5 +484,13 @@ for k in craft:
         p10.yaxis.axis_label = 'Predict SHOCK'
         p10.xaxis.axis_label = 'Time'
     
+        p11 = figure(title=fig_title,tools=tools)
+        p11.scatter('Npth_power','Vth_power',color='black',source=source)
+        p11.select_one(HoverTool).tooltips = tool_tips
+        p11.xaxis.axis_label = 'Np Th Power [~J/s]'
+        p11.yaxis.axis_label = 'Vth Power [~J/s]'
+
+
+
         save(gridplot([p1,p2],[p3,p4],[p5,p6],[p7,p8],[p9,p10],[p11]),filename='../plots/bokeh_power_training_plot_{0}.html'.format(k))
         
