@@ -31,7 +31,17 @@ tr_events = plsm[trainer][plsm[trainer][p_var] > p_val]
 
 #Group events by 1 per hour
 tr_events['str_hour'] = tr_events.time_dt.dt.strftime('%Y%m%d%H')
-tr_events = tr_events[~tr_events.duplicated(['str_hour'],keep = 'first')]
+#attempting to pick one event at a time J. Prchlik (2017/10/30) (Did not work as 1pm of the same day)
+#tr_events = tr_events[~tr_events.duplicated(['str_hour'],keep = 'first')]
+#loop over events and get best probability for event within 1 hour
+tr_events['group'] = range(tr_events.index.size)
+for i in tr_events.index:
+    tr_events['t_off'] = abs((i-tr_events.index).total_seconds())
+    match = tr_events[tr_events['t_off'] < 3600.] #anytime where the offest is less than 1 hour 
+    tr_events.loc[match.index,'group'] = match.group.values[0]
+
+#use groups to cut out duplicates
+tr_events = tr_events[~tr_events.duplicated(['group'],keep = 'first')]
 
 #get strings for times around each event#
 window = {}
@@ -93,9 +103,9 @@ for i in tr_events.index:
         if p_mat.size > 0:
            #get the index of the maximum value
            i_max = p_mat[p_var].idxmax() 
-           print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max={1:4.3f}'.format((i-i_max).total_seconds()/60.,p_mat.loc[i_max][p_var],i_max))
+           print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max={1:4.3f}'.format((i_max-i).total_seconds()/60.,p_mat.loc[i_max][p_var],i_max))
         else:
-           print('No Observations')
+           print('No Plasma Observations')
     print('########################################')
         
     
