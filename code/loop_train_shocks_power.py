@@ -21,6 +21,8 @@ mytrain = True
 full_soho = False
 #create bokeh
 create_bokeh = True 
+#Normalize all to 90s cadence
+smooth = True
 
 
 
@@ -187,6 +189,12 @@ for k in craft:
     if k !='soho': plms_df['SPEED'] = np.sqrt(plms_df.Vx**2.+plms_df.Vy**2+plms_df.Vz**2.)
     #set index to be time
     plms_df.set_index(plms_df['time_dt'],inplace=True)
+
+
+    #if smooth set resample distrubution to 90s Wind Cadence
+    if smooth:
+        plms_df = plms_df.resample("90S").mean()
+        plms_df['time_dt'] = plms_df.index
     
     #check quality 
     p_den = plms_df.Np > -9990.
@@ -206,7 +214,7 @@ for k in craft:
     #locate shocks and update parameter to 1
     for i in shock_times.start_time_dt:
         #less than 120s seconds away from shock claim as part of shock (output in nano seconds by default)
-        shock, = np.where(np.abs(((plms_df.time_dt-i).values/1.e9).astype('float')) < 70.)
+        shock, = np.where(np.abs(((plms_df.index-i).values/1.e9).astype('float')) < 70.)
         plms_df['shock'][shock] = 1
     
     
@@ -309,7 +317,10 @@ for k in craft:
     
     
     #save output
-    plms_df.to_pickle('../{0}/data/y2016_power_formatted.pic'.format(k))
+    if smooth:
+        plms_df.to_pickle('../{0}/data/y2016_power_smoothed_formatted.pic'.format(k))
+    else:
+        plms_df.to_pickle('../{0}/data/y2016_power_formatted.pic'.format(k))
     
     
     
