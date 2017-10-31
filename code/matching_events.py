@@ -12,6 +12,8 @@ use_craft = False
 #use best chisq to find the best time in between spacecraft
 use_chisq = True
 
+#plot chisq min procedure
+plot = False
 
 #set use to use all spacecraft
 craft = ['wind','dscovr','ace','soho']
@@ -130,8 +132,9 @@ for i in tr_events.index:
             if p_mat.size > 0:
 
                 #create figure to test fit
-                fig, ax = plt.subplots()
-                ax.set_title(k)
+                if plot:
+                    fig, ax = plt.subplots()
+                    ax.set_title(k)
 
                 #set up chisquared array in pandas object
                 p_mat['chisq'] = -99999.9
@@ -153,15 +156,17 @@ for i in tr_events.index:
                     p_mat.loc[time,'chisq'] = (sum((c_mat.SPEED-t_mat.SPEED)**2.))**.5
 
                     #create figure to check matching
-                    ax.scatter(c_mat.index,c_mat.SPEED,label=time.to_datetime().strftime('%Y/%m/%dT%H:%M:%S')+' chisq = {0:4.0f}'.format(p_mat.loc[time,'chisq']))
-                    ax.plot(t_mat.index,t_mat.SPEED,label='',color='black')
+                    if plot:
+                        ax.scatter(c_mat.index,c_mat.SPEED,label=time.to_datetime().strftime('%Y/%m/%dT%H:%M:%S')+' chisq = {0:4.0f}'.format(p_mat.loc[time,'chisq']))
+                        ax.plot(t_mat.index,t_mat.SPEED,label='',color='black')
 
-                ax.legend(loc='upper left',frameon=False,scatterpoints=1)
-                ax.set_xlim([t_mat.index.min(),t_mat.index.max()])
-                ax.set_ylabel('Speed [km/s]')
-                ax.set_xlabel('Time [UTC]')
-                ax.set_ylim([300,1000.])
-                plt.show()
+                if plot:
+                    ax.legend(loc='upper left',frameon=False,scatterpoints=1)
+                    ax.set_xlim([t_mat.index.min(),t_mat.index.max()])
+                    ax.set_ylabel('Speed [km/s]')
+                    ax.set_xlabel('Time [UTC]')
+                    ax.set_ylim([300,1000.])
+                    plt.show()
      
                 #get the index of minimum chisq value
                 i_min = p_mat['chisq'].idxmin()
