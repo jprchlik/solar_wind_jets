@@ -74,9 +74,10 @@ def format_df(inpt_df,span='3600s'):
     inpt_df['accl_sig_Vth']   = np.sqrt((inpt_df['accl_diff_Vth']  **2.).rolling(span,min_periods=3).median()) 
 
     #calculate snr in plasma parameters from rollin median
-    inpt_df['diff_snr_speed'] = np.abs(inpt_df.diff_med_speed)/inpt_df.diff_sig_speed 
-    inpt_df['diff_snr_Np']    = np.abs(inpt_df.diff_med_Np)/inpt_df.diff_sig_Np 
-    inpt_df['diff_snr_Vth']   = np.abs(inpt_df.diff_med_Vth)/inpt_df.diff_sig_Vth 
+    #Change to difference in sigma per minute time period 2017/10/31
+    inpt_df['diff_snr_speed'] = np.abs(inpt_df.diff_med_speed)/inpt_df.diff_sig_speed *inpt_df.del_time.median()/60. 
+    inpt_df['diff_snr_Np']    = np.abs(inpt_df.diff_med_Np)/inpt_df.diff_sig_Np       *inpt_df.del_time.median()/60. 
+    inpt_df['diff_snr_Vth']   = np.abs(inpt_df.diff_med_Vth)/inpt_df.diff_sig_Vth     *inpt_df.del_time.median()/60. 
 
     #calculate snr in plasma acceleration parameters from rollin median
     inpt_df['accl_snr_speed'] = np.abs(inpt_df.accl_sig_speed)/inpt_df.accl_sig_speed
@@ -109,9 +110,10 @@ def format_df(inpt_df,span='3600s'):
     inpt_df['diff_sig_Bz'] = np.sqrt((inpt_df.diff_med_Bz**2.).rolling(span,min_periods=3).median())
 
     #calculate snr in B parameters from rollin median
-    inpt_df['diff_snr_Bx'] = np.abs(inpt_df.diff_med_Bx)/inpt_df.diff_sig_Bx 
-    inpt_df['diff_snr_By'] = np.abs(inpt_df.diff_med_By)/inpt_df.diff_sig_By 
-    inpt_df['diff_snr_Bz'] = np.abs(inpt_df.diff_med_Bz)/inpt_df.diff_sig_Bz 
+    #Change to difference in sigma per minute time period 2017/10/31
+    inpt_df['diff_snr_Bx'] = np.abs(inpt_df.diff_med_Bx)/inpt_df.diff_sig_Bx *inpt_df.del_time.median()/60. 
+    inpt_df['diff_snr_By'] = np.abs(inpt_df.diff_med_By)/inpt_df.diff_sig_By *inpt_df.del_time.median()/60. 
+    inpt_df['diff_snr_Bz'] = np.abs(inpt_df.diff_med_Bz)/inpt_df.diff_sig_Bz *inpt_df.del_time.median()/60. 
 
     #calculate difference B parameters
     inpt_df['del_Bx'] = np.abs(inpt_df['Bx'].diff(1)/inpt_df.del_time)
@@ -258,9 +260,9 @@ for k in craft:
     #columns to use for training and secondary model
     trn_cols = ['diff_snr_Bx','diff_snr_By','diff_snr_Bz','intercept']
     #columns to use for training and secondary model (J. Prchlik 2017/10/30) and switched back
-    trn_cols = ['diff_snr_Bx','diff_snr_By','diff_snr_Bz','sig_Bx','sig_By','sig_Bz','intercept']
+    #trn_cols = ['diff_snr_Bx','diff_snr_By','diff_snr_Bz','sig_Bx','sig_By','sig_Bz','intercept']
     #columns to use in the model
-    use_cols = ['Np_abs_power','speed_abs_power','Npth_abs_power' ,'Vth_abs_power','sig_speed','sig_Np','sig_Vth','intercept']
+    #use_cols = ['Np_abs_power','speed_abs_power','Npth_abs_power' ,'Vth_abs_power','sig_speed','sig_Np','sig_Vth','intercept']
     #use median smoothing columns
     use_cols = ['diff_snr_speed','diff_snr_Vth','diff_snr_Np','intercept']
     #use median smoothing columns and spike and switched back (J. Prchlik 2017/10/30)
