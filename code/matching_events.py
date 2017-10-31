@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -13,7 +14,7 @@ use_craft = False
 use_chisq = True
 
 #plot chisq min procedure
-plot = False
+plot = True 
 
 #set use to use all spacecraft
 craft = ['wind','dscovr','ace','soho']
@@ -146,6 +147,11 @@ for i in tr_events.index:
                     #update the time index of the match array for comparision with training spacecraft (i=training spacecraft time)
                     c_mat.index = c_mat.index+(i-time)
 
+
+                    #remove Speed fill values by interpolation
+                    c_mat.SPEED[c_mat.SPEED < 0.] = np.nan
+                    c_mat.SPEED = c_mat.SPEED.interpolate('time')
+
                     #get trainint spacecraft time range
                     t_mat = plsm[trainer].loc[c_mat.index.min():c_mat.index.max()]
 
@@ -165,7 +171,7 @@ for i in tr_events.index:
                     ax.set_xlim([t_mat.index.min(),t_mat.index.max()])
                     ax.set_ylabel('Speed [km/s]')
                     ax.set_xlabel('Time [UTC]')
-                    ax.set_ylim([300,1000.])
+                    #ax.set_ylim([300,1000.])
                     plt.show()
      
                 #get the index of minimum chisq value
