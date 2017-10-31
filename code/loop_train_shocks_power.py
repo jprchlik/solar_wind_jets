@@ -229,6 +229,14 @@ for k in craft:
     if smooth:
         plms_df = plms_df.resample("90S").mean()
         plms_df['time_dt'] = plms_df.index
+
+    #range check for variables
+    plms_df.SPEED[((plms_df.SPEED > 2000) | (plms_df.SPEED < 200))] = -9999.0
+    plms_df.Vth[((plms_df.Vth > 1E2) | (plms_df.Vth < 0))] = -9999.0
+    plms_df.Np[((plms_df.Np > 1E4) | (plms_df.Np < 0))] = -9999.0
+    plms_df.Bx[np.abs(plms_df.Bx) > 1E3] = -9999.0
+    plms_df.By[np.abs(plms_df.By) > 1E3] = -9999.0
+    plms_df.Bz[np.abs(plms_df.Bz) > 1E3] = -9999.0
     
     #check quality 
     p_den = plms_df.Np > -9990.
@@ -361,6 +369,11 @@ for k in craft:
                 plms_df['predict_sigma_'+var] = log_m['predict_sigma_'+var].predict(plms_df[trn_cols])
                 if k == 'soho': plms_df['predict_'+var] =plms_df['predict_power_'+var].values
                 else: plms_df['predict_'+var] = plms_df['predict_power_'+var].values
+                
+                #do not report predicted values where fill values exist
+                plms_df['predict_'+var][((p_den == False) & (p_vth == False) & (p_spd == False))] = 0.0
+                plms_df['predict_power_'+var][((p_den == False) & (p_vth == False) & (p_spd == False))] = 0.0
+                plms_df['predict_sigma_'+var][((p_bfx == False) & (p_bfy == False) & (p_bfz == False))] = 0.0
             except KeyError:
                 continue
     
