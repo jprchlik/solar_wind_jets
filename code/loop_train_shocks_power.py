@@ -36,7 +36,7 @@ shock_times['start_time_dt'] = pd.to_datetime(shock_times.YY.astype('str')+'/'+s
 #format input dataframe
 def format_df(inpt_df,span='3600s'):
     #Do parameter calculation for the 2016 year (training year)
-    inpt_df['del_time'] = np.abs(inpt_df['time_dt'].diff(-1).values.astype('double')/1.e9)
+    inpt_df['del_time'] = np.abs(inpt_df['time_dt'].diff(1).values.astype('double')/1.e9)
 
     #calculate difference in parameters
     inpt_df['ldel_speed'] = np.abs(inpt_df['SPEED'].diff(-1)/inpt_df.del_time)
@@ -75,9 +75,9 @@ def format_df(inpt_df,span='3600s'):
 
     #calculate snr in plasma parameters from rollin median
     #Change to difference in sigma per minute time period 2017/10/31
-    inpt_df['diff_snr_speed'] = np.abs(inpt_df.diff_med_speed)/inpt_df.diff_sig_speed *inpt_df.del_time.median()/60. 
-    inpt_df['diff_snr_Np']    = np.abs(inpt_df.diff_med_Np)/inpt_df.diff_sig_Np       *inpt_df.del_time.median()/60. 
-    inpt_df['diff_snr_Vth']   = np.abs(inpt_df.diff_med_Vth)/inpt_df.diff_sig_Vth     *inpt_df.del_time.median()/60. 
+    inpt_df['diff_snr_speed'] = np.abs(inpt_df.diff_med_speed)/inpt_df.diff_sig_speed *inpt_df.del_time.median()**2./60./inpt_df.del_time 
+    inpt_df['diff_snr_Np']    = np.abs(inpt_df.diff_med_Np)/inpt_df.diff_sig_Np       *inpt_df.del_time.median()**2./60./inpt_df.del_time 
+    inpt_df['diff_snr_Vth']   = np.abs(inpt_df.diff_med_Vth)/inpt_df.diff_sig_Vth     *inpt_df.del_time.median()**2./60./inpt_df.del_time 
 
     #calculate snr in plasma acceleration parameters from rollin median
     inpt_df['accl_snr_speed'] = np.abs(inpt_df.accl_sig_speed)/inpt_df.accl_sig_speed
@@ -90,9 +90,9 @@ def format_df(inpt_df,span='3600s'):
     inpt_df['diff_pow_Vth']   = (np.abs(inpt_df.diff_med_Vth)  /inpt_df.del_time)*(2.*inpt_df.roll_med_Np)
                              
     #calculate increase in power in the diffence for paramaters
-    inpt_df['diff_acc_speed'] = (np.abs(inpt_df.diff_med_speed.diff(-1))/inpt_df.del_time)*(2.*inpt_df.roll_med_Np)
-    inpt_df['diff_acc_Np']    = (np.abs(inpt_df.diff_med_Np.diff(-1))   /inpt_df.del_time)*(inpt_df.roll_med_speed**2.+inpt_df.roll_med_Vth**2.)
-    inpt_df['diff_acc_Vth']   = (np.abs(inpt_df.diff_med_Vth.diff(-1))  /inpt_df.del_time)*(2.*inpt_df.roll_med_Np)
+    inpt_df['diff_acc_speed'] = (np.abs(inpt_df.diff_med_speed.diff(1))/inpt_df.del_time)*(2.*inpt_df.roll_med_Np)
+    inpt_df['diff_acc_Np']    = (np.abs(inpt_df.diff_med_Np.diff(1))   /inpt_df.del_time)*(inpt_df.roll_med_speed**2.+inpt_df.roll_med_Vth**2.)
+    inpt_df['diff_acc_Vth']   = (np.abs(inpt_df.diff_med_Vth.diff(1))  /inpt_df.del_time)*(2.*inpt_df.roll_med_Np)
 
     #calculate B parameters rollin median
     inpt_df['roll_med_Bx'] = inpt_df['Bx'].rolling(span,min_periods=3).median()
@@ -111,9 +111,9 @@ def format_df(inpt_df,span='3600s'):
 
     #calculate snr in B parameters from rollin median
     #Change to difference in sigma per minute time period 2017/10/31
-    inpt_df['diff_snr_Bx'] = np.abs(inpt_df.diff_med_Bx)/inpt_df.diff_sig_Bx *inpt_df.del_time.median()/60. 
-    inpt_df['diff_snr_By'] = np.abs(inpt_df.diff_med_By)/inpt_df.diff_sig_By *inpt_df.del_time.median()/60. 
-    inpt_df['diff_snr_Bz'] = np.abs(inpt_df.diff_med_Bz)/inpt_df.diff_sig_Bz *inpt_df.del_time.median()/60. 
+    inpt_df['diff_snr_Bx'] = np.abs(inpt_df.diff_med_Bx)/inpt_df.diff_sig_Bx *inpt_df.del_time.median()**2./60./inpt_df.del_time  
+    inpt_df['diff_snr_By'] = np.abs(inpt_df.diff_med_By)/inpt_df.diff_sig_By *inpt_df.del_time.median()**2./60./inpt_df.del_time  
+    inpt_df['diff_snr_Bz'] = np.abs(inpt_df.diff_med_Bz)/inpt_df.diff_sig_Bz *inpt_df.del_time.median()**2./60./inpt_df.del_time  
 
     #calculate difference B parameters
     inpt_df['del_Bx'] = np.abs(inpt_df['Bx'].diff(1)/inpt_df.del_time)
