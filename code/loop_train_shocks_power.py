@@ -238,9 +238,10 @@ for k in craft:
     p_bfy = plms_df.Bz > -9990.
     p_bfz = plms_df.Bz > -9990.
     
-    #only keep times with good data
-    if k != 'soho': plms_df = plms_df[((p_den) & (p_vth) & (p_spd) & (p_bfx) & (p_bfy) & (p_bfz))]
-    else: plms_df = plms_df[((p_den) & (p_vth) & (p_spd))]
+    #only keep times with good data and be more restricive with the training set
+    if k == trainer: plms_df = plms_df[((p_den) & (p_vth) & (p_spd) & (p_bfx) & (p_bfy) & (p_bfz))]
+    elif k == 'soho': plms_df = plms_df[((p_den) & (p_vth) & (p_spd))] 
+    else: plms_df = plms_df[(((p_den) & (p_vth) & (p_spd)) | ((p_bfx) & (p_bfy) & (p_bfz)))]
     
     
     
@@ -283,7 +284,13 @@ for k in craft:
         p_ran = np.linspace(3,8,samp)
 
         #settle on 3 sigma events in Wind
-        p_ran = [3.0,4.0,5.0]
+        p_ran = np.array([3.0,4.0,5.0,6.0])
+
+
+        #scale up based on scale parameter index
+        p_scale = np.median(plms_df.time_dt.diff().values.astype('double'))/1.e9/60.
+        
+
    
  
         #create dictionaries for sigma training level
@@ -295,7 +302,7 @@ for k in craft:
         #log_s = {}
 
         #for i in use_cols: p_dct[i] = np.percentile(plms_df[i],p_ran)
-        for i in trn_cols: p_dct[i] = p_ran
+        for i in trn_cols: p_dct[i] = p_ran*p_scale
         
         #locate shocks and update parameter to 1
         for j,i in enumerate(p_ran):
