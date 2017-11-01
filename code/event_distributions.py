@@ -15,7 +15,7 @@ sig_l = 5.0
 #use sig_l to create shock prediction variable in dataframes
 p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 #fractional p value to call an "event"
-p_val = linspace(0.68,0.9999,10)
+p_val = linspace(0.68,0.9999,50)
 
 #plot for comparing number of "events" distributions
 fig, ax =plt.subplots()
