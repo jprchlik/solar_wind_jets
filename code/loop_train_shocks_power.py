@@ -251,6 +251,14 @@ for k in craft:
     elif k == 'soho': plms_df = plms_df[((p_den) & (p_vth) & (p_spd))] 
     else: plms_df = plms_df[(((p_den) & (p_vth) & (p_spd)) | ((p_bfx) & (p_bfy) & (p_bfz)))]
     
+    #Only fill for ACE
+    if k == 'ace':
+        #replace bad values with nans and pervious observation fill previous value
+       parameters = ['SPEED','Vth','Np','Bx','By','Bz'] 
+       for p in parameters:
+            plms_df.loc[plms_df[p] < -9990.,p] = np.nan
+            plms_df[p].ffill(inplace=True)
+    
     
     
     plms_df['shock'] = 0
@@ -371,9 +379,9 @@ for k in craft:
                 else: plms_df['predict_'+var] = plms_df['predict_power_'+var].values
                 
                 #do not report predicted values where fill values exist
-                plms_df['predict_'+var][((p_den == False) & (p_vth == False) & (p_spd == False))] = 0.0
-                plms_df['predict_power_'+var][((p_den == False) & (p_vth == False) & (p_spd == False))] = 0.0
-                plms_df['predict_sigma_'+var][((p_bfx == False) & (p_bfy == False) & (p_bfz == False))] = 0.0
+                plms_df['predict_'+var][((p_den == False) | (p_vth == False) | (p_spd == False))] = 0.0
+                plms_df['predict_power_'+var][((p_den == False) | (p_vth == False) | (p_spd == False))] = 0.0
+                plms_df['predict_sigma_'+var][((p_bfx == False) | (p_bfy == False) | (p_bfz == False))] = 0.0
             except KeyError:
                 continue
     
