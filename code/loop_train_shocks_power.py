@@ -365,6 +365,12 @@ for k in craft:
             if k == 'soho': plms_df['predict_'+var] =plms_df['predict_power_'+var].values
             else: plms_df['predict_'+var] = plms_df['predict_power_'+var].values*plms_df['predict_sigma_'+var].values
 
+            #print Mag. and Plasma Models
+            print('Plasma')
+            print(sh_rs_p.summary())
+            print('Mag.')
+            print(sh_rs_s.summary())
+
                                       
             events, = np.where(plms_df['predict_'+var] > 0.990)
             if events.size > 0: sig_cnts[j] = events.size
