@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from fancy_plot import fancy_plot
 
 
 #dictionary for storing the Pandas Data frame
@@ -129,8 +130,12 @@ for i in tr_events.index:
             #sort the cut window and get the top 10 events
             p_mat = p_mat.sort_values(p_var,ascending=False)[0:10]
 
+            #mag tolerance for using magnetometer data to match events rather than plasma parameters
+            mag_tol = 0.5
+            
 
-            if p_mat.size > 0:
+
+            if (((p_mat.size > 0) & (p_mat[p_var].max() > mag_tol)) | (k == 'soho')):
 
                 #create figure to test fit
                 if plot:
@@ -138,7 +143,7 @@ for i in tr_events.index:
                     ax.set_title(k)
 
                 #set up chisquared array in pandas object
-                p_mat['chisq'] = -99999.9
+                p_mat.loc[:,'chisq'] = -99999.9
                 for time in p_mat.index:
                     #get a region around one of the best fit times
                     com_slice = [time-window[k],time+window[k]]
@@ -149,8 +154,8 @@ for i in tr_events.index:
 
 
                     #remove Speed fill values by interpolation
-                    c_mat.SPEED[c_mat.SPEED < 0.] = np.nan
-                    c_mat.SPEED = c_mat.SPEED.interpolate('time')
+                    c_mat.loc[c_mat.SPEED < 0.,'SPEED'] = np.nan
+                    c_mat.SPEED.interpolate('time',inplace=True)
 
                     #get trainint spacecraft time range
                     t_mat = plsm[trainer].loc[c_mat.index.min():c_mat.index.max()]
@@ -163,7 +168,7 @@ for i in tr_events.index:
 
                     #create figure to check matching
                     if plot:
-                        ax.scatter(c_mat.index,c_mat.SPEED,label=time.to_datetime().strftime('%Y/%m/%dT%H:%M:%S')+' chisq = {0:4.0f}'.format(p_mat.loc[time,'chisq']))
+                        ax.scatter(c_mat.index,c_mat.SPEED,label=time.to_pydatetime().strftime('%Y/%m/%dT%H:%M:%S')+' chisq = {0:4.0f}'.format(p_mat.loc[time,'chisq']))
                         ax.plot(t_mat.index,t_mat.SPEED,label='',color='black')
 
                 if plot:
@@ -171,6 +176,7 @@ for i in tr_events.index:
                     ax.set_xlim([t_mat.index.min(),t_mat.index.max()])
                     ax.set_ylabel('Speed [km/s]')
                     ax.set_xlabel('Time [UTC]')
+                    fancy_plot(ax)
                     #ax.set_ylim([300,1000.])
                     plt.show()
      
@@ -179,12 +185,18 @@ for i in tr_events.index:
                 if k == 'soho': print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min))
                 else: print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
             #else no plasma observations                                                                                                                                                      
-            elif ((p_mat.size == 0) & (p_mag.size > 0.)):
-               if k != 'soho':
+            elif (((p_mat.size == 0) | (p_mat[p_var].max() <= mag_tol)) & (p_mag.size > 0.) & (k != 'soho')):
+                   print 'Using Magnetic field observations'
                    #sort the cut window and get the top 10 events
                    p_mat = p_mag
        
                    if p_mat.size > 0:
+                       #create figure to test fit
+                       if plot:
+                           fig, ax = plt.subplots()
+                           ax.set_title(k)
+
+
                        #set up chisquared array in pandas object
                        p_mat['chisq'] = -99999.9
                        for time in p_mat.index:
@@ -203,6 +215,19 @@ for i in tr_events.index:
        
                            #compute the chisq value in SPEED from the top ten probablilty array
                            p_mat.loc[time,'chisq'] = (sum((c_mat.Bx-t_mat.Bx)**2.+(c_mat.By-t_mat.By)**2.+(c_mat.Bz-t_mat.Bz)**2.))**.5
+                           #create figure to check matching
+                           if plot:
+                               ax.scatter(c_mat.index,c_mat.SPEED,label=time.to_pydatetime().strftime('%Y/%m/%dT%H:%M:%S')+' chisq = {0:4.0f}'.format(p_mat.loc[time,'chisq']))
+                               ax.plot(t_mat.index,t_mat.SPEED,label='',color='black')
+
+                       if plot:
+                           ax.legend(loc='upper left',frameon=False,scatterpoints=1)
+                           ax.set_xlim([t_mat.index.min(),t_mat.index.max()])
+                           ax.set_ylabel('Speed [km/s]')
+                           ax.set_xlabel('Time [UTC]')
+                           fancy_plot(ax)
+                           #ax.set_ylim([300,1000.])
+                           plt.show()
             
                        #get the index of minimum chisq value
                        i_min = p_mat['chisq'].idxmin()
