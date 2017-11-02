@@ -244,9 +244,9 @@ for i in tr_events.index:
         #use chisq minimum of top events in 2 hour window
         elif use_chisq:
             #magnetic field model fitting
-            p_mag = p_mat.sort_values(p_var.replace('predict','predict_sigma'),ascending=False)[0:10]
+            p_mag = p_mat.sort_values(p_var.replace('predict','predict_sigma'),ascending=False)[0:50]
             #sort the cut window and get the top 10 events
-            p_mat = p_mat.sort_values(p_var,ascending=False)[0:10]
+            p_mat = p_mat.sort_values(p_var,ascending=False)[0:50]
 
             #mag tolerance for using magnetometer data to match events rather than plasma parameters
             mag_tol = 0.5
@@ -354,7 +354,7 @@ for i in tr_events.index:
                        #get the index of minimum chisq value
                        i_min = p_mat['chisq'].idxmin()
                        print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
-                       out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],p_mat.loc[i_min][p_var.replace('predict','predict_sigma')],'X'))
+                       out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],p_mat.loc[i_min][p_var.replace('predict','predict_sigma')],''))
        
             else:
                print('No Plasma or Mag. Observations')
@@ -372,11 +372,20 @@ for i in tr_events.index:
         fax[1,0].scatter(b_mat[b_mat['Vth'  ] > -9990.0].index,b_mat[b_mat['Vth'  ] > -9990.0].Vth  ,marker=marker[k],color=color[k])         
         fax[2,0].scatter(b_mat[b_mat['SPEED'] > -9990.0].index,b_mat[b_mat['SPEED'] > -9990.0].SPEED,marker=marker[k],color=color[k])         
 
+        fax[0,0].plot(b_mat[b_mat['Np'   ] > -9990.0].index,b_mat[b_mat['Np'   ] > -9990.0].Np   ,color=color[k],linewidth=2,label='')         
+        fax[1,0].plot(b_mat[b_mat['Vth'  ] > -9990.0].index,b_mat[b_mat['Vth'  ] > -9990.0].Vth  ,color=color[k],linewidth=2)         
+        fax[2,0].plot(b_mat[b_mat['SPEED'] > -9990.0].index,b_mat[b_mat['SPEED'] > -9990.0].SPEED,color=color[k],linewidth=2)         
+
+
         #plot mag. parameters
         if k != 'soho':
             fax[0,1].scatter(b_mat[b_mat['Bx']    > -9990.0].index,b_mat[b_mat['Bx']    > -9990.0].Bx,marker=marker[k],color=color[k])         
             fax[1,1].scatter(b_mat[b_mat['By']    > -9990.0].index,b_mat[b_mat['By']    > -9990.0].By,marker=marker[k],color=color[k])         
             fax[2,1].scatter(b_mat[b_mat['Bz']    > -9990.0].index,b_mat[b_mat['Bz']    > -9990.0].Bz,marker=marker[k],color=color[k])         
+
+            fax[0,1].plot(b_mat[b_mat['Bx']    > -9990.0].index,b_mat[b_mat['Bx']    > -9990.0].Bx,color=color[k],linewidth=2)         
+            fax[1,1].plot(b_mat[b_mat['By']    > -9990.0].index,b_mat[b_mat['By']    > -9990.0].By,color=color[k],linewidth=2)         
+            fax[2,1].plot(b_mat[b_mat['Bz']    > -9990.0].index,b_mat[b_mat['Bz']    > -9990.0].Bz,color=color[k],linewidth=2)         
 
         #print separater 
         print('########################################')
@@ -389,26 +398,44 @@ for i in tr_events.index:
     fax[0,0].scatter(t_mat[t_mat['Np'   ] > -9990.0].index,t_mat[t_mat['Np'   ] > -9990.0].Np   ,marker=marker[trainer],color=color[trainer],label='Wind')         
     fax[1,0].scatter(t_mat[t_mat['Vth'  ] > -9990.0].index,t_mat[t_mat['Vth'  ] > -9990.0].Vth  ,marker=marker[trainer],color=color[trainer])         
     fax[2,0].scatter(t_mat[t_mat['SPEED'] > -9990.0].index,t_mat[t_mat['SPEED'] > -9990.0].SPEED,marker=marker[trainer],color=color[trainer])         
+
+    fax[0,0].plot(t_mat[t_mat['Np'   ] > -9990.0].index,t_mat[t_mat['Np'   ] > -9990.0].Np   ,color=color[trainer],linewidth=2,label='')         
+    fax[1,0].plot(t_mat[t_mat['Vth'  ] > -9990.0].index,t_mat[t_mat['Vth'  ] > -9990.0].Vth  ,color=color[trainer],linewidth=2)         
+    fax[2,0].plot(t_mat[t_mat['SPEED'] > -9990.0].index,t_mat[t_mat['SPEED'] > -9990.0].SPEED,color=color[trainer],linewidth=2)         
     #plot mag. parameters
     fax[0,1].scatter(t_mat[t_mat['Bx'   ] > -9990.0].index,t_mat[t_mat['Bx']    > -9990.0].Bx,marker=marker[trainer],color=color[trainer])         
     fax[1,1].scatter(t_mat[t_mat['By'   ] > -9990.0].index,t_mat[t_mat['By']    > -9990.0].By,marker=marker[trainer],color=color[trainer])         
     fax[2,1].scatter(t_mat[t_mat['Bz'   ] > -9990.0].index,t_mat[t_mat['Bz']    > -9990.0].Bz,marker=marker[trainer],color=color[trainer])         
 
-   
+    fax[0,1].plot(t_mat[t_mat['Bx'   ] > -9990.0].index,t_mat[t_mat['Bx']    > -9990.0].Bx,color=color[trainer],linewidth=2)         
+    fax[1,1].plot(t_mat[t_mat['By'   ] > -9990.0].index,t_mat[t_mat['By']    > -9990.0].By,color=color[trainer],linewidth=2)         
+    fax[2,1].plot(t_mat[t_mat['Bz'   ] > -9990.0].index,t_mat[t_mat['Bz']    > -9990.0].Bz,color=color[trainer],linewidth=2)         
+
+
+    #plot observed break time
+    for pax in fax.ravel():
+        xoff = pd.to_timedelta('90 seconds')  
+        pax.axvline(i,linewidth=3,alpha=0.5,color='purple')
+        pax.axvline(i+xoff,alpha=0.5,linestyle='--',linewidth=3,color='purple')
+        pax.axvline(i-xoff,alpha=0.5,linestyle='--',linewidth=3,color='purple')
        
     #plot best time for each spacecraft
     fax[0,0].legend(loc='upper left',frameon=False,scatterpoints=1)
-    fax[0,0].set_xlim([t_mat.index.min(),t_mat.index.max()])
-  
-    fax[0,0].set_ylabel('Np [cm^-3]')
-    fax[1,0].set_ylabel('Th. Speed [km/s]')
-    fax[2,0].set_ylabel('Speed [km/s]')
-    fax[2,0].set_xlabel('Time [UTC]')
 
-    fax[0,1].set_ylabel('Bx [nT]')
-    fax[1,1].set_ylabel('By [nT]')
-    fax[2,1].set_ylabel('Bx [nT]')
+    #plot an hour around observation
+    fax[0,0].set_xlim([i-pd.to_timedelta('45 minutes'),i+pd.to_timedelta('45 minutes')])
+  
+    fax[0,0].set_ylabel('Np [cm^-3]',fontsize=20)
+    fax[1,0].set_ylabel('Th. Speed [km/s]',fontsize=20)
+    fax[2,0].set_ylabel('Speed [km/s]',fontsize=20)
+    fax[2,0].set_xlabel('Time [UTC]',fontsize=20)
+
+    fax[0,1].set_ylabel('Bx [nT]',fontsize=20)
+    fax[1,1].set_ylabel('By [nT]',fontsize=20)
+    fax[2,1].set_ylabel('Bx [nT]',fontsize=20)
     fax[2,1].set_xlabel('Time [UTC]')
+
+    #make fancy plot
     for pax in fax.ravel(): fancy_plot(pax)
     #ax.set_ylim([300,1000.])
     bfig.savefig('../plots/spacecraft_events/event_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
