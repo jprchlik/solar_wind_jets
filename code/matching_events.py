@@ -161,13 +161,19 @@ new_row =   '''<tr>
                   </td>
               </tr>'''
 footer = '''</table>
+
+         </br>
+         </br>
+         </br>
+
+
          '''
 ful_ftr = '''
             </body>
             </html>'''
 
 
-out_f = open('../plots/spacecraft_events/{0}_level_{1:3.0f}.html'.format(trainer,p_val*100.),'w')
+out_f = open('../html_files/{0}_level_{1:4.0f}.html'.format(trainer,p_val*1000.).replace(' ','0'),'w')
 out_f.write(ful_hdr)
 
 #get event slices 
@@ -180,7 +186,7 @@ for i in tr_events.index:
    
     #create file to output html table
 
-    out_f.write('Event on {0:%Y/%m/%d %H:%M:%S} UT'.format(i))
+    out_f.write('<b> Event on {0:%Y/%m/%d %H:%M:%S} UT </b>'.format(i))
     out_f.write(tab_hdr)
     #write trainer spacecraft event
     out_f.write(new_row.format(trainer,i,0.00,tr_events.loc[i,p_var],tr_events.loc[i,p_var.replace('predict','predict_sigma')],'X'))
