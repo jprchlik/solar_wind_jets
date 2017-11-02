@@ -83,12 +83,13 @@ Re = 6378. #Earth radius in km
 plsm['ace']['X'] = plsm['ace'].X/Re
 
 #correct normalization of spacecraft wind parameter Vth
-amu = 1.660538921e-27#amu
-mp  = 1.00727647*amu
-kb  = 1.3906488e-23#boltzmann's constant
-plsm['wind']['Vth']   = (plsm['wind'].Vth  *1.0e3)**2.*mp/kb/2.
-plsm['ace']['Vth']    = (plsm['ace'].Vth   *1.0e3)**2.*mp/kb/2.
-plsm['dscovr']['Vth'] = (plsm['dscovr'].Vth*1.0e3)**2.*mp/kb/2.
+#Fixed J. Prchlik 2017/11/02
+##amu = 1.660538921e-27#amu
+##mp  = 1.00727647*amu
+##kb  = 1.3906488e-23#boltzmann's constant
+##plsm['wind']['Vth']   = (plsm['wind'].Vth  *1.0e3)**2.*mp/kb/2.
+##plsm['ace']['Vth']    = (plsm['ace'].Vth   *1.0e3)**2.*mp/kb/2.
+##plsm['dscovr']['Vth'] = (plsm['dscovr'].Vth*1.0e3)**2.*mp/kb/2.
 
 
 
@@ -173,6 +174,7 @@ ful_ftr = '''
             </html>'''
 
 
+# write header for html page
 out_f = open('../html_files/{0}_level_{1:4.0f}.html'.format(trainer,p_val*1000.).replace(' ','0'),'w')
 out_f.write(ful_hdr)
 
@@ -184,9 +186,8 @@ for i in tr_events.index:
     print('{0:%Y/%m/%d %H:%M:%S}, p (plasma)={1:4.3f}, p (mag.) = {2:4.3f}'.format(i,tr_events.loc[i,p_var],tr_events.loc[i,p_var.replace('predict','predict_sigma')]))
     #get time slice around event
    
-    #create file to output html table
-
-    out_f.write('<b> Event on {0:%Y/%m/%d %H:%M:%S} UT </b>'.format(i))
+    #create table to output html table and link to github png files
+    out_f.write(r'''<b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/4cf1c6e7/plots/spacecraft_events/event_{0:%Y%m%d_%H%M%S}.png"> Event on {0:%Y/%m/%d %H:%M:%S} UT </a> </b>'''.format(i))
     out_f.write(tab_hdr)
     #write trainer spacecraft event
     out_f.write(new_row.format(trainer,i,0.00,tr_events.loc[i,p_var],tr_events.loc[i,p_var.replace('predict','predict_sigma')],'X'))
@@ -425,15 +426,15 @@ for i in tr_events.index:
     #plot an hour around observation
     fax[0,0].set_xlim([i-pd.to_timedelta('45 minutes'),i+pd.to_timedelta('45 minutes')])
   
-    fax[0,0].set_ylabel('Np [cm^-3]',fontsize=20)
+    fax[0,0].set_ylabel('Np [cm$^{-3}$]',fontsize=20)
     fax[1,0].set_ylabel('Th. Speed [km/s]',fontsize=20)
-    fax[2,0].set_ylabel('Speed [km/s]',fontsize=20)
+    fax[2,0].set_ylabel('Flow Speed [km/s]',fontsize=20)
     fax[2,0].set_xlabel('Time [UTC]',fontsize=20)
 
     fax[0,1].set_ylabel('Bx [nT]',fontsize=20)
     fax[1,1].set_ylabel('By [nT]',fontsize=20)
-    fax[2,1].set_ylabel('Bx [nT]',fontsize=20)
-    fax[2,1].set_xlabel('Time [UTC]')
+    fax[2,1].set_ylabel('Bz [nT]',fontsize=20)
+    fax[2,1].set_xlabel('Time [UTC]',fontsize=20)
 
     #make fancy plot
     for pax in fax.ravel(): fancy_plot(pax)
