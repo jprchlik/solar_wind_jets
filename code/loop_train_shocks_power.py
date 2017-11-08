@@ -38,6 +38,15 @@ def format_df(inpt_df,span='3600s'):
     #Do parameter calculation for the 2016 year (training year)
     inpt_df['del_time'] = np.abs(inpt_df['time_dt'].diff(1).values.astype('double')/1.e9)
 
+
+    #convert span to a number index so I can use the logic center = True
+    #assumes format_df import is in s
+    #then divide by the space craft jump time
+    span = round(float(span[:-1])/inp_df.del_time.median())
+
+    #time cadence parameter to add to plasma and magnetic field time series
+    par_ind = inpt_df.del_time.median()/inpt_df.del_time
+
     #calculate difference in parameters
     inpt_df['ldel_speed'] = np.abs(inpt_df['SPEED'].diff(-1)/inpt_df.del_time)
     inpt_df['ldel_Np'] = np.abs(inpt_df['Np'].diff(-1)/inpt_df.del_time)

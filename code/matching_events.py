@@ -18,9 +18,9 @@ use_chisq = True
 plot = False
 
 #set use to use all spacecraft
-craft = ['wind','dscovr','ace','soho']
-col   = ['blue','black','red','teal']
-mar   = ['D','o','s','<']
+craft = ['dscovr','wind','ace','soho']
+col   = ['black','blue','red','teal']
+mar   = ['o','D','s','<']
 marker = {}
 color  = {}
 
@@ -39,7 +39,7 @@ sig_l = 5.0
 #use sig_l to create shock prediction variable in dataframes
 p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 #fractional p value to call an "event"
-p_val = 0.98 
+p_val = 0.999 
 #p_val = 0.999 
 
 #read in all spacraft events
@@ -245,9 +245,9 @@ for i in tr_events.index:
         #use chisq minimum of top events in 2 hour window
         elif use_chisq:
             #magnetic field model fitting
-            p_mag = p_mat.sort_values(p_var.replace('predict','predict_sigma'),ascending=False)[0:50]
+            p_mag = p_mat.sort_values(p_var.replace('predict','predict_sigma'),ascending=False)[0:10]
             #sort the cut window and get the top 10 events
-            p_mat = p_mat.sort_values(p_var,ascending=False)[0:50]
+            p_mat = p_mat.sort_values(p_var,ascending=False)[0:10]
 
             #mag tolerance for using magnetometer data to match events rather than plasma parameters
             mag_tol = 0.5
@@ -396,7 +396,7 @@ for i in tr_events.index:
     t_mat = plsm[trainer].loc[plt_slice[0]:plt_slice[1]]
 
     #plot plasma parameters
-    fax[0,0].scatter(t_mat[t_mat['Np'   ] > -9990.0].index,t_mat[t_mat['Np'   ] > -9990.0].Np   ,marker=marker[trainer],color=color[trainer],label='Wind')         
+    fax[0,0].scatter(t_mat[t_mat['Np'   ] > -9990.0].index,t_mat[t_mat['Np'   ] > -9990.0].Np   ,marker=marker[trainer],color=color[trainer],label=trainer.upper())         
     fax[1,0].scatter(t_mat[t_mat['Vth'  ] > -9990.0].index,t_mat[t_mat['Vth'  ] > -9990.0].Vth  ,marker=marker[trainer],color=color[trainer])         
     fax[2,0].scatter(t_mat[t_mat['SPEED'] > -9990.0].index,t_mat[t_mat['SPEED'] > -9990.0].SPEED,marker=marker[trainer],color=color[trainer])         
 
