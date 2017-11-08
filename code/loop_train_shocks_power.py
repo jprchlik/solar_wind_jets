@@ -42,7 +42,8 @@ def format_df(inpt_df,span='3600s'):
     #convert span to a number index so I can use the logic center = True
     #assumes format_df import is in s
     #then divide by the space craft jump time
-    span = round(float(span[:-1])/inp_df.del_time.median())
+    span = int(round(float(span[:-1])/inpt_df.del_time.median()))
+    print(span)
 
     #time cadence parameter to add to plasma and magnetic field time series
     par_ind = inpt_df.del_time.median()/inpt_df.del_time
@@ -84,9 +85,9 @@ def format_df(inpt_df,span='3600s'):
 
     #calculate snr in plasma parameters from rollin median
     #Change to difference in sigma per minute time period 2017/10/31
-    inpt_df['diff_snr_speed'] = np.abs(inpt_df.diff_med_speed)/inpt_df.diff_sig_speed *inpt_df.del_time.median()**2./60./inpt_df.del_time 
-    inpt_df['diff_snr_Np']    = np.abs(inpt_df.diff_med_Np)/inpt_df.diff_sig_Np       *inpt_df.del_time.median()**2./60./inpt_df.del_time 
-    inpt_df['diff_snr_Vth']   = np.abs(inpt_df.diff_med_Vth)/inpt_df.diff_sig_Vth     *inpt_df.del_time.median()**2./60./inpt_df.del_time 
+    inpt_df['diff_snr_speed'] = np.abs(inpt_df.diff_med_speed)/inpt_df.diff_sig_speed *par_ind
+    inpt_df['diff_snr_Np']    = np.abs(inpt_df.diff_med_Np)/inpt_df.diff_sig_Np       *par_ind
+    inpt_df['diff_snr_Vth']   = np.abs(inpt_df.diff_med_Vth)/inpt_df.diff_sig_Vth     *par_ind
 
     #calculate snr in plasma acceleration parameters from rollin median
     inpt_df['accl_snr_speed'] = np.abs(inpt_df.accl_sig_speed)/inpt_df.accl_sig_speed
@@ -120,9 +121,9 @@ def format_df(inpt_df,span='3600s'):
 
     #calculate snr in B parameters from rollin median
     #Change to difference in sigma per minute time period 2017/10/31
-    inpt_df['diff_snr_Bx'] = np.abs(inpt_df.diff_med_Bx)/inpt_df.diff_sig_Bx *inpt_df.del_time.median()**2./60./inpt_df.del_time  
-    inpt_df['diff_snr_By'] = np.abs(inpt_df.diff_med_By)/inpt_df.diff_sig_By *inpt_df.del_time.median()**2./60./inpt_df.del_time  
-    inpt_df['diff_snr_Bz'] = np.abs(inpt_df.diff_med_Bz)/inpt_df.diff_sig_Bz *inpt_df.del_time.median()**2./60./inpt_df.del_time  
+    inpt_df['diff_snr_Bx'] = np.abs(inpt_df.diff_med_Bx)/inpt_df.diff_sig_Bx*par_ind 
+    inpt_df['diff_snr_By'] = np.abs(inpt_df.diff_med_By)/inpt_df.diff_sig_By*par_ind
+    inpt_df['diff_snr_Bz'] = np.abs(inpt_df.diff_med_Bz)/inpt_df.diff_sig_Bz*par_ind
 
     #calculate difference B parameters
     inpt_df['del_Bx'] = np.abs(inpt_df['Bx'].diff(1)/inpt_df.del_time)
