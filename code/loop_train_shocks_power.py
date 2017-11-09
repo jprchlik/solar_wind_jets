@@ -42,11 +42,10 @@ def format_df(inpt_df,span='3600s'):
     #convert span to a number index so I can use the logic center = True
     #assumes format_df import is in s
     #then divide by the space craft jump time
-    span = int(round(float(span[:-1])/inpt_df.del_time.median()))
-    print(span)
+    #span = int(round(float(span[:-1])/inpt_df.del_time.median()))
 
     #time cadence parameter to add to plasma and magnetic field time series
-    par_ind = inpt_df.del_time.median()/inpt_df.del_time
+    par_ind = inpt_df.del_time.median()**2./60./inpt_df.del_time
 
     #calculate difference in parameters
     inpt_df['ldel_speed'] = np.abs(inpt_df['SPEED'].diff(-1)/inpt_df.del_time)
@@ -54,9 +53,9 @@ def format_df(inpt_df,span='3600s'):
     inpt_df['ldel_Vth'] = np.abs(inpt_df['Vth'].diff(-1)/inpt_df.del_time)
 
     #calculat plasma parameters rolling median
-    inpt_df['roll_med_speed'] = inpt_df['SPEED'].rolling(span,min_periods=3,center=True).median()
-    inpt_df['roll_med_Np']    = inpt_df['Np'].rolling(   span,min_periods=3,center=True).median()
-    inpt_df['roll_med_Vth']   = inpt_df['Vth'].rolling(  span,min_periods=3,center=True).median()
+    inpt_df['roll_med_speed'] = inpt_df['SPEED'].rolling(span,min_periods=3,center=False).median()
+    inpt_df['roll_med_Np']    = inpt_df['Np'].rolling(   span,min_periods=3,center=False).median()
+    inpt_df['roll_med_Vth']   = inpt_df['Vth'].rolling(  span,min_periods=3,center=False).median()
 
     #calculate difference in plasma parameters from rolling median
     inpt_df['diff_med_speed'] = inpt_df.SPEED-inpt_df.roll_med_speed
@@ -64,9 +63,9 @@ def format_df(inpt_df,span='3600s'):
     inpt_df['diff_med_Vth']   = inpt_df.Vth-inpt_df.roll_med_Vth
 
     #calculate difference in plasma parameters from rolling median
-    inpt_df['roll_diff_med_speed'] = inpt_df.diff_med_speed.rolling(span,min_periods=3,center=True).median()
-    inpt_df['roll_diff_med_Np']    = inpt_df.diff_med_Np.rolling(   span,min_periods=3,center=True).median()
-    inpt_df['roll_diff_med_Vth']   = inpt_df.diff_med_Vth.rolling(  span,min_periods=3,center=True).median()
+    inpt_df['roll_diff_med_speed'] = inpt_df.diff_med_speed.rolling(span,min_periods=3,center=False).median()
+    inpt_df['roll_diff_med_Np']    = inpt_df.diff_med_Np.rolling(   span,min_periods=3,center=False).median()
+    inpt_df['roll_diff_med_Vth']   = inpt_df.diff_med_Vth.rolling(  span,min_periods=3,center=False).median()
 
     #calculate acceleration in plasma parameters from rolling median
     inpt_df['accl_diff_speed'] = inpt_df.diff_med_speed-inpt_df.roll_diff_med_speed
@@ -74,14 +73,14 @@ def format_df(inpt_df,span='3600s'):
     inpt_df['accl_diff_Vth']   = inpt_df.diff_med_Vth-inpt_df.roll_diff_med_Vth
 
     #calculate sigma in plasma parameters from rollin median
-    inpt_df['diff_sig_speed'] = np.sqrt((inpt_df.diff_med_speed**2.).rolling(span,min_periods=3,center=True).median())
-    inpt_df['diff_sig_Np']    = np.sqrt((inpt_df.diff_med_Np   **2.).rolling(span,min_periods=3,center=True).median()) 
-    inpt_df['diff_sig_Vth']   = np.sqrt((inpt_df.diff_med_Vth  **2.).rolling(span,min_periods=3,center=True).median()) 
+    inpt_df['diff_sig_speed'] = np.sqrt((inpt_df.diff_med_speed**2.).rolling(span,min_periods=3,center=False).median())
+    inpt_df['diff_sig_Np']    = np.sqrt((inpt_df.diff_med_Np   **2.).rolling(span,min_periods=3,center=False).median()) 
+    inpt_df['diff_sig_Vth']   = np.sqrt((inpt_df.diff_med_Vth  **2.).rolling(span,min_periods=3,center=False).median()) 
 
     #calculate acceleration in plasma parameters from rolling median
-    inpt_df['accl_sig_speed'] = np.sqrt((inpt_df['accl_diff_speed']**2.).rolling(span,min_periods=3,center=True).median()) 
-    inpt_df['accl_sig_Np']    = np.sqrt((inpt_df['accl_diff_Np']   **2.).rolling(span,min_periods=3,center=True).median()) 
-    inpt_df['accl_sig_Vth']   = np.sqrt((inpt_df['accl_diff_Vth']  **2.).rolling(span,min_periods=3,center=True).median()) 
+    inpt_df['accl_sig_speed'] = np.sqrt((inpt_df['accl_diff_speed']**2.).rolling(span,min_periods=3,center=False).median()) 
+    inpt_df['accl_sig_Np']    = np.sqrt((inpt_df['accl_diff_Np']   **2.).rolling(span,min_periods=3,center=False).median()) 
+    inpt_df['accl_sig_Vth']   = np.sqrt((inpt_df['accl_diff_Vth']  **2.).rolling(span,min_periods=3,center=False).median()) 
 
     #calculate snr in plasma parameters from rollin median
     #Change to difference in sigma per minute time period 2017/10/31
@@ -105,9 +104,9 @@ def format_df(inpt_df,span='3600s'):
     inpt_df['diff_acc_Vth']   = (np.abs(inpt_df.diff_med_Vth.diff(1))  /inpt_df.del_time)*(2.*inpt_df.roll_med_Np)
 
     #calculate B parameters rollin median
-    inpt_df['roll_med_Bx'] = inpt_df['Bx'].rolling(span,min_periods=3,center=True).median()
-    inpt_df['roll_med_By'] = inpt_df['By'].rolling(span,min_periods=3,center=True).median()
-    inpt_df['roll_med_Bz'] = inpt_df['Bz'].rolling(span,min_periods=3,center=True).median()
+    inpt_df['roll_med_Bx'] = inpt_df['Bx'].rolling(span,min_periods=3,center=False).median()
+    inpt_df['roll_med_By'] = inpt_df['By'].rolling(span,min_periods=3,center=False).median()
+    inpt_df['roll_med_Bz'] = inpt_df['Bz'].rolling(span,min_periods=3,center=False).median()
 
     #calculate difference B parameters from rollin median
     inpt_df['diff_med_Bx'] = inpt_df.Bx-inpt_df.roll_med_Bx
@@ -115,9 +114,9 @@ def format_df(inpt_df,span='3600s'):
     inpt_df['diff_med_Bz'] = inpt_df.Bz-inpt_df.roll_med_Bz
 
     #calculate sigma in B parameters from rollin median
-    inpt_df['diff_sig_Bx'] = np.sqrt((inpt_df.diff_med_Bx**2.).rolling(span,min_periods=3,center=True).median())
-    inpt_df['diff_sig_By'] = np.sqrt((inpt_df.diff_med_By**2.).rolling(span,min_periods=3,center=True).median())
-    inpt_df['diff_sig_Bz'] = np.sqrt((inpt_df.diff_med_Bz**2.).rolling(span,min_periods=3,center=True).median())
+    inpt_df['diff_sig_Bx'] = np.sqrt((inpt_df.diff_med_Bx**2.).rolling(span,min_periods=3,center=False).median())
+    inpt_df['diff_sig_By'] = np.sqrt((inpt_df.diff_med_By**2.).rolling(span,min_periods=3,center=False).median())
+    inpt_df['diff_sig_Bz'] = np.sqrt((inpt_df.diff_med_Bz**2.).rolling(span,min_periods=3,center=False).median())
 
     #calculate snr in B parameters from rollin median
     #Change to difference in sigma per minute time period 2017/10/31
