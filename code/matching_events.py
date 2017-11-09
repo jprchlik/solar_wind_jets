@@ -68,7 +68,8 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,ref_chi_t=pd.to_timedelta('10 minutes'),r
     
     
         #get median offset to apply to match spacecraft
-        #off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
+        off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
+        c_mat.SPEED = c_mat.SPEED-off_speed
     
 
         #compute chi^2 value for Wind and other spacecraft
@@ -77,7 +78,7 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,ref_chi_t=pd.to_timedelta('10 minutes'),r
     
         #create figure to check matchin
         if plot:
-            ax.scatter(c_mat.index,c_maSPEED,label=time.to_pydatetime().strftime('%Y/%m/%dT%H:%M:%S')+' chisq = {0:4.0f}'.format(p_mat.loc[time,'chisq']))
+            ax.scatter(c_mat.index,c_mat.SPEED,label=time.to_pydatetime().strftime('%Y/%m/%dT%H:%M:%S')+' chisq = {0:4.0f}'.format(p_mat.loc[time,'chisq']))
             ax.plot(t_mat.index,t_mat.SPEED,label='',color='black')
     
     
@@ -102,8 +103,9 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,ref_chi_t=pd.to_timedelta('10 minutes'),r
         p_temp = p_mat.sort_values('chisq',ascending=True )[:n_fine]
  
         #get all values in top n_fine at full resolution
-        p_mat  = plsm[k].loc[p_temp.index.min():p_temp.index.max()]
-       
+        p_mat  = plsm[k].loc[p_temp.index.min()-rgh_chi_t:p_temp.index.max()+rgh_chi_t]
+        print(p_temp.index.min()-rgh_chi_t,p_temp.index.max()+rgh_chi_t)
+ 
     
         #loop over all indexes in refined time window
         for time in p_mat.index:
@@ -126,7 +128,8 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,ref_chi_t=pd.to_timedelta('10 minutes'),r
             c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
     
             #get median offset to apply to match spacecraft
-            #off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
+            off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
+            c_mat.SPEED = c_mat.SPEED-off_speed
     
             #compute the chisq value in SPEED from the top ten probablilty array including the median offsets
             p_mat.loc[time,'chisq'] = np.sqrt(np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values))
@@ -181,7 +184,7 @@ sig_l = 5.0
 p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 #fractional p value to call an "event"
 p_val = 0.980 
-p_val = 0.999 
+#p_val = 0.999 
 
 #read in all spacraft events
 for k in craft: plsm[k] = pd.read_pickle('../{0}/data/y2016_power_formatted.pic'.format(k.lower()))
@@ -213,7 +216,7 @@ window['SOHO'] = pd.to_timedelta('180 minutes')
 window['Wind'] = pd.to_timedelta('180 minutes')
 
 #define rough chi min time  to cal Chi^2 min for each time
-rgh_chi_t = pd.to_timedelta('60 minutes')
+rgh_chi_t = pd.to_timedelta('30 minutes')
 
 #get strings for times around each event when refining chi^2 time
 ref_window = {}
@@ -289,6 +292,21 @@ par_hdr =   '''
             around each fine grid point. The &chi;<sup>2</sub> reported is the minimum from the time grid.
             </p1>
 
+            </br>
+            </br>
+            <h4>
+            Table Summary
+            </h4>
+            Each table contains a row for each spacecraft with observations in the requested time period. Then each row contains 6 columns. The first column labels the spacecraft for a 
+            given row. Then next column (Obs. Time [UT]) gives the time of the "event" in the reference frame of the spacecraft. Offset is the offset in minutes from the Wind observation.
+            P-val (plasma) is the p-val for a 5&sigma; discontinuity at the reference Obs. time for a given spacecraft's measured plasma values. 
+            P-val (mag.) is the p-val for a 5&sigma; discontinuity given at the reference Obs. time for a given spacecraft's measured magnetic field values.
+            Finally, an X in Use Plasma Mod. means the minimization routine use the wind Speed to find the best match &chi;<sup>2</sup> time,
+            while an empty cell denotes using the magnetic field.
+    
+            </br>
+            </br>
+
             '''
 
 tab_hdr = '''
@@ -363,7 +381,7 @@ for i in tr_events.index:
     #get time slice around event
    
     #create table to output html table and link to github png files (https://cdn.rawgit.com/jprchlik/solar_wind_jets/4cf1c6e7)
-    out_f.write(r'''<b><a href="../plots/spacecraft_events/event_{0:%Y%m%d_%H%M%S}_bigg.png"> Event on {0:%Y/%m/%d %H:%M:%S} UT (6 Hour) </a> </b>'''.format(i))
+    out_f.write(r'''<b><a href="../plots/spacecraft_events/event_{0:%Y%m%d_%H%M%S}_bigg.png"> Event on {0:%Y/%m/%d %H:%M:%S} UT (6 Hour)</a> </b>     '''.format(i))
     out_f.write(r'''<b><a href="../plots/spacecraft_events/event_{0:%Y%m%d_%H%M%S}_zoom.png"> Event on {0:%Y/%m/%d %H:%M:%S} UT (50 Min.)</a> </b>'''.format(i))
     out_f.write(tab_hdr)
     #write trainer spacecraft event
