@@ -203,8 +203,9 @@ for i in tr_events.index:
     print('{0:%Y/%m/%d %H:%M:%S}, p (plasma)={1:4.3f}, p (mag.) = {2:4.3f}'.format(i,tr_events.loc[i,p_var],tr_events.loc[i,p_var.replace('predict','predict_sigma')]))
     #get time slice around event
    
-    #create table to output html table and link to github png files
-    out_f.write(r'''<b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/4cf1c6e7/plots/spacecraft_events/event_{0:%Y%m%d_%H%M%S}.png"> Event on {0:%Y/%m/%d %H:%M:%S} UT </a> </b>'''.format(i))
+    #create table to output html table and link to github png files (https://cdn.rawgit.com/jprchlik/solar_wind_jets/4cf1c6e7)
+    out_f.write(r'''<b><a href="../plots/spacecraft_events/event_{0:%Y%m%d_%H%M%S}_bigg.png"> Event on {0:%Y/%m/%d %H:%M:%S} UT (6 Hour) </a> </b>'''.format(i))
+    out_f.write(r'''<b><a href="../plots/spacecraft_events/event_{0:%Y%m%d_%H%M%S}_zoom.png"> Event on {0:%Y/%m/%d %H:%M:%S} UT (50 Min.)</a> </b>'''.format(i))
     out_f.write(tab_hdr)
     #write trainer spacecraft event
     out_f.write(new_row.format(trainer,i,0.00,tr_events.loc[i,p_var],tr_events.loc[i,p_var.replace('predict','predict_sigma')],'X'))
