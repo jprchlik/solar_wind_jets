@@ -4,6 +4,139 @@ import matplotlib.pyplot as plt
 from fancy_plot import fancy_plot
 
 
+#function to find the Chi^2 min value given a set of parameters
+def chi_min(p_mat,par,rgh_chi_t,plsm,k,ref_chi_t=pd.to_timedelta('10 minutes'),refine=True,n_fine=4,plot=False):
+
+    """
+    chi_min computes the chi^2 min. time for a given set of parameters
+
+    p_mat: Pandas DataFrame
+    Solar wind pandas DataFrame for a space craft roughly sampled
+
+    par : list
+    List of parameters to use in the Chi^2 minimization 
+
+    rgh_chi_t: Pandas datetime delta object
+    Time around a given time in p_mat to include in chi^2 minimization  
+
+    ref_chi_t: Pandas datetime delta object
+    Time around a given time in refined grid to include in chi^2 minimization  
+
+    plsm: dict
+    Dictionary of plasma DataFrames of plasma Dataframes
+   
+    k   : string
+    Spacecraft name in plsm dictionary
+   
+
+    refine: boolean
+    Whether to use a refined window (Default = True)
+
+    n_fine : integer
+    Number of chi^2 min values from the rough grid to check with the fine grid (Default = 4)
+
+    plot  : boolean
+    Plot Chi^2 minimization window (Default = False)
+
+    RETURNS
+    --------
+    i_min : datetime index
+    Datetime index of best fit Chi^2 time
+
+    """
+
+    #set up chisquared array in pandas object
+    p_mat.loc[:,'chisq'] = -99999.9
+    for time in p_mat.index:
+        #get a region around one of the best fit times
+        com_slice = [time-rgh_chi_t,time+rgh_chi_t]
+        c_mat = plsm[k].loc[com_slice[0]:com_slice[1]]
+    
+        #update the time index of the match array for comparision with training spacecraft (i=training spacecraft time)
+        c_mat.index = c_mat.index+(i-time)
+    
+    
+        #remove Speed fill values by interpolation
+        c_mat.loc[c_mat.SPEED < 0.,'SPEED'] = np.nan
+        c_mat.SPEED.interpolate('time',inplace=True)
+    
+        #get training spacecraft time range
+        t_mat = plsm[trainer].loc[c_mat.index.min():c_mat.index.max()]
+    
+        #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid and interpolate
+        c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
+    
+    
+        #get median offset to apply to match spacecraft
+        #off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
+    
+
+        #compute chi^2 value for Wind and other spacecraft
+        p_mat.loc[time,'chisq'] = np.sqrt(np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values))
+    
+    
+        #create figure to check matchin
+        if plot:
+            ax.scatter(c_mat.index,c_maSPEED,label=time.to_pydatetime().strftime('%Y/%m/%dT%H:%M:%S')+' chisq = {0:4.0f}'.format(p_mat.loc[time,'chisq']))
+            ax.plot(t_mat.index,t_mat.SPEED,label='',color='black')
+    
+    
+         
+    
+    if plot:
+        ax.legend(loc='upper left',frameon=False,scatterpoints=1)
+        ax.set_xlim([t_mat.index.min(),t_mat.index.max()])
+        ax.set_ylabel('Speed [km/s]')
+        ax.set_xlabel('Time [UTC]')
+        fancy_plot(ax)
+        #ax.set_ylim([300,1000.])
+        plt.show()
+    
+    #get the index of minimum chisq value
+    i_min = p_mat['chisq'].idxmin()
+    
+    #use fine grid around observations to match time offset locally
+    if refine:
+
+        #Find 4 lowest chisq min times
+        p_temp = p_mat.sort_values('chisq',ascending=True )[:n_fine]
+ 
+        #get all values in top n_fine at full resolution
+        p_mat  = plsm[k].loc[p_temp.index.min():p_temp.index.max()]
+       
+    
+        #loop over all indexes in refined time window
+        for time in p_mat.index:
+            #get a region around one of the best fit times
+            com_slice = [time-ref_chi_t,time+ref_chi_t]
+            c_mat = plsm[k].loc[com_slice[0]:com_slice[1]]
+    
+            #update the time index of the match array for comparision with training spacecraft (i=training spacecraft time)
+            c_mat.index = c_mat.index+(i-time)
+    
+    
+            #remove Speed fill values by interpolation
+            c_mat.loc[c_mat.SPEED < 0.,'SPEED'] = np.nan
+            c_mat.SPEED.interpolate('time',inplace=True)
+    
+            #get trainint spacecraft time range
+            t_mat = plsm[trainer].loc[c_mat.index.min():c_mat.index.max()]
+    
+            #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid and interpolate
+            c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
+    
+            #get median offset to apply to match spacecraft
+            #off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
+    
+            #compute the chisq value in SPEED from the top ten probablilty array including the median offsets
+            p_mat.loc[time,'chisq'] = np.sqrt(np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values))
+    
+    
+        #get the index of minimum refined chisq value
+        i_min = p_mat['chisq'].idxmin()
+
+    return i_min
+    
 #dictionary for storing the Pandas Data frame
 plsm = {}
 
@@ -27,6 +160,11 @@ mar   = ['D','o','s','<']
 marker = {}
 color  = {}
 
+
+#Use five min cadence for rough chi^2 min
+downsamp = '5T'
+
+
 #create dictionaries for labels
 for j,i in enumerate(craft):
     marker[i] = mar[j]
@@ -43,7 +181,7 @@ sig_l = 5.0
 p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 #fractional p value to call an "event"
 p_val = 0.980 
-#p_val = 0.999 
+p_val = 0.999 
 
 #read in all spacraft events
 for k in craft: plsm[k] = pd.read_pickle('../{0}/data/y2016_power_formatted.pic'.format(k.lower()))
@@ -74,6 +212,9 @@ window['ACE'] = pd.to_timedelta('180 minutes')
 window['SOHO'] = pd.to_timedelta('180 minutes')
 window['Wind'] = pd.to_timedelta('180 minutes')
 
+#define rough chi min time  to cal Chi^2 min for each time
+rgh_chi_t = pd.to_timedelta('60 minutes')
+
 #get strings for times around each event when refining chi^2 time
 ref_window = {}
 ref_window['DSCOVR'] = pd.to_timedelta('25 minutes')
@@ -84,7 +225,6 @@ ref_window['Wind'] = pd.to_timedelta('25 minutes')
 #refined window to calculate Chi^2 min for each time
 ref_chi_t = pd.to_timedelta('10 minutes')
 
-#space craft to match with trainer soho
 
 #space craft to match with trainer soho
 craft.remove(trainer)
@@ -130,6 +270,25 @@ ful_hdr = '''
             </style>
             </head>
             <body>
+            '''
+
+par_hdr =   '''
+            <h1>
+            Finding &chi;<sup>2</sup> Minimization 
+            </h1>
+            </br>
+            </br>
+            <p1>
+            The program for finding the &chi;<sup>2</sup> minimum for events between spacecraft works by using a primary spacecraft to find events.
+            I selected Wind because I used Wind to train the model, and the events found in Wind are consistent with events found by eye or independent spacecraft 
+            algorithms. I define an event discontinuity as a time where our model indicates a {0:4.2f}% probability the solar wind parameters corresponds to a 5&sigma;
+            discontinuity in a component of the magnetic field. Then I create a course grid of 5 minute samples for &plusmn; 3 hours around a event. Then I shift 
+            the other 3 spacecraft onto the Wind using the course grid. Then I select a 1 hour window around the shifted Wind and other spacecraft and derive a first order
+            &chi;<sup>2</sup> minimum. Using the first order &chi;<sup>2</sup> minimum, I create a fine grid 50 minutes (&plusmn; 25 minutes) around the rough &chi;<sup>2</sup> minimum
+            time. The fine grid cadence is set to the maximum sampling frequency of a given spacecraft. Then the program stores the &chi;<sup>2</sup> value for 20 minutes (&plusmn; 10 minutes)
+            around each fine grid point. The &chi;<sup>2</sub> reported is the minimum from the time grid.
+            </p1>
+
             '''
 
 tab_hdr = '''
@@ -193,7 +352,7 @@ ful_ftr = '''
 
 # write header for html page
 out_f = open('../html_files/{0}_level_{1:4.0f}.html'.format(trainer.lower(),p_val*1000.).replace(' ','0'),'w')
-out_f.write(ful_hdr)
+out_f.write(ful_hdr+par_hdr.format(p_val*100.))
 
 #get event slices 
 for i in tr_events.index:
@@ -263,149 +422,27 @@ for i in tr_events.index:
   
         #use chisq minimum of top events in 2 hour window
         elif use_chisq:
-            #Just use 6 hour window J. Prchlik 2017/11/09
-            #####find the median distance
-            #####med_dis = np.median(np.sqrt((p_mat.X-i.X)**2.+(p_mat.Y-i.Y)**2.+(p_mat.Z-i.Z)**2.))
-            #####Just use X distance since most of wind is in that direction
-            #####towards the sun is positive X (GSE)
-            #####use negative sign to change to increasing away from the sun
-            ####med_dis_x = (p_mat.X-tr_events.loc[i,'X']).median()
-            ####med_dis_y = (p_mat.Y-tr_events.loc[i,'Y']).median()
-            ####med_dis_z = (p_mat.Z-tr_events.loc[i,'Z']).median()
-
-            #####get mag of distance
-            ####med_dis = np.sqrt((med_dis_x)**2.+(med_dis_y)**2.+(med_dis_z)**2.)
-            ####
-            #####convert the median distance into a time delay (distances in Re)
-            #####use +/- slow wind distance
-            #####if med_dis > 0:
-            ####max_del = med_dis*Re/min_vel
-            #####min_del = med_dis*Re/max_vel
-            ####min_del = -med_dis*Re/min_vel
-            #####else:
-            #####    min_del = med_dis*Re/min_vel
-            #####    max_del = med_dis*Re/max_vel
-            ####
-
-            #####convert to pandas time delta window
-            ####cal_wd = pd.to_timedelta([min_del,max_del],unit='s')
-            #####get a time slice base on space craft differences
-            ####time_slice = [i+cal_wd[0],i+cal_wd[1]] 
-
-
-            #####get new time range for p_mat based on spacecraft position time slice
-            ####p_mat = plsm[k].loc[time_slice[0]:time_slice[1]]
      
-            #get a time slice base on space craft differences
-            #magnetic field model fitting
-            #p_mag = p_mat.sort_values(p_var.replace('predict','predict_sigma'),ascending=False)[0:50]
-            #sort the cut window and get the top 10 events
-            #p_mat = p_mat.sort_values(p_var,ascending=False)[0:50]
 
             #downsample to 5 minutes for time matching in chisq
-            p_mat = p_mat.resample('5T').median()
+            p_mat_t = p_mat.resample(downsamp).median()
 
             #downsample mag to 5 minutes for time matching in chisq
-            p_mag = p_mat
+            p_mag_t = p_mat_t
 
             #mag tolerance for using magnetometer data to match events rather than plasma parameters
             mag_tol = 0.5
             
 
 
-            if (((p_mat.size > 0) & (p_mat[p_var].max() > mag_tol)) | ((k.lower() == 'soho') & (p_mat.size > 0.))):
+            if (((p_mat_t.size > 0) & (p_mat_t[p_var].max() > mag_tol)) | ((k.lower() == 'soho') & (p_mat_t.size > 0.))):
 
+                i_min = chi_min(p_mat_t,['SPEED'],rgh_chi_t,plsm,k,ref_chi_t=ref_chi_t,refine=True,n_fine=4,plot=False)
                 #create figure to test fit
                 if plot:
                     fig, ax = plt.subplots()
                     ax.set_title(k)
 
-                #set up chisquared array in pandas object
-                p_mat.loc[:,'chisq'] = -99999.9
-                for time in p_mat.index:
-                    #get a region around one of the best fit times
-                    com_slice = [time-window[k],time+window[k]]
-                    c_mat = plsm[k].loc[com_slice[0]:com_slice[1]]
-
-                    #update the time index of the match array for comparision with training spacecraft (i=training spacecraft time)
-                    c_mat.index = c_mat.index+(i-time)
-
-
-                    #remove Speed fill values by interpolation
-                    c_mat.loc[c_mat.SPEED < 0.,'SPEED'] = np.nan
-                    c_mat.SPEED.interpolate('time',inplace=True)
-
-                    #get trainint spacecraft time range
-                    t_mat = plsm[trainer].loc[c_mat.index.min():c_mat.index.max()]
-
-                    #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid and interpolate
-                    c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
-
-
-                    #get median offset to apply to match spacecraft
-                    off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
-
-
-                    #compute the chisq value in SPEED from the top ten probablilty array including the median offsets
-                    p_mat.loc[time,'chisq'] = (sum((c_mat.SPEED-off_speed-t_mat.SPEED)**2.))**.5
-
-                    #create figure to check matchin
-                    if plot:
-                        ax.scatter(c_mat.index,c_maSPEED,label=time.to_pydatetime().strftime('%Y/%m/%dT%H:%M:%S')+' chisq = {0:4.0f}'.format(p_mat.loc[time,'chisq']))
-                        ax.plot(t_mat.index,t_mat.SPEED,label='',color='black')
-
-
-                     
-
-                if plot:
-                    ax.legend(loc='upper left',frameon=False,scatterpoints=1)
-                    ax.set_xlim([t_mat.index.min(),t_mat.index.max()])
-                    ax.set_ylabel('Speed [km/s]')
-                    ax.set_xlabel('Time [UTC]')
-                    fancy_plot(ax)
-                    #ax.set_ylim([300,1000.])
-                    plt.show()
-     
-                #get the index of minimum chisq value
-                i_min = p_mat['chisq'].idxmin()
-
-                #use fine grid around observations to match time offset locally
-                if refine:
-                    #refined time slice to get the approximate spacecraft differences
-                    refn_slice = [i_min-ref_window[k],i_min+ref_window[k]] 
-                    p_mat = plsm[k].loc[refn_slice[0]:refn_slice[1]] 
- 
-                    #loop over all indexes in refined time window
-                    for time in p_mat.index:
-                        #get a region around one of the best fit times
-                        com_slice = [time-ref_chi_t,time+ref_chi_t]
-                        c_mat = plsm[k].loc[com_slice[0]:com_slice[1]]
-    
-                        #update the time index of the match array for comparision with training spacecraft (i=training spacecraft time)
-                        c_mat.index = c_mat.index+(i-time)
-    
-    
-                        #remove Speed fill values by interpolation
-                        c_mat.loc[c_mat.SPEED < 0.,'SPEED'] = np.nan
-                        c_mat.SPEED.interpolate('time',inplace=True)
-    
-                        #get trainint spacecraft time range
-                        t_mat = plsm[trainer].loc[c_mat.index.min():c_mat.index.max()]
-    
-                        #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid and interpolate
-                        c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
-    
-                        #get median offset to apply to match spacecraft
-                        off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
-    
-                        #compute the chisq value in SPEED from the top ten probablilty array including the median offsets
-                        p_mat.loc[time,'chisq'] = (sum((c_mat.SPEED-off_speed-t_mat.SPEED)**2.))**.5
-
- 
-                    #get the index of minimum refined chisq value
-                    i_min = p_mat['chisq'].idxmin()
-    
-    
 
 
                 if k.lower() == 'soho':
@@ -415,84 +452,15 @@ for i in tr_events.index:
                     print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
                     out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],p_mat.loc[i_min][p_var.replace('predict','predict_sigma')],'X'))
             #else no plasma observations                                                                                                                                                      
-            elif (((p_mat.size == 0) | (p_mat[p_var].max() <= mag_tol)) & (p_mag.size > 0.) & (k.lower() != 'soho')):
-                   print 'Using Magnetic field observations'
-                   #sort the cut window and get the top 10 events
-                   p_mat = p_mag
+            elif (((p_mat_t.size == 0) | (p_mat_t[p_var].max() <= mag_tol)) & (p_mag_t.size > 0.) & (k.lower() != 'soho')):
+                print 'Using Magnetic field observations'
+                #sort the cut window and get the top 10 events
+                p_mat_t = p_mag_t
        
-                   if p_mat.size > 0:
-                       #create figure to test fit
-                       if plot:
-                           fig, ax = plt.subplots()
-                           ax.set_title(k)
-
-
-                       #set up chisquared array in pandas object
-                       p_mat['chisq'] = -99999.9
-                       for time in p_mat.index:
-                           #get a region around one of the best fit times
-                           com_slice = [time-window[k],time+window[k]]
-                           c_mat = plsm[k].loc[com_slice[0]:com_slice[1]]
-       
-                           #update the time index of the match array for comparision with training spacecraft (i=training spacecraft time)
-                           c_mat.index = c_mat.index+(i-time)
-       
-                           #get trainint spacecraft time range
-                           t_mat = plsm[trainer].loc[c_mat.index.min():c_mat.index.max()]
-       
-                           #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid and interpolate
-                           c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
-       
-                           #compute the chisq value in SPEED from the top ten probablilty array
-                           p_mat.loc[time,'chisq'] = (sum((c_mat.Bx-t_mat.Bx)**2.+(c_mat.By-t_mat.By)**2.+(c_mat.Bz-t_mat.Bz)**2.))**.5
-                           #create figure to check matching
-                           if plot:
-                               ax.scatter(c_mat.index,c_mat.SPEED,label=time.to_pydatetime().strftime('%Y/%m/%dT%H:%M:%S')+' chisq = {0:4.0f}'.format(p_mat.loc[time,'chisq']))
-                               ax.plot(t_mat.index,t_mat.SPEED,label='',color='black')
-
-                       if plot:
-                           ax.legend(loc='upper left',frameon=False,scatterpoints=1)
-                           ax.set_xlim([t_mat.index.min(),t_mat.index.max()])
-                           ax.set_ylabel('Speed [km/s]')
-                           ax.set_xlabel('Time [UTC]')
-                           fancy_plot(ax)
-                           #ax.set_ylim([300,1000.])
-                           plt.show()
-            
-                       #get the index of minimum chisq value
-                       i_min = p_mat['chisq'].idxmin()
-
-                       #use fine grid around observations to match time offset locally
-                       if refine:
-                           #refined time slice to get the approximate spacecraft differences
-                           refn_slice = [i_min-ref_window[k],i_min+ref_window[k]] 
-                           p_mat = plsm[k].loc[refn_slice[0]:refn_slice[1]] 
- 
-                           #loop over all indexes in refined time window
-                           for time in p_mat.index:
-                               #get a region around one of the best fit times
-                               com_slice = [time-ref_chi_t,time+ref_chi_t]
-                               c_mat = plsm[k].loc[com_slice[0]:com_slice[1]]
-    
-                               #update the time index of the match array for comparision with training spacecraft (i=training spacecraft time)
-                               c_mat.index = c_mat.index+(i-time)
-
-                               #get trainint spacecraft time range
-                               t_mat = plsm[trainer].loc[c_mat.index.min():c_mat.index.max()]
-       
-                               #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid and interpolate
-                               c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
-       
-                               #compute the chisq value in SPEED from the top ten probablilty array
-                               p_mat.loc[time,'chisq'] = (sum((c_mat.Bx-t_mat.Bx)**2.+(c_mat.By-t_mat.By)**2.+(c_mat.Bz-t_mat.Bz)**2.))**.5
-
-                           #get the refined index of minimum chisq value
-                           i_min = p_mat['chisq'].idxmin()
-
-
-                       #print output to terminal
-                       print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
-                       out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],p_mat.loc[i_min][p_var.replace('predict','predict_sigma')],''))
+                i_min = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,plsm,k,ref_chi_t=ref_chi_t,refine=True,n_fine=4,plot=False)
+                #print output to terminal
+                print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
+                out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],p_mat.loc[i_min][p_var.replace('predict','predict_sigma')],''))
        
             else:
                print('No Plasma or Mag. Observations')
