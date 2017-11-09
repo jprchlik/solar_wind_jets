@@ -4,6 +4,7 @@ from numpy import linspace,where
 import pandas as pd
 
 smooth = False
+resample = False
 
 #set use to use all spacecraft
 craft = ['DSCOVR','Wind','ACE','SOHO']
@@ -31,7 +32,13 @@ for j,k in enumerate(craft):
 #    plsm = plsm[~plsm.duplicated(['str_hour'],keep = 'first')]
 
     #resample to 30 minutes because that is all that is needed
-    tplms = plsm.resample('30min',label='right').max()
+    if resample:
+        tplms = plsm.resample('30min',label='right').max()
+    #else do nothing
+    else:
+        tplms = plsm
+
+    #list of counts for each p_val
     counts = []
     #loop over all p-values an count the number of events
     for i in p_val:
