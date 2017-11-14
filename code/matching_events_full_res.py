@@ -217,15 +217,15 @@ def format_df(inpt_df,p_var,span='3600s',center=True):
     #only guess times with good data in plasma or magnetic field respectively
     m_var = p_var.replace('predict','predict_sigma')
     plsm_df.loc[:,p_var] = logit_model(plsm_df,-3.2437,0.2365,0.0464,0.0594)
-    magf_df.loc[:,m_var] = logit_model(magf_df,-10.0575,0.6861,0.7071,0.6640)
+    magf_df.loc[:,m_var] = logit_model(magf_df,-10.0575,0.6861,0.7071,0.6640,plasma=False)
 
     #cur arrays to the bar minimum for matching
-    plsm_df = plsm_df.loc[:,'p_var']
-    magf_df = magf_df.loc[:,'m_var']
+    plsm_df = plsm_df.loc[:,p_var]
+    magf_df = magf_df.loc[:,m_var]
     
     #update array with new p-values by matching on indices
-    outp_df  = pd.merge(outp_df,plsm_df,how='left',left_index=True,right_index=True)
-    outp_df  = pd.merge(outp_df,magf_df,how='left',left_index=True,right_index=True)
+    outp_df  = pd.merge(inpt_df,plsm_df.to_frame(),how='left',left_index=True,right_index=True)
+    outp_df  = pd.merge(outp_df,magf_df.to_frame(),how='left',left_index=True,right_index=True)
 
 
     return outp_df
@@ -233,6 +233,10 @@ def format_df(inpt_df,p_var,span='3600s',center=True):
 
 #probability model and parameters to use
 def logit_model(df,b0,b1,b2,b3,plasma=True):
+    '''
+    Returns logit probability for a given set of parameters
+
+    '''
     if plasma:
         return 1./(np.exp(-(df.diff_snr_speed*b1+df.diff_snr_Vth*b2+df.diff_snr_Np*b3+b0))+1.) 
     else:
@@ -449,6 +453,10 @@ for k in craft:
 
         #join magnetic field and plasma dataframes
         com_df  = pd.merge(mag[k],pls[k],how='outer',left_index=True,right_index=True,suffixes=('_mag','_pls'))
+
+        #make sure data columns are numeric
+        cols = ['SPEED','Np','Vth','Bx','By','Bz']
+        com_df[cols] = com_df[cols].apply(pd.to_numeric, errors='coerce')
 
         #replace NaN with previously measured value
         #com_df.fillna(method='bfill',inplace=True)
