@@ -760,7 +760,8 @@ for i in tr_events.index:
             
 
 
-            if (((p_mat_t.size > 0) & (p_mat_t[p_var].max() > mag_tol)) | ((k.lower() == 'soho') & (p_mat_t.size > 0.))):
+            #if (((p_mat_t.size > 0) & (p_mat_t[p_var].max() > mag_tol)) | ((k.lower() == 'soho') & (p_mat_t.size > 0.))):
+            if ((k.lower() == 'soho') & (p_mat_t.size > 0.)):
 
                 i_min = chi_min(p_mat_t,['SPEED'],rgh_chi_t,plsm,k,ref_chi_t=ref_chi_t,refine=False,n_fine=4,plot=False)
                 #create figure to test fit
@@ -789,7 +790,8 @@ for i in tr_events.index:
 
 
             #else no plasma observations                                                                                                                                                      
-            elif (((p_mat_t.size == 0) | (p_mat_t[p_var].max() <= mag_tol) | (np.isnan(p_mat_t[p_var].max()))) & (p_mag_t.size > 0.) & (k.lower() != 'soho')):
+            #elif (((p_mat_t.size == 0) | (p_mat_t[p_var].max() <= mag_tol) | (np.isnan(p_mat_t[p_var].max()))) & (p_mag_t.size > 0.) & (k.lower() != 'soho')):
+            elif ((p_mag_t.size > 0.) & (k.lower() != 'soho')):
                 print 'Using Magnetic field observations'
                 #sort the cut window and get the top 10 events
                 p_mat_t = p_mag_t
@@ -821,24 +823,24 @@ for i in tr_events.index:
 
         #plot plasma parameters
         #fax[0,0].scatter(b_mat[b_mat['Np'   ] > -9990.0].index,b_mat[b_mat['Np'   ] > -9990.0].Np   ,marker=marker[k],color=color[k],label=k.upper())         
-        fax[0,0].scatter(b_mat[b_mat['Np'   ] > -9990.0].index,b_mat[b_mat['Np'   ] > -9990.0].Np   ,marker=marker[k],color=color[k],label=k)         
-        fax[1,0].scatter(b_mat[b_mat['Vth'  ] > -9990.0].index,b_mat[b_mat['Vth'  ] > -9990.0].Vth  ,marker=marker[k],color=color[k])         
-        fax[2,0].scatter(b_mat[b_mat['SPEED'] > -9990.0].index,b_mat[b_mat['SPEED'] > -9990.0].SPEED,marker=marker[k],color=color[k])         
+        fax[0,0].scatter(b_mat[b_mat['Np'   ] > -9990.0].time_dt_pls,b_mat[b_mat['Np'   ] > -9990.0].Np   ,marker=marker[k],color=color[k],label=k)         
+        fax[1,0].scatter(b_mat[b_mat['Vth'  ] > -9990.0].time_dt_pls,b_mat[b_mat['Vth'  ] > -9990.0].Vth  ,marker=marker[k],color=color[k])         
+        fax[2,0].scatter(b_mat[b_mat['SPEED'] > -9990.0].time_dt_pls,b_mat[b_mat['SPEED'] > -9990.0].SPEED,marker=marker[k],color=color[k])         
 
-        fax[0,0].plot(b_mat[b_mat['Np'   ] > -9990.0].index,b_mat[b_mat['Np'   ] > -9990.0].Np   ,color=color[k],linewidth=2,label='')         
-        fax[1,0].plot(b_mat[b_mat['Vth'  ] > -9990.0].index,b_mat[b_mat['Vth'  ] > -9990.0].Vth  ,color=color[k],linewidth=2)         
-        fax[2,0].plot(b_mat[b_mat['SPEED'] > -9990.0].index,b_mat[b_mat['SPEED'] > -9990.0].SPEED,color=color[k],linewidth=2)         
+        fax[0,0].plot(b_mat[b_mat['Np'   ] > -9990.0].time_dt_pls,b_mat[b_mat['Np'   ] > -9990.0].Np   ,color=color[k],linewidth=2,label='')         
+        fax[1,0].plot(b_mat[b_mat['Vth'  ] > -9990.0].time_dt_pls,b_mat[b_mat['Vth'  ] > -9990.0].Vth  ,color=color[k],linewidth=2)         
+        fax[2,0].plot(b_mat[b_mat['SPEED'] > -9990.0].time_dt_pls,b_mat[b_mat['SPEED'] > -9990.0].SPEED,color=color[k],linewidth=2)         
 
 
         #plot mag. parameters
         if k.lower() != 'soho':
-            fax[0,1].scatter(b_mat[b_mat['Bx']    > -9990.0].index,b_mat[b_mat['Bx']    > -9990.0].Bx,marker=marker[k],color=color[k])         
-            fax[1,1].scatter(b_mat[b_mat['By']    > -9990.0].index,b_mat[b_mat['By']    > -9990.0].By,marker=marker[k],color=color[k])         
-            fax[2,1].scatter(b_mat[b_mat['Bz']    > -9990.0].index,b_mat[b_mat['Bz']    > -9990.0].Bz,marker=marker[k],color=color[k])         
+            fax[0,1].scatter(b_mat[b_mat['Bx']    > -9990.0].time_dt_mag,b_mat[b_mat['Bx']    > -9990.0].Bx,marker=marker[k],color=color[k])         
+            fax[1,1].scatter(b_mat[b_mat['By']    > -9990.0].time_dt_mag,b_mat[b_mat['By']    > -9990.0].By,marker=marker[k],color=color[k])         
+            fax[2,1].scatter(b_mat[b_mat['Bz']    > -9990.0].time_dt_mag,b_mat[b_mat['Bz']    > -9990.0].Bz,marker=marker[k],color=color[k])         
 
-            fax[0,1].plot(b_mat[b_mat['Bx']    > -9990.0].index,b_mat[b_mat['Bx']    > -9990.0].Bx,color=color[k],linewidth=2)         
-            fax[1,1].plot(b_mat[b_mat['By']    > -9990.0].index,b_mat[b_mat['By']    > -9990.0].By,color=color[k],linewidth=2)         
-            fax[2,1].plot(b_mat[b_mat['Bz']    > -9990.0].index,b_mat[b_mat['Bz']    > -9990.0].Bz,color=color[k],linewidth=2)         
+            fax[0,1].plot(b_mat[b_mat['Bx']    > -9990.0].time_dt_mag,b_mat[b_mat['Bx']    > -9990.0].Bx,color=color[k],linewidth=2)         
+            fax[1,1].plot(b_mat[b_mat['By']    > -9990.0].time_dt_mag,b_mat[b_mat['By']    > -9990.0].By,color=color[k],linewidth=2)         
+            fax[2,1].plot(b_mat[b_mat['Bz']    > -9990.0].time_dt_mag,b_mat[b_mat['Bz']    > -9990.0].Bz,color=color[k],linewidth=2)         
 
         #print separater 
         print('########################################')
@@ -849,21 +851,21 @@ for i in tr_events.index:
     t_mat = plsm[trainer].loc[plt_slice[0]:plt_slice[1]]
 
     #plot plasma parameters
-    fax[0,0].scatter(t_mat[t_mat['Np'   ] > -9990.0].index,t_mat[t_mat['Np'   ] > -9990.0].Np   ,marker=marker[trainer],color=color[trainer],label=trainer.upper())         
-    fax[1,0].scatter(t_mat[t_mat['Vth'  ] > -9990.0].index,t_mat[t_mat['Vth'  ] > -9990.0].Vth  ,marker=marker[trainer],color=color[trainer])         
-    fax[2,0].scatter(t_mat[t_mat['SPEED'] > -9990.0].index,t_mat[t_mat['SPEED'] > -9990.0].SPEED,marker=marker[trainer],color=color[trainer])         
+    fax[0,0].scatter(t_mat[t_mat['Np'   ] > -9990.0].time_dt_pls,t_mat[t_mat['Np'   ] > -9990.0].Np   ,marker=marker[trainer],color=color[trainer],label=trainer.upper())         
+    fax[1,0].scatter(t_mat[t_mat['Vth'  ] > -9990.0].time_dt_pls,t_mat[t_mat['Vth'  ] > -9990.0].Vth  ,marker=marker[trainer],color=color[trainer])         
+    fax[2,0].scatter(t_mat[t_mat['SPEED'] > -9990.0].time_dt_pls,t_mat[t_mat['SPEED'] > -9990.0].SPEED,marker=marker[trainer],color=color[trainer])         
 
-    fax[0,0].plot(t_mat[t_mat['Np'   ] > -9990.0].index,t_mat[t_mat['Np'   ] > -9990.0].Np   ,color=color[trainer],linewidth=2,label='')         
-    fax[1,0].plot(t_mat[t_mat['Vth'  ] > -9990.0].index,t_mat[t_mat['Vth'  ] > -9990.0].Vth  ,color=color[trainer],linewidth=2)         
-    fax[2,0].plot(t_mat[t_mat['SPEED'] > -9990.0].index,t_mat[t_mat['SPEED'] > -9990.0].SPEED,color=color[trainer],linewidth=2)         
+    fax[0,0].plot(t_mat[t_mat['Np'   ] > -9990.0].time_dt_pls,t_mat[t_mat['Np'   ] > -9990.0].Np   ,color=color[trainer],linewidth=2,label='')         
+    fax[1,0].plot(t_mat[t_mat['Vth'  ] > -9990.0].time_dt_pls,t_mat[t_mat['Vth'  ] > -9990.0].Vth  ,color=color[trainer],linewidth=2)         
+    fax[2,0].plot(t_mat[t_mat['SPEED'] > -9990.0].time_dt_pls,t_mat[t_mat['SPEED'] > -9990.0].SPEED,color=color[trainer],linewidth=2)         
     #plot mag. parameters
-    fax[0,1].scatter(t_mat[t_mat['Bx'   ] > -9990.0].index,t_mat[t_mat['Bx']    > -9990.0].Bx,marker=marker[trainer],color=color[trainer])         
-    fax[1,1].scatter(t_mat[t_mat['By'   ] > -9990.0].index,t_mat[t_mat['By']    > -9990.0].By,marker=marker[trainer],color=color[trainer])         
-    fax[2,1].scatter(t_mat[t_mat['Bz'   ] > -9990.0].index,t_mat[t_mat['Bz']    > -9990.0].Bz,marker=marker[trainer],color=color[trainer])         
+    fax[0,1].scatter(t_mat[t_mat['Bx'   ] > -9990.0].time_dt_mag,t_mat[t_mat['Bx']    > -9990.0].Bx,marker=marker[trainer],color=color[trainer])         
+    fax[1,1].scatter(t_mat[t_mat['By'   ] > -9990.0].time_dt_mag,t_mat[t_mat['By']    > -9990.0].By,marker=marker[trainer],color=color[trainer])         
+    fax[2,1].scatter(t_mat[t_mat['Bz'   ] > -9990.0].time_dt_mag,t_mat[t_mat['Bz']    > -9990.0].Bz,marker=marker[trainer],color=color[trainer])         
 
-    fax[0,1].plot(t_mat[t_mat['Bx'   ] > -9990.0].index,t_mat[t_mat['Bx']    > -9990.0].Bx,color=color[trainer],linewidth=2)         
-    fax[1,1].plot(t_mat[t_mat['By'   ] > -9990.0].index,t_mat[t_mat['By']    > -9990.0].By,color=color[trainer],linewidth=2)         
-    fax[2,1].plot(t_mat[t_mat['Bz'   ] > -9990.0].index,t_mat[t_mat['Bz']    > -9990.0].Bz,color=color[trainer],linewidth=2)         
+    fax[0,1].plot(t_mat[t_mat['Bx'   ] > -9990.0].time_dt_mag,t_mat[t_mat['Bx']    > -9990.0].Bx,color=color[trainer],linewidth=2)         
+    fax[1,1].plot(t_mat[t_mat['By'   ] > -9990.0].time_dt_mag,t_mat[t_mat['By']    > -9990.0].By,color=color[trainer],linewidth=2)         
+    fax[2,1].plot(t_mat[t_mat['Bz'   ] > -9990.0].time_dt_mag,t_mat[t_mat['Bz']    > -9990.0].Bz,color=color[trainer],linewidth=2)         
 
 
     #plot observed break time
