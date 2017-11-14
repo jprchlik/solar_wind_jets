@@ -23,7 +23,8 @@ def format_df(inpt_df,p_var,span='3600s'):
     p_vth = inpt_df.Vth > -9990.
     p_spd = inpt_df.SPEED > -9990.
     p_bfx = inpt_df.Bx > -9990.
-    p_bfy = inpt_df.Bz > -9990.
+    p_bfy = inpt_df.By > -9990.
+    p_bfz = inpt_df.Bz > -9990.
 
     #only keep times with good data in plasma or magnetic field
     inpt_df = inpt_df[(((p_den) & (p_vth) & (p_spd)) | ((p_bfx) & (p_bfy) & (p_bfz)))]
@@ -38,7 +39,8 @@ def format_df(inpt_df,p_var,span='3600s'):
     #
 
     #Do parameter calculation for the 2016 year (training year)
-    inpt_df['del_time'] = np.abs(inpt_df['time_dt'].diff(1).values.astype('double')/1.e9)
+    inpt_df['del_time_mag'] = np.abs(inpt_df['time_dt_mag'].diff(1).values.astype('double')/1.e9)
+    inpt_df['del_time_pls'] = np.abs(inpt_df['time_dt_pls'].diff(1).values.astype('double')/1.e9)
 
 
     #convert span to a number index so I can use the logic center = True
@@ -47,7 +49,8 @@ def format_df(inpt_df,p_var,span='3600s'):
     span = int(round(float(span[:-1])/inpt_df.del_time.median()))
 
     #time cadence parameter to add to plasma and magnetic field time series
-    par_ind = inpt_df.del_time.median()**2./60./inpt_df.del_time
+    par_ind_mag = inpt_df.del_time_mag.median()**2./60./inpt_df.del_time_mag
+    par_ind_pls = inpt_df.del_time_pls.median()**2./60./inpt_df.del_time_pls
 
     #calculate difference in parameters
     inpt_df['ldel_speed'] = np.abs(inpt_df['SPEED'].diff(-1)/inpt_df.del_time)
@@ -86,9 +89,9 @@ def format_df(inpt_df,p_var,span='3600s'):
 
     #calculate snr in plasma parameters from rollin median
     #Change to difference in sigma per minute time period 2017/10/31
-    inpt_df['diff_snr_speed'] = np.abs(inpt_df.diff_med_speed)/inpt_df.diff_sig_speed *par_ind
-    inpt_df['diff_snr_Np']    = np.abs(inpt_df.diff_med_Np)/inpt_df.diff_sig_Np       *par_ind
-    inpt_df['diff_snr_Vth']   = np.abs(inpt_df.diff_med_Vth)/inpt_df.diff_sig_Vth     *par_ind
+    inpt_df['diff_snr_speed'] = np.abs(inpt_df.diff_med_speed)/inpt_df.diff_sig_speed *par_ind_pls
+    inpt_df['diff_snr_Np']    = np.abs(inpt_df.diff_med_Np)/inpt_df.diff_sig_Np       *par_ind_pls
+    inpt_df['diff_snr_Vth']   = np.abs(inpt_df.diff_med_Vth)/inpt_df.diff_sig_Vth     *par_ind_pls
 
     #calculate snr in plasma acceleration parameters from rollin median
     inpt_df['accl_snr_speed'] = np.abs(inpt_df.accl_sig_speed)/inpt_df.accl_sig_speed
@@ -122,9 +125,9 @@ def format_df(inpt_df,p_var,span='3600s'):
 
     #calculate snr in B parameters from rollin median
     #Change to difference in sigma per minute time period 2017/10/31
-    inpt_df['diff_snr_Bx'] = np.abs(inpt_df.diff_med_Bx)/inpt_df.diff_sig_Bx*par_ind 
-    inpt_df['diff_snr_By'] = np.abs(inpt_df.diff_med_By)/inpt_df.diff_sig_By*par_ind
-    inpt_df['diff_snr_Bz'] = np.abs(inpt_df.diff_med_Bz)/inpt_df.diff_sig_Bz*par_ind
+    inpt_df['diff_snr_Bx'] = np.abs(inpt_df.diff_med_Bx)/inpt_df.diff_sig_Bx*par_ind_mag 
+    inpt_df['diff_snr_By'] = np.abs(inpt_df.diff_med_By)/inpt_df.diff_sig_By*par_ind_mag
+    inpt_df['diff_snr_Bz'] = np.abs(inpt_df.diff_med_Bz)/inpt_df.diff_sig_Bz*par_ind_mag
 
     #calculate difference B parameters
     inpt_df['del_Bx'] = np.abs(inpt_df['Bx'].diff(1)/inpt_df.del_time)
@@ -394,25 +397,31 @@ arch = '../cdf/cdftotxt/'
 for k in craft:
 
     #Read in plasma and magnetic field data from full res
-    pls[k] = pd.read_table(arch+'{0}_pls_formatted.txt'.format(k.lower()))
-    mag[k] = pd.read_table(arch+'{0}_mag_formatted.txt'.format(k.lower()))
+    pls[k] = pd.read_table(arch+'{0}_pls_formatted.txt'.format(k.lower()),delim_whitespace=True)
 
-    #create datetime objects from time
-    pls[k]['time_dt'] = pd.to_datetime(pls[k]['Time'])
-    mag[k]['time_dt'] = pd.to_datetime(mag[k]['Time'])
+    #no magnetic field data from SOHO
+    if k != 'soho':
+        mag[k] = pd.read_table(arch+'{0}_mag_formatted.txt'.format(k.lower()),delim_whitespace=True)
 
-    #setup index
-    pls[k].set_index(pls[k].time_dt,inplace=True)
-    mag[k].set_index(mag[k].time_dt,inplace=True)
+        #create datetime objects from time
+        pls[k]['time_dt'] = pd.to_datetime(pls[k]['Time'])
+        mag[k]['time_dt'] = pd.to_datetime(mag[k]['Time'])
 
-    #join magnetic field and plasma dataframes
-    com_df  = pd.merge(mag[k],pls[k],how='outer',left_index=True,right_index=True)
+        #setup index
+        pls[k].set_index(pls[k].time_dt,inplace=True)
+        mag[k].set_index(mag[k].time_dt,inplace=True)
 
-    #replace NaN with previously measured value
-    com_df.fillna(method='bfill',inplace=True)
-    
-    #get degault formating for pandas dataframe
-    plsm[k] = format_df(com_df,p_var) 
+        #join magnetic field and plasma dataframes
+        com_df  = pd.merge(mag[k],pls[k],how='outer',left_index=True,right_index=True,suffixes=('_mag','_pls'))
+
+        #replace NaN with previously measured value
+        com_df.fillna(method='bfill',inplace=True)
+        
+        #get degault formating for pandas dataframe
+        plsm[k] = format_df(com_df,p_var) 
+    else:
+	    pls[k]['time_dt'] = pd.to_datetime(pls[k]['Time'])
+        plsm[k] = format_df(pls[k],p_var)
 
 
 
