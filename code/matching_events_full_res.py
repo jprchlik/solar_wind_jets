@@ -26,16 +26,18 @@ def format_df(inpt_df,p_var,span='3600s',center=True):
     
     
     #check quality 
-    p_den = inpt_df.Np > -9990.
-    p_vth = inpt_df.Vth > -9990.
-    p_spd = inpt_df.SPEED > -9990.
-    p_bfx = inpt_df.Bx > -9990.
-    p_bfy = inpt_df.By > -9990.
-    p_bfz = inpt_df.Bz > -9990.
+    p_den = ((inpt_df.Np > -9990.)    & (np.isfinite(inpt_df.Np)))
+    p_vth = ((inpt_df.Vth > -9990.)   & (np.isfinite(inpt_df.Vth)))
+    p_spd = ((inpt_df.SPEED > -9990.) & (np.isfinite(inpt_df.SPEED)))
+    p_bfx = ((inpt_df.Bx > -9990.)    & (np.isfinite(inpt_df.Bx)))
+    p_bfy = ((inpt_df.By > -9990.)    & (np.isfinite(inpt_df.By)))
+    p_bfz = ((inpt_df.Bz > -9990.)    & (np.isfinite(inpt_df.Bz)))
 
     #only keep times with good data in plasma or magnetic field
     plsm_df = inpt_df[((p_den) & (p_vth) & (p_spd))]
     magf_df = inpt_df[((p_bfx) & (p_bfy) & (p_bfz))]
+
+
     
     #Only fill for ACE
     #if k == 'ace':
@@ -47,24 +49,24 @@ def format_df(inpt_df,p_var,span='3600s',center=True):
     #
 
     #Do parameter calculation of different cadences
-    magf_df['del_time_mag'] = np.abs(mag[k]['time_dt_mag'].diff(1).values.astype('double')/1.e9)
-    plsm_df['del_time_pls'] = np.abs(pls[k]['time_dt_pls'].diff(1).values.astype('double')/1.e9)
+    plsm_df['del_time_pls'] = np.abs(plsm_df['time_dt_pls'].diff(1).values.astype('double')/1.e9)
+    magf_df['del_time_mag'] = np.abs(magf_df['time_dt_mag'].diff(1).values.astype('double')/1.e9)
 
 
     #convert span to a number index so I can use the logic center = True
     #assumes format_df import is in s
     #then divide by the space craft jump time
     if center:
-        span_mag = int(round(float(span[:-1])/inpt_df.del_time_mag.median()))
-        span_pls = int(round(float(span[:-1])/inpt_df.del_time_pls.median()))
+        span_mag = int(round(float(span[:-1])/magf_df.del_time_mag.median()))
+        span_pls = int(round(float(span[:-1])/plsm_df.del_time_pls.median()))
     #else use the runup (left) span
     else:
         span_mag = span
         span_pls = span
 
     #time cadence parameter to add to plasma and magnetic field time series
-    par_ind_mag = inpt_df.del_time_mag.median()**2./60./inpt_df.del_time_mag
-    par_ind_pls = inpt_df.del_time_pls.median()**2./60./inpt_df.del_time_pls
+    par_ind_mag = magf_df.del_time_mag.median()**2./60./magf_df.del_time_mag
+    par_ind_pls = plsm_df.del_time_pls.median()**2./60./plsm_df.del_time_pls
 
     #calculate difference in parameters
     plsm_df['ldel_speed'] = np.abs(plsm_df['SPEED'].diff(-1)/plsm_df.del_time_pls)
@@ -434,19 +436,22 @@ for k in craft:
         mag[k] = pd.read_table(arch+'{0}_mag_formatted.txt'.format(k.lower()),delim_whitespace=True)
 
         #create datetime objects from time
-        pls[k]['time_dt'] = pd.to_datetime(pls[k]['Time'])
-        mag[k]['time_dt'] = pd.to_datetime(mag[k]['Time'])
+        pls[k]['time_dt_pls'] = pd.to_datetime(pls[k]['Time'])
+        mag[k]['time_dt_mag'] = pd.to_datetime(mag[k]['Time'])
 
         #setup index
-        pls[k].set_index(pls[k].time_dt,inplace=True)
-        mag[k].set_index(mag[k].time_dt,inplace=True)
+        pls[k].set_index(pls[k].time_dt_pls,inplace=True)
+        mag[k].set_index(mag[k].time_dt_mag,inplace=True)
 
+        #cut for testing reasons
+        pls[k] = pls[k]['2017/01/01':'2017/01/31']
+        mag[k] = mag[k]['2017/01/01':'2017/01/31']
 
         #join magnetic field and plasma dataframes
         com_df  = pd.merge(mag[k],pls[k],how='outer',left_index=True,right_index=True,suffixes=('_mag','_pls'))
 
         #replace NaN with previously measured value
-        com_df.fillna(method='bfill',inplace=True)
+        #com_df.fillna(method='bfill',inplace=True)
         
         #get degault formating for pandas dataframe
         plsm[k] = format_df(com_df,p_var) 
