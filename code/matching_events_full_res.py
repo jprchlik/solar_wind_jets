@@ -303,13 +303,15 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,ref_chi_t=pd.to_timedelta('10 minutes'),r
         c_mat.index = c_mat.index+(i-time)
     
     
-        #remove bad Speed values 
-        c_mat.loc[c_mat.SPEED < 0.,'SPEED'] = np.nan
         #c_mat.SPEED.interpolate('time',inplace=True)
         #need to use values for correct logic
 
         #use speed for rough esimation if possible
-        if ((len(c_mat[c_mat['SPEED'] > -9999.0].SPEED) > 10.) & (len(c_mat[c_mat['SPEED'] > -9999.0].SPEED) > 10.)): par = ['SPEED']
+        if ((len(c_mat[c_mat['SPEED'] > 0].SPEED) > 10.) & (len(c_mat[c_mat['SPEED'] > 0].SPEED) > 10.)): par = ['SPEED']
+        else: par = ['Bx','By','Bz']
+
+        #remove bad Speed values 
+        c_mat.loc[c_mat.SPEED < 0.,'SPEED'] = np.nan
     
         #get training spacecraft time range
         t_mat = plsm[trainer].loc[c_mat.index.min():c_mat.index.max()]
@@ -323,6 +325,10 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,ref_chi_t=pd.to_timedelta('10 minutes'),r
         c_mat = c_mat[~c_mat.index.duplicated(keep='first')]
         t_mat = t_mat[~t_mat.index.duplicated(keep='first')]
 
+     
+        #go to next time if DataFrame is empty
+        if ((len(c_mat) < 2) | (len(t_mat) < 2)): continue
+
     
         #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid and interpolate
         c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
@@ -334,7 +340,8 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,ref_chi_t=pd.to_timedelta('10 minutes'),r
     
 
         #compute chi^2 value for Wind and other spacecraft
-        p_mat.loc[time,'chisq'] = np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)
+        #added computation number to prefer maximum overlap (i.e. won't shove to an edge) J. Prchlik 2017/11/15
+        p_mat.loc[time,'chisq'] = np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)/float(len(c_mat)+len(t_mat))
     
     
         #create figure to check matchin
@@ -406,7 +413,7 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,ref_chi_t=pd.to_timedelta('10 minutes'),r
             c_mat.SPEED = c_mat.SPEED-off_speed
     
             #compute the chisq value in SPEED from the top ten probablilty array including the median offsets
-            p_mat.loc[time,'chisq'] = np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)
+            p_mat.loc[time,'chisq'] = np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)/float(len(c_mat)+len(t_mat))
     
     
         #get the index of minimum refined chisq value
@@ -461,7 +468,7 @@ p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 m_var = p_var.replace('predict','predict_sigma')
 #fractional p value to call an "event"
 p_val = 0.980 
-p_val = 0.9990 
+#p_val = 0.9990 
 
 #read in all spacraft events
 #for k in craft: plsm[k] = pd.read_pickle('../{0}/data/y2016_power_formatted.pic'.format(k.lower()))
@@ -484,10 +491,10 @@ for k in craft:
         mag[k].set_index(mag[k].time_dt_mag,inplace=True)
 
         #cut for testing reasons
-        #pls[k] = pls[k]['2016/06/04':'2017/07/31']
-        #mag[k] = mag[k]['2016/06/04':'2017/07/31']
-        pls[k] = pls[k]['2016/07/18':'2016/07/21']
-        mag[k] = mag[k]['2016/07/18':'2016/07/21']
+        pls[k] = pls[k]['2016/06/04':'2017/07/31']
+        mag[k] = mag[k]['2016/06/04':'2017/07/31']
+        #pls[k] = pls[k]['2016/07/18':'2016/07/21']
+        #mag[k] = mag[k]['2016/07/18':'2016/07/21']
         #pls[k] = pls[k]['2017/01/25':'2017/01/27']
         #mag[k] = mag[k]['2017/01/25':'2017/01/27']
 
@@ -534,23 +541,23 @@ tr_events = tr_events[~tr_events.duplicated(['group'],keep = 'first')]
 
 #get strings for times around each event#
 window = {}
-window['DSCOVR'] = pd.to_timedelta('60 minutes')
-window['ACE'] = pd.to_timedelta('60 minutes')
-window['SOHO'] = pd.to_timedelta('60 minutes')
-window['Wind'] = pd.to_timedelta('60 minutes')
+window['DSCOVR'] = pd.to_timedelta('120 minutes')
+window['ACE'] = pd.to_timedelta('120 minutes')
+window['SOHO'] = pd.to_timedelta('120 minutes')
+window['Wind'] = pd.to_timedelta('120 minutes')
 
 #define rough chi min time  to cal Chi^2 min for each time
-rgh_chi_t = pd.to_timedelta('720 minutes')
+rgh_chi_t = pd.to_timedelta('90 minutes')
 
 #get strings for times around each event when refining chi^2 time
 ref_window = {}
-ref_window['DSCOVR'] = pd.to_timedelta('5 minutes')
-ref_window['ACE'] = pd.to_timedelta('5 minutes')
-ref_window['SOHO'] = pd.to_timedelta('5 minutes')
-ref_window['Wind'] = pd.to_timedelta('5 minutes')
+ref_window['DSCOVR'] = pd.to_timedelta('30 minutes')
+ref_window['ACE'] = pd.to_timedelta('30 minutes')
+ref_window['SOHO'] = pd.to_timedelta('30 minutes')
+ref_window['Wind'] = pd.to_timedelta('30 minutes')
 
 #refined window to calculate Chi^2 min for each time
-ref_chi_t = pd.to_timedelta('10 minutes')
+ref_chi_t = pd.to_timedelta('20 minutes')
 
 
 #plot window 
