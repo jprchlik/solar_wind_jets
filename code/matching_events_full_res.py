@@ -466,8 +466,8 @@ for k in craft:
         mag[k].set_index(mag[k].time_dt_mag,inplace=True)
 
         #cut for testing reasons
-        pls[k] = pls[k]['2016/07/01':'2016/07/31']
-        mag[k] = mag[k]['2016/07/01':'2016/07/31']
+        pls[k] = pls[k]['2016/06/04':'2017/10/31']
+        mag[k] = mag[k]['2016/06/04':'2017/10/31']
 
         #join magnetic field and plasma dataframes
         com_df  = pd.merge(mag[k],pls[k],how='outer',left_index=True,right_index=True,suffixes=('_mag','_pls'),sort=True)
@@ -763,7 +763,7 @@ for i in tr_events.index:
             #if (((p_mat_t.size > 0) & (p_mat_t[p_var].max() > mag_tol)) | ((k.lower() == 'soho') & (p_mat_t.size > 0.))):
             if ((k.lower() == 'soho') & (p_mat_t.size > 0.)):
 
-                i_min = chi_min(p_mat_t,['SPEED'],rgh_chi_t,plsm,k,ref_chi_t=ref_chi_t,refine=False,n_fine=4,plot=False)
+                i_min = chi_min(p_mat_t,['SPEED'],rgh_chi_t,plsm,k,ref_chi_t=ref_chi_t,refine=True ,n_fine=4,plot=False)
                 #create figure to test fit
                 if plot:
                     fig, ax = plt.subplots()
@@ -796,7 +796,7 @@ for i in tr_events.index:
                 #sort the cut window and get the top 10 events
                 p_mat_t = p_mag_t
        
-                i_min = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,plsm,k,ref_chi_t=ref_chi_t,refine=False,n_fine=4,plot=False)
+                i_min = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,plsm,k,ref_chi_t=ref_chi_t,refine=True ,n_fine=4,plot=False)
 
                 #use full array for index matching
                 p_mat = plsm[k]
