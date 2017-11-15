@@ -421,7 +421,7 @@ use_chisq = True
 plot = False
 
 #refine chisq min with closer time grid
-refine = True
+refine = False
 
 #set use to use all spacecraft
 craft = ['Wind','DSCOVR','ACE','SOHO']
@@ -765,14 +765,14 @@ for i in tr_events.index:
             p_mag_t = p_mat.sort_values(m_var,ascending=False)[:4]
 
             #mag tolerance for using magnetometer data to match events rather than plasma parameters
-            mag_tol = 0.5
+            mag_tol = 0.0
             
 
 
             if (((p_mat_t.size > 0) & (p_mat_t[p_var].max() > mag_tol)) | ((k.lower() == 'soho') & (p_mat_t.size > 0.))):
             #if ((k.lower() == 'soho') & (p_mat_t.size > 0.)):
 
-                i_min = chi_min(p_mat_t,['SPEED'],rgh_chi_t,plsm,k,ref_chi_t=ref_chi_t,refine=True ,n_fine=4,plot=False)
+                i_min = chi_min(p_mat_t,['SPEED'],rgh_chi_t,plsm,k,ref_chi_t=ref_chi_t,refine=refine,n_fine=4,plot=False)
                 #create figure to test fit
                 if plot:
                     fig, ax = plt.subplots()
@@ -805,7 +805,7 @@ for i in tr_events.index:
                 #sort the cut window and get the top 10 events
                 p_mat_t = p_mag_t
        
-                i_min = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,plsm,k,ref_chi_t=ref_chi_t,refine=True ,n_fine=4,plot=False)
+                i_min = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,plsm,k,ref_chi_t=ref_chi_t,refine=refine,n_fine=4,plot=False)
 
                 #use full array for index matching
                 p_mat = plsm[k]
