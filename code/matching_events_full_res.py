@@ -293,19 +293,20 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,time):
    #c_mat.SPEED.interpolate('time',inplace=True)
    #need to use values for correct logic
 
-   #use speed for rough esimation if possible
-   if ((len(c_mat[c_mat['SPEED'] > 0].SPEED) > 10.) & (len(c_mat[c_mat['SPEED'] > 0].SPEED) > 10.) & (try_pls)): par = ['SPEED']
-   else: par = ['Bx','By','Bz']
+   #get training spacecraft time range
+   t_mat = plsm[trainer].loc[c_mat.index.min():c_mat.index.max()]
 
    #use magentic field for refinement for ACE, Wind, and DSCOVR
    if ((k.lower() != 'soho') & (try_mag)): par = ['Bx','By','Bz']
+
+   #use speed for rough esimation if possible
+   if (((len(c_mat[c_mat['SPEED'] > 0].SPEED) > 10.) & (len(t_mat[t_mat['SPEED'] > 0].SPEED) > 10.) & (try_pls)) | (k.lower() == 'soho')): par = ['SPEED']
+   else: par = ['Bx','By','Bz']
 
 
    #remove bad Speed values 
    c_mat.loc[c_mat.SPEED < 0.,'SPEED'] = np.nan
 
-   #get training spacecraft time range
-   t_mat = plsm[trainer].loc[c_mat.index.min():c_mat.index.max()]
 
    #need to use values for correct logic
    c_mat = c_mat[np.isfinite(c_mat[par].values)]
@@ -491,6 +492,7 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,ref_chi_t=pd.to_timedelta('10 minutes'),r
 
         #use magentic field for refinement for ACE, Wind, and DSCOVR
         if k.lower() != 'soho': par = ['Bx','By','Bz']
+        else: par = ['SPEED']
 
         #Find 4 lowest chisq min times
         p_temp = p_mat.sort_values('chisq',ascending=True )[:n_fine]
@@ -503,12 +505,14 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,ref_chi_t=pd.to_timedelta('10 minutes'),r
         time = p_mat.index
         #create list of tuples to sent to processors
         #create list to sent to processors
-        ref_chi_min = partial(return_chi_min,rgh_chi_t,plsm,k,par,False,True)
+        ref_chi_min = partial(return_chi_min,ref_chi_t,plsm,k,par,True,False)
+        loop_list = []
+        for i in time: loop_list.append((ref_chi_t,plsm,k,par,True,False,i))
     
         #Parallized chisq computation
         if nproc > 1.5:
             pool = Pool(processes=nproc)
-            outp = pool.map(ref_chi_min,time)
+            outp = pool.map(help_chi_min,loop_list)
             pool.close()
             pool.join()
         else:
@@ -519,6 +523,8 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,ref_chi_t=pd.to_timedelta('10 minutes'),r
         #add chisq times to p_mat array
         #first is time index second is chisq value
         for i in outp: p_mat.loc[i[0],'chisq'] = i[1]
+        #get the index of minimum refined chisq value
+        i_min = p_mat['chisq'].idxmin()
     
         #loop over all indexes in refined time window
         #for time in p_mat.index:
@@ -558,8 +564,6 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,ref_chi_t=pd.to_timedelta('10 minutes'),r
         #    p_mat.loc[time,'chisq'] = np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)/float(len(c_mat)+len(t_mat))
     
     
-        #get the index of minimum refined chisq value
-        i_min = p_mat['chisq'].idxmin()
 
     return i_min
     
@@ -579,7 +583,7 @@ use_chisq = True
 plot = False
 
 #refine chisq min with closer time grid
-refine = False
+refine = True 
 
 #set use to use all spacecraft
 craft = ['Wind','DSCOVR','ACE','SOHO']
@@ -609,7 +613,7 @@ sig_l = 5.0
 p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 m_var = p_var.replace('predict','predict_sigma')
 #fractional p value to call an "event"
-p_val = 0.980 
+p_val = 0.990 
 p_val = 0.9990 
 
 #read in all spacraft events
@@ -635,10 +639,10 @@ def read_in(k):
         #cut for testing reasons
         #pls = pls['2016/06/04':'2017/07/31']
         #mag = mag['2016/06/04':'2017/07/31']
-        pls = pls['2016/07/18':'2016/07/21']
-        mag = mag['2016/07/18':'2016/07/21']
-        #pls[k] = pls[k]['2017/01/25':'2017/01/27']
-        #mag[k] = mag[k]['2017/01/25':'2017/01/27']
+        #pls = pls['2016/07/18':'2016/07/21']
+        #mag = mag['2016/07/18':'2016/07/21']
+        pls = pls['2017/01/25':'2017/01/27']
+        mag = mag['2017/01/25':'2017/01/27']
 
         #join magnetic field and plasma dataframes
         com_df  = pd.merge(mag,pls,how='outer',left_index=True,right_index=True,suffixes=('_mag','_pls'),sort=True)
@@ -703,13 +707,13 @@ window['SOHO'] = pd.to_timedelta('120 minutes')
 window['Wind'] = pd.to_timedelta('120 minutes')
 
 #define rough chi min time  to cal Chi^2 min for each time
-rgh_chi_t = pd.to_timedelta('720 minutes')
+rgh_chi_t = pd.to_timedelta('150 minutes')
 
 #get strings for times around each event when refining chi^2 time
 ref_window = {}
-ref_window['DSCOVR'] = pd.to_timedelta('15 minutes')
+ref_window['DSCOVR'] = pd.to_timedelta('25 minutes')
 ref_window['ACE'] = pd.to_timedelta('15 minutes')
-ref_window['SOHO'] = pd.to_timedelta('15 minutes')
+ref_window['SOHO'] = pd.to_timedelta('45 minutes')
 ref_window['Wind'] = pd.to_timedelta('15 minutes')
 
 #refined window to calculate Chi^2 min for each time
@@ -1014,8 +1018,8 @@ for i in tr_events.index:
             fax[0,0].plot(b_mat[b_mat['Np'   ] > -9990.0].index,b_mat[b_mat['Np'   ] > -9990.0].Np   ,color=color[k],linewidth=2,label='')         
 
         if len(b_mat[b_mat['Vth'  ] > -9990.0]) > 0:
-            fax[1,0].scatter(b_mat[b_mat['Vth'  ] > -9990.0].index,b_mat[b_mat['Vth'  ] > -9990.0].Vth  ,marker=marker[k],color=color[k])         
-            fax[1,0].plot(b_mat[b_mat['Vth'  ] > -9990.0].index,b_mat[b_mat['Vth'  ] > -9990.0].Vth  ,color=color[k],linewidth=2)         
+            fax[1,0].scatter(b_mat[b_mat['Vth'  ] > -9990.0].index,b_mat[b_mat['Vth'  ] > -9990.0].Vth  ,marker=marker[k],color=color[k],label=k)         
+            fax[1,0].plot(b_mat[b_mat['Vth'  ] > -9990.0].index,b_mat[b_mat['Vth'  ] > -9990.0].Vth  ,color=color[k],linewidth=2,label='')         
 
         if len(b_mat[b_mat['SPEED'] > -9990.0]) > 0:
             fax[2,0].scatter(b_mat[b_mat['SPEED'] > -9990.0].index,b_mat[b_mat['SPEED'] > -9990.0].SPEED,marker=marker[k],color=color[k])         
@@ -1052,8 +1056,8 @@ for i in tr_events.index:
         fax[0,0].plot(t_mat[t_mat['Np'   ] > -9990.0].index,t_mat[t_mat['Np'   ] > -9990.0].Np   ,color=color[trainer],linewidth=2,label='')         
 
     if len(t_mat[t_mat['Vth'  ] > -9990.0]) > 0:
-        fax[1,0].scatter(t_mat[t_mat['Vth'  ] > -9990.0].index,t_mat[t_mat['Vth'  ] > -9990.0].Vth  ,marker=marker[trainer],color=color[trainer])         
-        fax[1,0].plot(t_mat[t_mat['Vth'  ] > -9990.0].index,t_mat[t_mat['Vth'  ] > -9990.0].Vth  ,color=color[trainer],linewidth=2)         
+        fax[1,0].scatter(t_mat[t_mat['Vth'  ] > -9990.0].index,t_mat[t_mat['Vth'  ] > -9990.0].Vth  ,marker=marker[trainer],color=color[trainer],label=trainer)         
+        fax[1,0].plot(t_mat[t_mat['Vth'  ] > -9990.0].index,t_mat[t_mat['Vth'  ] > -9990.0].Vth  ,color=color[trainer],linewidth=2,label='')         
 
     if len(t_mat[t_mat['SPEED'] > -9990.0]) > 0:
         fax[2,0].scatter(t_mat[t_mat['SPEED'] > -9990.0].index,t_mat[t_mat['SPEED'] > -9990.0].SPEED,marker=marker[trainer],color=color[trainer])         
@@ -1083,7 +1087,7 @@ for i in tr_events.index:
         pax.axvline(i-xoff,alpha=0.5,linestyle='--',linewidth=3,color='purple')
        
     #plot best time for each spacecraft
-    fax[0,0].legend(loc='upper left',frameon=False,scatterpoints=1)
+    fax[1,0].legend(loc='best',frameon=False,scatterpoints=1)
 
     #plot an hour around observation
     fax[0,0].set_xlim([i-pd.to_timedelta('25 minutes'),i+pd.to_timedelta('25 minutes')])
