@@ -1,0 +1,1325 @@
+
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <style>
+            table, th, td {
+                border: 1px solid black;
+                border-collapse: collapse;
+            }
+            th, td {
+                padding: 5px;
+            }
+            th {
+                text-align: left;
+            }
+            </style>
+            </head>
+            <body>
+            
+            <h1>
+            Finding &chi;<sup>2</sup> Minimization 
+            </h1>
+            </br>
+            </br>
+            <p1>
+            The program for finding the &chi;<sup>2</sup> minimum for events between spacecraft works by using a primary spacecraft to find events.
+            I selected Wind because I used Wind to train the model, and the events found in Wind are consistent with events found by eye or independent spacecraft 
+            algorithms. I define an event discontinuity as a time where our model indicates a 99.90% probability the solar wind parameters corresponds to a 5&sigma;
+            discontinuity in a component of the magnetic field. Then I create a course grid of 5 minute samples for &plusmn; 3 hours around a event. Then I shift 
+            the other 3 spacecraft onto the Wind using the course grid. Then I select a 1 hour window around the shifted Wind and other spacecraft and derive a first order
+            &chi;<sup>2</sup> minimum. Using the first order &chi;<sup>2</sup> minimum, I create a fine grid 50 minutes (&plusmn; 25 minutes) around the rough &chi;<sup>2</sup> minimum
+            time. The fine grid cadence is set to the maximum sampling frequency of a given spacecraft. Then the program stores the &chi;<sup>2</sup> value for 20 minutes (&plusmn; 10 minutes)
+            around each fine grid point. The &chi;<sup>2</sup> reported is the minimum from the time grid.
+            </p1>
+
+            </br>
+            </br>
+            <h4>
+            Table Summary
+            </h4>
+            Each table contains a row for each spacecraft with observations in the requested time period. Then each row contains 6 columns. The first column labels the spacecraft for a 
+            given row. Then next column (Obs. Time [UT]) gives the time of the "event" in the reference frame of the spacecraft. Offset is the offset in minutes from the Wind observation.
+            P-val (plasma) is the p-val for a 5&sigma; discontinuity at the reference Obs. time for a given spacecraft's measured plasma values. 
+            P-val (mag.) is the p-val for a 5&sigma; discontinuity given at the reference Obs. time for a given spacecraft's measured magnetic field values.
+            Finally, an X in Use Plasma Mod. means the minimization routine use the wind Speed to find the best match &chi;<sup>2</sup> time,
+            while an empty cell denotes using the magnetic field.
+    
+            </br>
+            </br>
+
+            <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20160719_230122_bigg.png"> Event on 2016/07/19 23:01:22 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20160719_230122_zoom.png"> Event on 2016/07/19 23:01:22 UT (50 Min.)</a> </b>
+
+           <table style="width=100%">
+              <tr>
+                  <td>
+                  Spacecraft
+                  </td>
+                  <td>
+                  Obs. Time [UT]
+                  </td>
+                  <td>
+                  Offset [min]
+                  </td>
+                  <td>
+                  p-val (plasma) 
+                  </td>
+                  <td>
+                  p-val (mag.) 
+                  </td>
+                  <td>
+                  Used Plasma Mod.
+                  </td>
+              </tr>
+                  <tr>
+                  <td>
+                  Wind
+                  </td>
+                  <td>
+                  2016/07/19 23:01:22
+                  </td>
+                  <td>
+                   0.00
+                  </td>
+                  <td>
+                  1.000
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  DSCOVR
+                  </td>
+                  <td>
+                  2016/07/19 22:55:00
+                  </td>
+                  <td>
+                  -6.37
+                  </td>
+                  <td>
+                  0.067
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  ACE
+                  </td>
+                  <td>
+                  2016/07/19 23:01:59
+                  </td>
+                  <td>
+                   0.62
+                  </td>
+                  <td>
+                  0.073
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  SOHO
+                  </td>
+                  <td>
+                  2016/07/19 23:09:15
+                  </td>
+                  <td>
+                   7.88
+                  </td>
+                  <td>
+                  0.627
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr></table>
+
+         </br>
+         </br>
+         </br>
+
+
+         <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20160908_003324_bigg.png"> Event on 2016/09/08 00:33:24 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20160908_003324_zoom.png"> Event on 2016/09/08 00:33:24 UT (50 Min.)</a> </b>
+
+           <table style="width=100%">
+              <tr>
+                  <td>
+                  Spacecraft
+                  </td>
+                  <td>
+                  Obs. Time [UT]
+                  </td>
+                  <td>
+                  Offset [min]
+                  </td>
+                  <td>
+                  p-val (plasma) 
+                  </td>
+                  <td>
+                  p-val (mag.) 
+                  </td>
+                  <td>
+                  Used Plasma Mod.
+                  </td>
+              </tr>
+                  <tr>
+                  <td>
+                  Wind
+                  </td>
+                  <td>
+                  2016/09/08 00:33:24
+                  </td>
+                  <td>
+                   0.00
+                  </td>
+                  <td>
+                  1.000
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  DSCOVR
+                  </td>
+                  <td>
+                  2016/09/08 00:19:50
+                  </td>
+                  <td>
+                  -13.57
+                  </td>
+                  <td>
+                  0.144
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  ACE
+                  </td>
+                  <td>
+                  2016/09/08 00:06:28
+                  </td>
+                  <td>
+                  -26.93
+                  </td>
+                  <td>
+                  0.068
+                  </td>
+                  <td>
+                  0.001
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  SOHO
+                  </td>
+                  <td>
+                  2016/09/08 00:46:08
+                  </td>
+                  <td>
+                  12.73
+                  </td>
+                  <td>
+                  0.101
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr></table>
+
+         </br>
+         </br>
+         </br>
+
+
+         <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20161012_211614_bigg.png"> Event on 2016/10/12 21:16:14 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20161012_211614_zoom.png"> Event on 2016/10/12 21:16:14 UT (50 Min.)</a> </b>
+
+           <table style="width=100%">
+              <tr>
+                  <td>
+                  Spacecraft
+                  </td>
+                  <td>
+                  Obs. Time [UT]
+                  </td>
+                  <td>
+                  Offset [min]
+                  </td>
+                  <td>
+                  p-val (plasma) 
+                  </td>
+                  <td>
+                  p-val (mag.) 
+                  </td>
+                  <td>
+                  Used Plasma Mod.
+                  </td>
+              </tr>
+                  <tr>
+                  <td>
+                  Wind
+                  </td>
+                  <td>
+                  2016/10/12 21:16:14
+                  </td>
+                  <td>
+                   0.00
+                  </td>
+                  <td>
+                  1.000
+                  </td>
+                  <td>
+                  0.001
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  DSCOVR
+                  </td>
+                  <td>
+                  2016/10/12 21:22:40
+                  </td>
+                  <td>
+                   6.43
+                  </td>
+                  <td>
+                  1.000
+                  </td>
+                  <td>
+                  0.001
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  ACE
+                  </td>
+                  <td>
+                  2016/10/12 21:24:08
+                  </td>
+                  <td>
+                   7.90
+                  </td>
+                  <td>
+                  0.668
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  SOHO
+                  </td>
+                  <td>
+                  2016/10/12 21:27:08
+                  </td>
+                  <td>
+                  10.90
+                  </td>
+                  <td>
+                  0.705
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr></table>
+
+         </br>
+         </br>
+         </br>
+
+
+         <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20161209_044529_bigg.png"> Event on 2016/12/09 04:45:29 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20161209_044529_zoom.png"> Event on 2016/12/09 04:45:29 UT (50 Min.)</a> </b>
+
+           <table style="width=100%">
+              <tr>
+                  <td>
+                  Spacecraft
+                  </td>
+                  <td>
+                  Obs. Time [UT]
+                  </td>
+                  <td>
+                  Offset [min]
+                  </td>
+                  <td>
+                  p-val (plasma) 
+                  </td>
+                  <td>
+                  p-val (mag.) 
+                  </td>
+                  <td>
+                  Used Plasma Mod.
+                  </td>
+              </tr>
+                  <tr>
+                  <td>
+                  Wind
+                  </td>
+                  <td>
+                  2016/12/09 04:45:29
+                  </td>
+                  <td>
+                   0.00
+                  </td>
+                  <td>
+                  1.000
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  DSCOVR
+                  </td>
+                  <td>
+                  2016/12/09 04:40:00
+                  </td>
+                  <td>
+                  -5.48
+                  </td>
+                  <td>
+                  0.954
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  ACE
+                  </td>
+                  <td>
+                  2016/12/09 04:44:31
+                  </td>
+                  <td>
+                  -0.97
+                  </td>
+                  <td>
+                  0.121
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  SOHO
+                  </td>
+                  <td>
+                  2016/12/09 04:35:06
+                  </td>
+                  <td>
+                  -10.38
+                  </td>
+                  <td>
+                  0.969
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr></table>
+
+         </br>
+         </br>
+         </br>
+
+
+         <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170126_073709_bigg.png"> Event on 2017/01/26 07:37:09 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170126_073709_zoom.png"> Event on 2017/01/26 07:37:09 UT (50 Min.)</a> </b>
+
+           <table style="width=100%">
+              <tr>
+                  <td>
+                  Spacecraft
+                  </td>
+                  <td>
+                  Obs. Time [UT]
+                  </td>
+                  <td>
+                  Offset [min]
+                  </td>
+                  <td>
+                  p-val (plasma) 
+                  </td>
+                  <td>
+                  p-val (mag.) 
+                  </td>
+                  <td>
+                  Used Plasma Mod.
+                  </td>
+              </tr>
+                  <tr>
+                  <td>
+                  Wind
+                  </td>
+                  <td>
+                  2017/01/26 07:37:09
+                  </td>
+                  <td>
+                   0.00
+                  </td>
+                  <td>
+                  0.999
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  DSCOVR
+                  </td>
+                  <td>
+                  2017/01/26 07:38:40
+                  </td>
+                  <td>
+                   1.52
+                  </td>
+                  <td>
+                  0.139
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  ACE
+                  </td>
+                  <td>
+                  2017/01/26 07:44:06
+                  </td>
+                  <td>
+                   6.95
+                  </td>
+                  <td>
+                  0.109
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  SOHO
+                  </td>
+                  <td>
+                  2017/01/26 07:36:52
+                  </td>
+                  <td>
+                  -0.28
+                  </td>
+                  <td>
+                  0.075
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr></table>
+
+         </br>
+         </br>
+         </br>
+
+
+         <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170214_203616_bigg.png"> Event on 2017/02/14 20:36:16 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170214_203616_zoom.png"> Event on 2017/02/14 20:36:16 UT (50 Min.)</a> </b>
+
+           <table style="width=100%">
+              <tr>
+                  <td>
+                  Spacecraft
+                  </td>
+                  <td>
+                  Obs. Time [UT]
+                  </td>
+                  <td>
+                  Offset [min]
+                  </td>
+                  <td>
+                  p-val (plasma) 
+                  </td>
+                  <td>
+                  p-val (mag.) 
+                  </td>
+                  <td>
+                  Used Plasma Mod.
+                  </td>
+              </tr>
+                  <tr>
+                  <td>
+                  Wind
+                  </td>
+                  <td>
+                  2017/02/14 20:36:16
+                  </td>
+                  <td>
+                   0.00
+                  </td>
+                  <td>
+                  1.000
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  DSCOVR
+                  </td>
+                  <td>
+                  2017/02/14 19:45:00
+                  </td>
+                  <td>
+                  -51.27
+                  </td>
+                  <td>
+                  0.081
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  ACE
+                  </td>
+                  <td>
+                  2017/02/14 20:15:46
+                  </td>
+                  <td>
+                  -20.50
+                  </td>
+                  <td>
+                  0.050
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  SOHO
+                  </td>
+                  <td>
+                  2017/02/14 20:07:19
+                  </td>
+                  <td>
+                  -28.95
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr></table>
+
+         </br>
+         </br>
+         </br>
+
+
+         <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170216_060527_bigg.png"> Event on 2017/02/16 06:05:27 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170216_060527_zoom.png"> Event on 2017/02/16 06:05:27 UT (50 Min.)</a> </b>
+
+           <table style="width=100%">
+              <tr>
+                  <td>
+                  Spacecraft
+                  </td>
+                  <td>
+                  Obs. Time [UT]
+                  </td>
+                  <td>
+                  Offset [min]
+                  </td>
+                  <td>
+                  p-val (plasma) 
+                  </td>
+                  <td>
+                  p-val (mag.) 
+                  </td>
+                  <td>
+                  Used Plasma Mod.
+                  </td>
+              </tr>
+                  <tr>
+                  <td>
+                  Wind
+                  </td>
+                  <td>
+                  2017/02/16 06:05:27
+                  </td>
+                  <td>
+                   0.00
+                  </td>
+                  <td>
+                  1.000
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  DSCOVR
+                  </td>
+                  <td>
+                  2017/02/16 06:33:20
+                  </td>
+                  <td>
+                  27.88
+                  </td>
+                  <td>
+                  0.974
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  ACE
+                  </td>
+                  <td>
+                  2017/02/16 06:41:38
+                  </td>
+                  <td>
+                  36.18
+                  </td>
+                  <td>
+                  0.050
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  SOHO
+                  </td>
+                  <td>
+                  2017/02/16 06:50:58
+                  </td>
+                  <td>
+                  45.52
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr></table>
+
+         </br>
+         </br>
+         </br>
+
+
+         <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170327_040952_bigg.png"> Event on 2017/03/27 04:09:52 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170327_040952_zoom.png"> Event on 2017/03/27 04:09:52 UT (50 Min.)</a> </b>
+
+           <table style="width=100%">
+              <tr>
+                  <td>
+                  Spacecraft
+                  </td>
+                  <td>
+                  Obs. Time [UT]
+                  </td>
+                  <td>
+                  Offset [min]
+                  </td>
+                  <td>
+                  p-val (plasma) 
+                  </td>
+                  <td>
+                  p-val (mag.) 
+                  </td>
+                  <td>
+                  Used Plasma Mod.
+                  </td>
+              </tr>
+                  <tr>
+                  <td>
+                  Wind
+                  </td>
+                  <td>
+                  2017/03/27 04:09:52
+                  </td>
+                  <td>
+                   0.00
+                  </td>
+                  <td>
+                  1.000
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  DSCOVR
+                  </td>
+                  <td>
+                  2017/03/27 03:42:10
+                  </td>
+                  <td>
+                  -27.70
+                  </td>
+                  <td>
+                  0.112
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  ACE
+                  </td>
+                  <td>
+                  2017/03/27 04:02:43
+                  </td>
+                  <td>
+                  -7.15
+                  </td>
+                  <td>
+                  0.803
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  SOHO
+                  </td>
+                  <td>
+                  2017/03/27 03:52:59
+                  </td>
+                  <td>
+                  -16.88
+                  </td>
+                  <td>
+                  0.105
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr></table>
+
+         </br>
+         </br>
+         </br>
+
+
+         <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170603_075801_bigg.png"> Event on 2017/06/03 07:58:01 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170603_075801_zoom.png"> Event on 2017/06/03 07:58:01 UT (50 Min.)</a> </b>
+
+           <table style="width=100%">
+              <tr>
+                  <td>
+                  Spacecraft
+                  </td>
+                  <td>
+                  Obs. Time [UT]
+                  </td>
+                  <td>
+                  Offset [min]
+                  </td>
+                  <td>
+                  p-val (plasma) 
+                  </td>
+                  <td>
+                  p-val (mag.) 
+                  </td>
+                  <td>
+                  Used Plasma Mod.
+                  </td>
+              </tr>
+                  <tr>
+                  <td>
+                  Wind
+                  </td>
+                  <td>
+                  2017/06/03 07:58:01
+                  </td>
+                  <td>
+                   0.00
+                  </td>
+                  <td>
+                  0.999
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  DSCOVR
+                  </td>
+                  <td>
+                  2017/06/03 07:45:50
+                  </td>
+                  <td>
+                  -12.18
+                  </td>
+                  <td>
+                  0.328
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  ACE
+                  </td>
+                  <td>
+                  2017/06/03 07:42:57
+                  </td>
+                  <td>
+                  -15.07
+                  </td>
+                  <td>
+                  0.407
+                  </td>
+                  <td>
+                  0.002
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  SOHO
+                  </td>
+                  <td>
+                  2017/06/03 07:45:52
+                  </td>
+                  <td>
+                  -12.15
+                  </td>
+                  <td>
+                  0.102
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr></table>
+
+         </br>
+         </br>
+         </br>
+
+
+         <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170607_031111_bigg.png"> Event on 2017/06/07 03:11:11 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170607_031111_zoom.png"> Event on 2017/06/07 03:11:11 UT (50 Min.)</a> </b>
+
+           <table style="width=100%">
+              <tr>
+                  <td>
+                  Spacecraft
+                  </td>
+                  <td>
+                  Obs. Time [UT]
+                  </td>
+                  <td>
+                  Offset [min]
+                  </td>
+                  <td>
+                  p-val (plasma) 
+                  </td>
+                  <td>
+                  p-val (mag.) 
+                  </td>
+                  <td>
+                  Used Plasma Mod.
+                  </td>
+              </tr>
+                  <tr>
+                  <td>
+                  Wind
+                  </td>
+                  <td>
+                  2017/06/07 03:11:11
+                  </td>
+                  <td>
+                   0.00
+                  </td>
+                  <td>
+                  0.999
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  DSCOVR
+                  </td>
+                  <td>
+                  2017/06/07 04:05:00
+                  </td>
+                  <td>
+                  53.82
+                  </td>
+                  <td>
+                  0.059
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  ACE
+                  </td>
+                  <td>
+                  2017/06/07 03:45:04
+                  </td>
+                  <td>
+                  33.88
+                  </td>
+                  <td>
+                  0.043
+                  </td>
+                  <td>
+                  0.039
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  SOHO
+                  </td>
+                  <td>
+                  2017/06/07 03:01:38
+                  </td>
+                  <td>
+                  -9.55
+                  </td>
+                  <td>
+                  0.085
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr></table>
+
+         </br>
+         </br>
+         </br>
+
+
+         <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170708_231124_bigg.png"> Event on 2017/07/08 23:11:24 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170708_231124_zoom.png"> Event on 2017/07/08 23:11:24 UT (50 Min.)</a> </b>
+
+           <table style="width=100%">
+              <tr>
+                  <td>
+                  Spacecraft
+                  </td>
+                  <td>
+                  Obs. Time [UT]
+                  </td>
+                  <td>
+                  Offset [min]
+                  </td>
+                  <td>
+                  p-val (plasma) 
+                  </td>
+                  <td>
+                  p-val (mag.) 
+                  </td>
+                  <td>
+                  Used Plasma Mod.
+                  </td>
+              </tr>
+                  <tr>
+                  <td>
+                  Wind
+                  </td>
+                  <td>
+                  2017/07/08 23:11:24
+                  </td>
+                  <td>
+                   0.00
+                  </td>
+                  <td>
+                  0.999
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  DSCOVR
+                  </td>
+                  <td>
+                  2017/07/08 23:10:30
+                  </td>
+                  <td>
+                  -0.90
+                  </td>
+                  <td>
+                  0.918
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  ACE
+                  </td>
+                  <td>
+                  2017/07/08 23:34:42
+                  </td>
+                  <td>
+                  23.30
+                  </td>
+                  <td>
+                  0.062
+                  </td>
+                  <td>
+                  0.001
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  SOHO
+                  </td>
+                  <td>
+                  2017/07/08 23:32:28
+                  </td>
+                  <td>
+                  21.07
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr></table>
+
+         </br>
+         </br>
+         </br>
+
+
+         <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170727_053714_bigg.png"> Event on 2017/07/27 05:37:14 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/2b493a6/plots/spacecraft_events/full_res_event_20170727_053714_zoom.png"> Event on 2017/07/27 05:37:14 UT (50 Min.)</a> </b>
+
+           <table style="width=100%">
+              <tr>
+                  <td>
+                  Spacecraft
+                  </td>
+                  <td>
+                  Obs. Time [UT]
+                  </td>
+                  <td>
+                  Offset [min]
+                  </td>
+                  <td>
+                  p-val (plasma) 
+                  </td>
+                  <td>
+                  p-val (mag.) 
+                  </td>
+                  <td>
+                  Used Plasma Mod.
+                  </td>
+              </tr>
+                  <tr>
+                  <td>
+                  Wind
+                  </td>
+                  <td>
+                  2017/07/27 05:37:14
+                  </td>
+                  <td>
+                   0.00
+                  </td>
+                  <td>
+                  1.000
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  DSCOVR
+                  </td>
+                  <td>
+                  2017/07/27 05:52:30
+                  </td>
+                  <td>
+                  15.27
+                  </td>
+                  <td>
+                  0.089
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  ACE
+                  </td>
+                  <td>
+                  2017/07/27 04:55:35
+                  </td>
+                  <td>
+                  -41.65
+                  </td>
+                  <td>
+                  0.045
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr><tr>
+                  <td>
+                  SOHO
+                  </td>
+                  <td>
+                  2017/07/27 05:18:17
+                  </td>
+                  <td>
+                  -18.95
+                  </td>
+                  <td>
+                  0.041
+                  </td>
+                  <td>
+                  0.000
+                  </td>
+                  <td>
+                  X
+                  </td>
+              </tr></table>
+
+         </br>
+         </br>
+         </br>
+
+
+         
+            </body>
+            </html>
