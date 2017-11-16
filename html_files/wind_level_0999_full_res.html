@@ -26,10 +26,10 @@
             The program for finding the &chi;<sup>2</sup> minimum for events between spacecraft works by using a primary spacecraft to find events.
             I selected Wind because I used Wind to train the model, and the events found in Wind are consistent with events found by eye or independent spacecraft 
             algorithms. I define an event discontinuity as a time where our model indicates a 99.90% probability the solar wind parameters corresponds to a 5&sigma;
-            discontinuity in a component of the magnetic field. Then I create a course grid of 5 minute samples for &plusmn; 3 hours around a event. Then I shift 
-            the other 3 spacecraft onto the Wind using the course grid. Then I select a 1 hour window around the shifted Wind and other spacecraft and derive a first order
-            &chi;<sup>2</sup> minimum. Using the first order &chi;<sup>2</sup> minimum, I create a fine grid 50 minutes (&plusmn; 25 minutes) around the rough &chi;<sup>2</sup> minimum
-            time. The fine grid cadence is set to the maximum sampling frequency of a given spacecraft. Then the program stores the &chi;<sup>2</sup> value for 20 minutes (&plusmn; 10 minutes)
+            discontinuity in a component of the magnetic field. Then I create a course grid of 5 minute samples for &plusmn; 40 minutes around a event. Then I shift 
+            the other 3 spacecraft onto the Wind using the course grid. Then I select a 4 hour window (&plusmn;2 hours) around the shifted Wind and other spacecraft and derive a first order
+            &chi;<sup>2</sup> minimum. Using the first order &chi;<sup>2</sup> minimum, I create a fine grid 30 minutes (&plusmn; 15 minutes) around the rough &chi;<sup>2</sup> minimum
+            time. The fine grid cadence is set to the maximum sampling frequency of a given spacecraft. Then the program stores the &chi;<sup>2</sup> value for 30 minutes (&plusmn; 15 minutes)
             around each fine grid point. The &chi;<sup>2</sup> reported is the minimum from the time grid.
             </p1>
 
