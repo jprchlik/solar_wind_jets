@@ -614,7 +614,7 @@ p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 m_var = p_var.replace('predict','predict_sigma')
 #fractional p value to call an "event"
 p_val = 0.990 
-p_val = 0.9990 
+#p_val = 0.9990 
 
 #read in all spacraft events
 #for k in craft: plsm[k] = pd.read_pickle('../{0}/data/y2016_power_formatted.pic'.format(k.lower()))
@@ -711,13 +711,13 @@ rgh_chi_t = pd.to_timedelta('150 minutes')
 
 #get strings for times around each event when refining chi^2 time
 ref_window = {}
-ref_window['DSCOVR'] = pd.to_timedelta('25 minutes')
+ref_window['DSCOVR'] = pd.to_timedelta('35 minutes')
 ref_window['ACE'] = pd.to_timedelta('15 minutes')
-ref_window['SOHO'] = pd.to_timedelta('45 minutes')
+ref_window['SOHO'] = pd.to_timedelta('35 minutes')
 ref_window['Wind'] = pd.to_timedelta('15 minutes')
 
 #refined window to calculate Chi^2 min for each time
-ref_chi_t = pd.to_timedelta('30 minutes')
+ref_chi_t = pd.to_timedelta('40 minutes')
 
 
 #plot window 
