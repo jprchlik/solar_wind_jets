@@ -613,8 +613,8 @@ sig_l = 5.0
 p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 m_var = p_var.replace('predict','predict_sigma')
 #fractional p value to call an "event"
-p_val = 0.990 
-#p_val = 0.9990 
+#p_val = 0.990 
+p_val = 0.9990 
 
 #read in all spacraft events
 #for k in craft: plsm[k] = pd.read_pickle('../{0}/data/y2016_power_formatted.pic'.format(k.lower()))
@@ -637,12 +637,12 @@ def read_in(k):
         mag.set_index(mag.time_dt_mag,inplace=True)
 
         #cut for testing reasons
-        #pls = pls['2016/06/04':'2017/07/31']
-        #mag = mag['2016/06/04':'2017/07/31']
+        pls = pls['2016/06/04':'2017/07/31']
+        mag = mag['2016/06/04':'2017/07/31']
         #pls = pls['2016/07/18':'2016/07/21']
         #mag = mag['2016/07/18':'2016/07/21']
-        pls = pls['2017/01/25':'2017/01/27']
-        mag = mag['2017/01/25':'2017/01/27']
+        #pls = pls['2017/01/25':'2017/01/27']
+        #mag = mag['2017/01/25':'2017/01/27']
 
         #join magnetic field and plasma dataframes
         com_df  = pd.merge(mag,pls,how='outer',left_index=True,right_index=True,suffixes=('_mag','_pls'),sort=True)
@@ -701,23 +701,23 @@ tr_events = tr_events[~tr_events.duplicated(['group'],keep = 'first')]
 
 #get strings for times around each event#
 window = {}
-window['DSCOVR'] = pd.to_timedelta('120 minutes')
-window['ACE'] = pd.to_timedelta('120 minutes')
-window['SOHO'] = pd.to_timedelta('120 minutes')
-window['Wind'] = pd.to_timedelta('120 minutes')
+window['DSCOVR'] = pd.to_timedelta('40 minutes')
+window['ACE'] = pd.to_timedelta('40 minutes')
+window['SOHO'] = pd.to_timedelta('40 minutes')
+window['Wind'] = pd.to_timedelta('40 minutes')
 
 #define rough chi min time  to cal Chi^2 min for each time
-rgh_chi_t = pd.to_timedelta('150 minutes')
+rgh_chi_t = pd.to_timedelta('120 minutes')
 
 #get strings for times around each event when refining chi^2 time
 ref_window = {}
-ref_window['DSCOVR'] = pd.to_timedelta('35 minutes')
+ref_window['DSCOVR'] = pd.to_timedelta('15 minutes')
 ref_window['ACE'] = pd.to_timedelta('15 minutes')
-ref_window['SOHO'] = pd.to_timedelta('35 minutes')
+ref_window['SOHO'] = pd.to_timedelta('15 minutes')
 ref_window['Wind'] = pd.to_timedelta('15 minutes')
 
 #refined window to calculate Chi^2 min for each time
-ref_chi_t = pd.to_timedelta('40 minutes')
+ref_chi_t = pd.to_timedelta('15 minutes')
 
 
 #plot window 
@@ -940,16 +940,16 @@ for i in tr_events.index:
      
             #downsample to 5 minutes for time matching in chisq
             p_mat_t = p_mat.resample(downsamp).median()
-            #p_mat_t = p_mat.sort_values(p_var,ascending=False)[:4]
+            #p_mat_t = p_mat.sort_values(p_var,ascending=False)[:40]
             #p_mat_t = p_mat[p_var].idxmax()
 
             #downsample mag to 5 minutes for time matching in chisq
-            #p_mag_t = p_mat.sort_values(m_var,ascending=False)[:4]
+            #p_mag_t = p_mat.sort_values(m_var,ascending=False)[:40]
             #p_mat_t = p_mat[p_var].idxmax()
             p_mag_t = p_mat_t
 
             #mag tolerance for using magnetometer data to match events rather than plasma parameters
-            mag_tol = 0.5
+            mag_tol = 0.0
             
 
 
