@@ -373,7 +373,6 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,time):
 
    #go to next time if DataFrame is empty
    if ((len(c_mat) < 2) | (len(t_mat) < 2)): 
-       lock.release()
        return time,np.nan
 
 
@@ -389,6 +388,8 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,time):
    #compute chi^2 value for Wind and other spacecraft
    #added computation number to prefer maximum overlap (i.e. won't shove to an edge) J. Prchlik 2017/11/15
    chisq = np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)/float(len(c_mat)+len(t_mat))
+   #Try using the median offset rather than chi^2 minimum (Did not work)
+   #chisq = np.nanmedian(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)/float(len(c_mat)+len(t_mat))
     
 
    return time,chisq
@@ -636,7 +637,7 @@ use_chisq = True
 plot = False
 
 #refine chisq min with closer time grid
-refine = False
+refine = True 
 
 #set use to use all spacecraft
 craft = ['Wind','DSCOVR','ACE','SOHO']
@@ -666,7 +667,7 @@ sig_l = 5.0
 p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 m_var = p_var.replace('predict','predict_sigma')
 #fractional p value to call an "event"
-p_val = 0.980 
+p_val = 0.950 
 #p_val = 0.9990 
 
 #read in all spacraft events
@@ -708,14 +709,14 @@ def read_in(k):
         #com_df.fillna(method='bfill',inplace=True)
         
         #get degault formating for pandas dataframe
-        plsm = format_df(com_df,p_var,center=False) 
+        plsm = format_df(com_df,p_var,center=True ) 
     else:
         #work around for no Mag data in SOHO
         pls.loc[:,['Bx','By','Bz']] = 0.0
         pls['time_dt_pls'] = pd.to_datetime(pls['Time'])
         pls['time_dt_mag'] = pd.to_datetime(pls['Time'])
         pls.set_index(pls.time_dt_pls,inplace=True)
-        plsm = format_df(pls,p_var,center=False)
+        plsm = format_df(pls,p_var,center=True )
         plsm.loc[:,['Bx','By','Bz']] = -9999.0
 
     #for rekeying later
@@ -774,7 +775,7 @@ ref_chi_t = pd.to_timedelta('15 minutes')
 
 
 #plot window 
-plt_windw = pd.to_timedelta('120 minutes')
+plt_windw = pd.to_timedelta('180 minutes')
 
 
 #space craft to match with trainer soho
