@@ -51,36 +51,36 @@ def format_df(inpt_df,p_var,span='3600s',center=True):
     magf_df = inpt_df[((p_bfx) & (p_bfy) & (p_bfz) & (p_mtm))]
 
     #Do a quick spike rejection
-    #calculate difference in plasma parameters from rolling median for spike rejection
-    plsm_df['diff_med_spike_speed'] = plsm_df.SPEED-plsm_df.roll_med_spike_speed
-    plsm_df['diff_med_spike_Np']    = plsm_df.Np   -plsm_df.roll_med_spike_Np
-    plsm_df['diff_med_spike_Vth']   = plsm_df.Vth  -plsm_df.roll_med_spike_Vth
-
     #calculat plasma parameters rolling median for spike rejection
     plsm_df['roll_med_spike_speed'] = plsm_df['SPEED'].rolling(60,min_periods=3,center=True).median()
     plsm_df['roll_med_spike_Np']    = plsm_df['Np'].rolling(   60,min_periods=3,center=True).median()
     plsm_df['roll_med_spike_Vth']   = plsm_df['Vth'].rolling(  60,min_periods=3,center=True).median()
 
+    #calculate difference in plasma parameters from rolling median for spike rejection
+    plsm_df['diff_med_spike_speed'] = plsm_df.SPEED-plsm_df.roll_med_spike_speed
+    plsm_df['diff_med_spike_Np']    = plsm_df.Np   -plsm_df.roll_med_spike_Np
+    plsm_df['diff_med_spike_Vth']   = plsm_df.Vth  -plsm_df.roll_med_spike_Vth
+
     #calculate sigma in plasma parameters from rollin median for spike rejection
-    plsm_df['diff_sig_spike_speed'] = np.sqrt((plsm_df.diff_med_speed**2.).rolling(60,min_periods=3,center=True).median())
-    plsm_df['diff_sig_spike_Np']    = np.sqrt((plsm_df.diff_med_Np   **2.).rolling(60,min_periods=3,center=True).median()) 
-    plsm_df['diff_sig_spike_Vth']   = np.sqrt((plsm_df.diff_med_Vth  **2.).rolling(60,min_periods=3,center=True).median()) 
+    plsm_df['diff_sig_spike_speed'] = np.sqrt((plsm_df.diff_med_spike_speed**2.).rolling(60,min_periods=3,center=True).median())
+    plsm_df['diff_sig_spike_Np']    = np.sqrt((plsm_df.diff_med_spike_Np   **2.).rolling(60,min_periods=3,center=True).median()) 
+    plsm_df['diff_sig_spike_Vth']   = np.sqrt((plsm_df.diff_med_spike_Vth  **2.).rolling(60,min_periods=3,center=True).median()) 
 
 
     #difference for spike rejection
-    plsm_df['diff_snr_speed'] = np.abs(plsm_df.diff_med_spike_speed)/plsm_df.diff_sig_spike_speed 
-    plsm_df['diff_snr_Np']    = np.abs(plsm_df.diff_med_spike_Np)   /plsm_df.diff_sig_spike_Np       
-    plsm_df['diff_snr_Vth']   = np.abs(plsm_df.diff_med_spike_Vth)  /plsm_df.diff_sig_spike_Vth     
+    plsm_df['diff_snr_spike_speed'] = np.abs(plsm_df.diff_med_spike_speed)/plsm_df.diff_sig_spike_speed 
+    plsm_df['diff_snr_spike_Np']    = np.abs(plsm_df.diff_med_spike_Np)   /plsm_df.diff_sig_spike_Np       
+    plsm_df['diff_snr_spike_Vth']   = np.abs(plsm_df.diff_med_spike_Vth)  /plsm_df.diff_sig_spike_Vth     
 
     #shift back
-    plsm_df['l_diff_snr_speed'] = plsm_df['diff_snr_speed'].shift(-1) 
-    plsm_df['l_diff_snr_Np']    = plsm_df['diff_snr_Np']   .shift(-1) 
-    plsm_df['l_diff_snr_Vth']   = plsm_df['diff_snr_Vth']  .shift(-1) 
+    plsm_df['l_diff_snr_spike_speed'] = plsm_df['diff_snr_spike_speed'].shift(-1) 
+    plsm_df['l_diff_snr_spike_Np']    = plsm_df['diff_snr_spike_Np']   .shift(-1) 
+    plsm_df['l_diff_snr_spike_Vth']   = plsm_df['diff_snr_spike_Vth']  .shift(-1) 
 
     #shift forward
-    plsm_df['r_diff_snr_speed'] = plsm_df['diff_snr_speed'].shift(1) 
-    plsm_df['r_diff_snr_Np']    = plsm_df['diff_snr_Np']   .shift(1) 
-    plsm_df['r_diff_snr_Vth']   = plsm_df['diff_snr_Vth']  .shift(1) 
+    plsm_df['r_diff_snr_spike_speed'] = plsm_df['diff_snr_spike_speed'].shift(1) 
+    plsm_df['r_diff_snr_spike_Np']    = plsm_df['diff_snr_spike_Np']   .shift(1) 
+    plsm_df['r_diff_snr_spike_Vth']   = plsm_df['diff_snr_spike_Vth']  .shift(1) 
 
     #Sigma tolerance 
     sig_tol = 5.0
@@ -88,9 +88,9 @@ def format_df(inpt_df,p_var,span='3600s',center=True):
     #loop over toleranaces and fill with -9999.0 where you find an isolated spike
     tol_loop = ['speed','Np','Vth'] 
     for i in tol_loop:
-        before = plsm_df['l_diff_snr_'+i] < sig_tol
-        during = plsm_df['diff_snr_'+i]   > sig_tol
-        after  = plsm_df['r_diff_snr_'+i] < sig_tol
+        before = plsm_df['l_diff_snr_spike_'+i] < sig_tol
+        during = plsm_df['diff_snr_spike_'+i]   > sig_tol
+        after  = plsm_df['r_diff_snr_spike_'+i] < sig_tol
 
         #correct for bad variable naming
         if i == 'speed': i = i.upper()
@@ -636,7 +636,7 @@ use_chisq = True
 plot = False
 
 #refine chisq min with closer time grid
-refine = True 
+refine = False
 
 #set use to use all spacecraft
 craft = ['Wind','DSCOVR','ACE','SOHO']
@@ -666,8 +666,8 @@ sig_l = 5.0
 p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 m_var = p_var.replace('predict','predict_sigma')
 #fractional p value to call an "event"
-#p_val = 0.980 
-p_val = 0.9990 
+p_val = 0.980 
+#p_val = 0.9990 
 
 #read in all spacraft events
 #for k in craft: plsm[k] = pd.read_pickle('../{0}/data/y2016_power_formatted.pic'.format(k.lower()))
