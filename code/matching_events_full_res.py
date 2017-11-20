@@ -9,6 +9,8 @@ import os
 import threading
 import sys
 
+from scipy.stats.mstats import theilslopes
+
 #prevents issues with core affinity (i.e. issues with using all the processes)
 #os.system("taskset -p 0xff %d" % os.getpid())
 
@@ -383,11 +385,19 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time):
    #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid and interpolate
    c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
 
+
+   #get the median slope and offset
+   #J. Prchlik (2017/11/20)
+   try:
+       med_m,med_i,low_s,hgh_s = theilslopes(t_mat.SPEED.values,c_mat.SPEED.values)
+       c_mat.SPEED = c_mat.SPEED*med_m+med_i
+   except IndexError:
    #get median offset to apply to match spacecraft
-   off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
+       off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
+       c_mat.SPEED = c_mat.SPEED-off_speed
+   
 
 
-   c_mat.SPEED = c_mat.SPEED-off_speed
 
    #compute chi^2 value for Wind and other spacecraft
    #added computation number to prefer maximum overlap (i.e. won't shove to an edge) J. Prchlik 2017/11/15
@@ -619,12 +629,12 @@ def read_in(k):
         mag.set_index(mag.time_dt_mag,inplace=True)
 
         #cut for testing reasons
-        pls = pls['2016/06/04':'2017/07/31']
-        mag = mag['2016/06/04':'2017/07/31']
+        #pls = pls['2016/06/04':'2017/07/31']
+        #mag = mag['2016/06/04':'2017/07/31']
         #pls = pls['2016/07/18':'2016/07/21']
         #mag = mag['2016/07/18':'2016/07/21']
-        #pls = pls['2017/01/25':'2017/01/27']
-        #mag = mag['2017/01/25':'2017/01/27']
+        pls = pls['2017/01/25':'2017/01/27']
+        mag = mag['2017/01/25':'2017/01/27']
 
         #join magnetic field and plasma dataframes
         com_df  = pd.merge(mag,pls,how='outer',left_index=True,right_index=True,suffixes=('_mag','_pls'),sort=True)
@@ -814,7 +824,7 @@ tab_hdr = '''
 #data format for new row
 new_row =   '''<tr>
                   <td>
-                  {0}
+                  <a href="../plots/spacecraft_events/chisq/chi_min_{6:%Y%m%d_%H%M%S}_{7}.png">{0}</a>
                   </td>
                   <td>
                   {1:%Y/%m/%d %H:%M:%S}
@@ -862,7 +872,7 @@ for i in tr_events.index:
     out_f.write(r'''<b><a href="../plots/spacecraft_events/full_res_event_{0:%Y%m%d_%H%M%S}_zoom.png"> Event on {0:%Y/%m/%d %H:%M:%S} UT (50 Min.)</a> </b>'''.format(i))
     out_f.write(tab_hdr)
     #write trainer spacecraft event
-    out_f.write(new_row.format(trainer,i,0.00,tr_events.loc[i,p_var],tr_events.loc[i,p_var.replace('predict','predict_sigma')],'X'))
+    out_f.write(new_row.format(trainer,i,0.00,tr_events.loc[i,p_var],tr_events.loc[i,p_var.replace('predict','predict_sigma')],'X',i,trainer.lower()))
 
 
     #create figure showing 
@@ -921,7 +931,8 @@ for i in tr_events.index:
         elif use_chisq:
      
             #downsample to 5 minutes for time matching in chisq
-            p_mat_t = p_mat.resample(downsamp).median()
+            #remove downsampling J. Prchlik 2017/11/20
+            p_mat_t = p_mat #.resample(downsamp).median()
             #p_mat_t = p_mat.sort_values(p_var,ascending=False)[:40]
             #p_mat_t = p_mat[p_var].idxmax()
 
@@ -951,11 +962,11 @@ for i in tr_events.index:
  
                     if k.lower() == 'soho':
                         print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min))
-                        out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],0.000,'X'))
+                        out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],0.000,'X',i,k.lower()))
 
                     else: 
                         print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
-                        out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],p_mat.loc[i_min][p_var.replace('predict','predict_sigma')],'X'))
+                        out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],p_mat.loc[i_min][p_var.replace('predict','predict_sigma')],'X',i,k.lower()))
 
                 except KeyError:
                     print('Missing Index')
@@ -976,7 +987,7 @@ for i in tr_events.index:
                 #print output to terminal
 
                     print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
-                    out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],p_mat.loc[i_min][p_var.replace('predict','predict_sigma')],''))
+                    out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],p_mat.loc[i_min][p_var.replace('predict','predict_sigma')],'',i,k.lower()))
 
 
                 except KeyError:
