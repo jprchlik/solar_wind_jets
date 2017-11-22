@@ -397,6 +397,11 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time):
        c_mat.SPEED = c_mat.SPEED-off_speed
    
 
+   #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
+   if len(par) > 1:
+      par_chi = np.array([np.sum(((c_mat.loc[:,par_i]-t_mat.loc[:,par_i])**2.).values)/float(len(c_mat)+len(t_mat)) for par_i in par])
+      use_par, = np.where(par_chi == np.min(par_chi))
+      par      = list(np.array(par)[use_par])
 
 
    #compute chi^2 value for Wind and other spacecraft
@@ -461,69 +466,37 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,trainer_t,ref_chi_t=pd.to_timedelta('10 m
     #keep one for plotting range
     p_mat_r = p_mat.copy()
 
-
-    #list of to values to compute X^2 minium
-    time = p_mat.index
-    #create list to sent to processors
-    par_chi_min = partial(return_chi_min,rgh_chi_t,plsm,k,par,False,True,trainer_t)
-    loop_list = []
-    for i in time: loop_list.append((rgh_chi_t,plsm,k,par,False,True,trainer_t,i))
-    
-
-    #clear Threads
-    #print('Number of Threads')
-    #print(threading.active_count())
-    #all_th = threading.enumerate()
-    #for i in all_th: i.clear()
+    #first set to no time offset
+    i_min = trainer_t
 
 
-    #Parallized chisq computation
+    #loop and squeeze rough window
+    for j in range(2):
+        #looping time around window to try to match
+        t_rgh_wid = window[k]/(j+1)
+        #looping range of window size
+        t_rgh_chi_t = ref_chi_t/(j+1)
 
-    if nproc > 1.5:
-        pool = Pool(processes=nproc)
-        outp = pool.map(help_chi_min,loop_list)
-        pool.close()
-        pool.join()
-    else:
-        outp = []
-        for i in loop_list: outp.append(help_chi_min(i))
-
-
-    #add chisq times to p_mat array
-    #first is time index second is chisq value
-    for i in outp: p_mat.loc[i[0],'chisq'] = i[1]
-
-    
-    
-    #get the index of minimum chisq value
-    i_min = p_mat['chisq'].idxmin()
-
-    #plot chi^2 min
-    if plot: chi_ax.scatter(p_mat.index,p_mat.chisq/p_mat.chisq.min(),label=k,color=color[k],marker=marker[k])
-    
-    #use fine grid around observations to match time offset locally
-    if refine:
-
-        #use magentic field for refinement for ACE, Wind, and DSCOVR
-        if k.lower() != 'soho': par = ['Bx','By','Bz']
-        else: par = ['SPEED']
-
-        #Find 4 lowest chisq min times
-        p_temp = p_mat.sort_values('chisq',ascending=True )[:n_fine]
- 
         #get all values in top n_fine at full resolution
-        p_mat  = plsm[k].loc[p_temp.index.min()-ref_window[k]:p_temp.index.max()+ref_window[k]]
-        #print(p_temp.index.min()-rgh_chi_t,p_temp.index.max()+rgh_chi_t)
- 
+        p_mat  = plsm[k].loc[i_min-t_rgh_wid:i_min+t_rgh_wid]
+
         #list of to values to compute X^2 minium
         time = p_mat.index
-        #create list of tuples to sent to processors
         #create list to sent to processors
-        ref_chi_min = partial(return_chi_min,ref_chi_t,plsm,k,par,True,False,trainer_t)
+        #par_chi_min = partial(return_chi_min,rgh_chi_t,plsm,k,par,False,True,trainer_t)
         loop_list = []
-        for i in time: loop_list.append((ref_chi_t,plsm,k,par,True,False,trainer_t,i))
-    
+        for i in time: loop_list.append((t_rgh_chi_t,plsm,k,par,False,True,trainer_t,i))
+        
+
+        #clear Threads
+        #print('Number of Threads')
+        #print(threading.active_count())
+        #all_th = threading.enumerate()
+        #for i in all_th: i.clear()
+
+
         #Parallized chisq computation
+
         if nproc > 1.5:
             pool = Pool(processes=nproc)
             outp = pool.map(help_chi_min,loop_list)
@@ -537,38 +510,97 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,trainer_t,ref_chi_t=pd.to_timedelta('10 m
         #add chisq times to p_mat array
         #first is time index second is chisq value
         for i in outp: p_mat.loc[i[0],'chisq'] = i[1]
-        #get the index of minimum refined chisq value
+
+        
+        
+        #get the index of minimum chisq value
         i_min = p_mat['chisq'].idxmin()
 
-      
-        #variable to exit while loop
-        looper = 1
+        #plot chi^2 min
+        if plot: chi_ax.scatter(p_mat.index,p_mat.chisq/p_mat.chisq.min(),label=k,color=color[k],marker=marker[k])
+    
+    #use fine grid around observations to match time offset locally
+    if refine:
 
-        #check to see if chisq min is at an edge but if it is still at an edge after 9 tries give up
-        while (((i_min == p_mat.index.max()) | (i_min == p_mat.index.min())) & (looper < 10)):
+        #use magentic field for refinement for ACE, Wind, and DSCOVR
+        if k.lower() != 'soho': par = ['Bx','By','Bz']
+        else: par = ['SPEED']
+
+        #Find 4 lowest chisq min times
+        p_temp = p_mat.sort_values('chisq',ascending=True )[:n_fine]
+
+        #set the min value to interative solve for refinemnet
+        i_min = p_temp['chisq'].idxmin()
+ 
+        #loop and squeeze refinement window
+        for j in range(3):
+
+            #looping time around window to try to match
+            t_ref_wid = ref_window[k]/(j+1)
+            #looping range of window size
+            t_ref_chi_t = ref_chi_t/(j+1)
+
             #get all values in top n_fine at full resolution
-            p_mat  = plsm[k].loc[p_temp.index.min()-(ref_window[k]*(looper+1)):p_temp.index.max()+(ref_window[k]*(looper+1))]
+            p_mat  = plsm[k].loc[i_min-t_ref_wid:i_min+t_ref_wid]
+            #print(p_temp.index.min()-rgh_chi_t,p_temp.index.max()+rgh_chi_t)
+ 
             #list of to values to compute X^2 minium
             time = p_mat.index
+            #create list of tuples to sent to processors
+            #create list to sent to processors
+            #ref_chi_min = partial(return_chi_min,ref_chi_t,plsm,k,par,True,False,trainer_t)
             loop_list = []
-            #create list to pass to function
-            for i in time: loop_list.append((ref_chi_t,plsm,k,par,True,False,trainer_t,i))
+            for i in time: loop_list.append((t_ref_chi_t,plsm,k,par,True,False,trainer_t,i))
+    
+            #Parallized chisq computation
+            if nproc > 1.5:
+                pool = Pool(processes=nproc)
+                outp = pool.map(help_chi_min,loop_list)
+                pool.close()
+                pool.join()
+            else:
+                outp = []
+                for i in loop_list: outp.append(help_chi_min(i))
 
-            #run function and return output
-            outp = []
-            for i in loop_list: outp.append(help_chi_min(i))
 
             #add chisq times to p_mat array
             #first is time index second is chisq value
             for i in outp: p_mat.loc[i[0],'chisq'] = i[1]
             #get the index of minimum refined chisq value
             i_min = p_mat['chisq'].idxmin()
-  
-            #Add 1 to running loop
-            looper += 1
 
-        #plot chi^2 min
-        if plot: chi_ax.scatter(p_mat.index,p_mat.chisq/p_mat.chisq.min(),label='Ref. '+k,color='purple',marker=marker[k])
+      
+            #variable to exit while loop
+            looper = 1
+
+            #check to see if chisq min is at an edge but if it is still at an edge after 9 tries give up
+            while (((i_min == p_mat.index.max()) | (i_min == p_mat.index.min())) & (looper < 10)):
+                #get all values in top n_fine at full resolution
+                p_mat  = plsm[k].loc[p_temp.index.min()-(t_ref_wid*(looper+1)):p_temp.index.max()+(t_ref_wid*(looper+1))]
+                #list of to values to compute X^2 minium
+                time = p_mat.index
+                loop_list = []
+                #create list to pass to function
+                for i in time: loop_list.append((t_ref_chi_t,plsm,k,par,True,False,trainer_t,i))
+
+                #run function and return output
+                outp = []
+                for i in loop_list: outp.append(help_chi_min(i))
+
+                #add chisq times to p_mat array
+                #first is time index second is chisq value
+                for i in outp: p_mat.loc[i[0],'chisq'] = i[1]
+                #get the index of minimum refined chisq value
+                i_min = p_mat['chisq'].idxmin()
+  
+                #Add 1 to running loop
+                looper += 1
+
+            #get the index of minimum refined chisq value
+            i_min = p_mat['chisq'].idxmin()
+            #plot chi^2 min
+            if plot: chi_ax.scatter(p_mat.index,p_mat.chisq/p_mat.chisq.min(),label='Ref. {0:1d} {1} '.format(j+1,k),marker=marker[k])
+
     
     
     #set up plot for chi^2 min
@@ -578,10 +610,11 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,trainer_t,ref_chi_t=pd.to_timedelta('10 m
         chi_ax.set_ylabel('$\chi^2$')
         chi_ax.set_xlabel('Time [UTC]')
         #set plot maximum to be 10% higher than the max value
-        ymax = 1.1*np.nanmax(p_mat.chisq.values/p_mat.chisq.min())
+        #ymax = 1.1*np.nanmax(p_mat.chisq.values/p_mat.chisq.min())
     
-        #if ymax > 10 then set ymax to 10
-        if ymax > 10.: ymax = 10.
+        ##if ymax > 10 then set ymax to 10
+        #if ymax > 10.: ymax = 10.
+        ymax= 10
         
         chi_ax.set_ylim([0.5,ymax])
         fancy_plot(chi_ax)
@@ -742,7 +775,7 @@ window['SOHO'] = pd.to_timedelta('40 minutes')
 window['Wind'] = pd.to_timedelta('40 minutes')
 
 #define rough chi min time  to cal Chi^2 min for each time
-rgh_chi_t = pd.to_timedelta('40 minutes')
+rgh_chi_t = pd.to_timedelta('90 minutes')
 
 #get strings for times around each event when refining chi^2 time
 ref_window = {}
@@ -752,7 +785,7 @@ ref_window['SOHO'] = pd.to_timedelta('25 minutes')
 ref_window['Wind'] = pd.to_timedelta('25 minutes')
 
 #refined window to calculate Chi^2 min for each time
-ref_chi_t = pd.to_timedelta('15 minutes')
+ref_chi_t = pd.to_timedelta('30 minutes')
 
 
 #plot window 
