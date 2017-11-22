@@ -547,7 +547,7 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,trainer_t,ref_chi_t=pd.to_timedelta('10 m
     #set up plot for chi^2 min
     if plot:
         chi_ax.legend(loc='best',frameon=False,scatterpoints=1)
-        chi_ax.set_xlim([p_mat_r.index.min(),p_mat_r.index.max()])
+        chi_ax.set_xlim([p_mat_r.index.min()-pd.to_timedelta('30 minutes'),p_mat_r.index.max()+pd.to_timedelta('30 minutes')])
         chi_ax.set_ylabel('$\chi^2$')
         chi_ax.set_xlabel('Time [UTC]')
         #chi_ax.set_ylim([0.5,10.])
@@ -606,7 +606,7 @@ p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 m_var = p_var.replace('predict','predict_sigma')
 #fractional p value to call an "event"
 p_val = 0.950 
-p_val = 0.9990 
+#p_val = 0.9990 
 
 #read in all spacraft events
 #for k in craft: plsm[k] = pd.read_pickle('../{0}/data/y2016_power_formatted.pic'.format(k.lower()))
@@ -629,12 +629,12 @@ def read_in(k):
         mag.set_index(mag.time_dt_mag,inplace=True)
 
         #cut for testing reasons
-        #pls = pls['2016/06/04':'2017/07/31']
-        #mag = mag['2016/06/04':'2017/07/31']
+        pls = pls['2016/06/04':'2017/07/31']
+        mag = mag['2016/06/04':'2017/07/31']
         #pls = pls['2016/07/18':'2016/07/21']
         #mag = mag['2016/07/18':'2016/07/21']
-        pls = pls['2017/01/25':'2017/01/27']
-        mag = mag['2017/01/25':'2017/01/27']
+        #pls = pls['2017/01/25':'2017/01/27']
+        #mag = mag['2017/01/25':'2017/01/27']
 
         #join magnetic field and plasma dataframes
         com_df  = pd.merge(mag,pls,how='outer',left_index=True,right_index=True,suffixes=('_mag','_pls'),sort=True)
@@ -699,14 +699,14 @@ window['SOHO'] = pd.to_timedelta('40 minutes')
 window['Wind'] = pd.to_timedelta('40 minutes')
 
 #define rough chi min time  to cal Chi^2 min for each time
-rgh_chi_t = pd.to_timedelta('120 minutes')
+rgh_chi_t = pd.to_timedelta('40 minutes')
 
 #get strings for times around each event when refining chi^2 time
 ref_window = {}
-ref_window['DSCOVR'] = pd.to_timedelta('15 minutes')
-ref_window['ACE'] = pd.to_timedelta('15 minutes')
-ref_window['SOHO'] = pd.to_timedelta('15 minutes')
-ref_window['Wind'] = pd.to_timedelta('15 minutes')
+ref_window['DSCOVR'] = pd.to_timedelta('25 minutes')
+ref_window['ACE'] = pd.to_timedelta('25 minutes')
+ref_window['SOHO'] = pd.to_timedelta('25 minutes')
+ref_window['Wind'] = pd.to_timedelta('25 minutes')
 
 #refined window to calculate Chi^2 min for each time
 ref_chi_t = pd.to_timedelta('15 minutes')
@@ -979,7 +979,7 @@ for i in tr_events.index:
                 #sort the cut window and get the top 10 events
                 p_mat_t = p_mag_t
        
-                i_min = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,plsm,k,ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot)
+                i_min = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,plsm,k,i,ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot)
 
                 #use full array for index matching
                 p_mat = plsm[k]
