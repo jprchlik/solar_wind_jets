@@ -300,8 +300,8 @@ def format_df(inpt_df,p_var,span='3600s',center=True):
 
 
     #forward fill NaN event probabilities
-    outp_df[p_var].ffill(inplace=True)
-    outp_df[m_var].ffill(inplace=True)
+    #outp_df[p_var].ffill(inplace=True)
+    #outp_df[m_var].ffill(inplace=True)
 
     return outp_df
 
@@ -711,7 +711,7 @@ for i in outp:
 tr_events = plsm[trainer][plsm[trainer][p_var] > p_val]
 
 #Group events by 1 per hour
-tr_events['str_hour'] = tr_events.time_dt_mag.dt.strftime('%Y%m%d%H')
+#ctr_events['str_hour'] = tr_events.time_dt_mag.dt.strftime('%Y%m%d%H')
 #attempting to pick one event at a time J. Prchlik (2017/10/30) (Did not work as 1pm of the same day)
 #tr_events = tr_events[~tr_events.duplicated(['str_hour'],keep = 'first')]
 #loop over events and get best probability for event within 1 hour
@@ -723,6 +723,16 @@ for i in tr_events.index:
 
 #use groups to cut out duplicates
 tr_events = tr_events[~tr_events.duplicated(['group'],keep = 'first')]
+
+#For an hour around an event find the minimum time to get a precise break point using a 10% lower prob. threshold
+#search window for the star
+s_wind = pd.to_timedelta('30 minutes')
+for i in tr_events.index:
+      temp_events = plsm[trainer][i-s_wind:i+s_wind][plsm[trainer][p_var] > p_val-.10]
+      tr_events.loc[i,:] = temp_events.loc[temp_events.index.min(),:]
+
+#reset index with new plasma time value
+tr_events.set_index(tr_events.Time_pls,inplace=True)
 
 #get strings for times around each event#
 window = {}
@@ -943,7 +953,7 @@ for i in tr_events.index:
     print('########################################')
     print('NEW EVENT')
     print(trainer)
-    print('{0:%Y/%m/%d %H:%M:%S}, p (plasma)={1:4.3f}, p (mag.) = {2:4.3f}'.format(i,tr_events.loc[i,p_var],tr_events.loc[i,p_var.replace('predict','predict_sigma')]))
+    #print('{0:%Y/%m/%d %H:%M:%S}, p (plasma)={1:4.3f}, p (mag.) = {2:4.3f}'.format(i,tr_events.loc[i,p_var],tr_events.loc[i,p_var.replace('predict','predict_sigma')]))
     #get time slice around event
    
     #create table to output html table and link to github png files (https://cdn.rawgit.com/jprchlik/solar_wind_jets/4cf1c6e7)
@@ -951,7 +961,7 @@ for i in tr_events.index:
     out_f.write(r'''<b><a href="../plots/spacecraft_events/full_res_event_{0:%Y%m%d_%H%M%S}_zoom.png"> Event on {0:%Y/%m/%d %H:%M:%S} UT (50 Min.)</a> </b>'''.format(i))
     out_f.write(tab_hdr)
     #write trainer spacecraft event
-    out_f.write(new_row.format(trainer,i,0.00,tr_events.loc[i,p_var],tr_events.loc[i,p_var.replace('predict','predict_sigma')],'X',i,trainer.lower(),*plsm[trainer].loc[i-a_w:i+a_w,par_out].max()))
+    out_f.write(new_row.format(trainer,i,0.00,tr_events.loc[i,p_var],tr_events.loc[i-a_w:i+a_w,p_var.replace('predict','predict_sigma')].max(),'X',i,trainer.lower(),*plsm[trainer].loc[i-a_w:i+a_w,par_out].max()))
 
 
     #create figure showing 
@@ -1002,7 +1012,7 @@ for i in tr_events.index:
             if p_mat.size > 0:
                #get the index of the maximum value
                i_max = p_mat[p_var].idxmax() 
-               print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max={1:4.3f}'.format((i_max-i).total_seconds()/60.,p_mat.loc[i_max][p_var],i_max))
+               #print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max={1:4.3f}'.format((i_max-i).total_seconds()/60.,p_mat.loc[i_max][p_var],i_max))
             else:
                print('No Plasma Observations')
   
@@ -1040,11 +1050,11 @@ for i in tr_events.index:
                 try:
  
                     if k.lower() == 'soho':
-                        print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min))
+                        #print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min))
                         out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),0.000,'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
 
                     else: 
-                        print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
+                        #print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
                         out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
 
                 except KeyError:
@@ -1054,7 +1064,7 @@ for i in tr_events.index:
             #else no plasma observations                                                                                                                                                      
             elif (((p_mat_t.size == 0) | (p_mat_t[p_var].max() <= mag_tol) | (np.isnan(p_mat_t[p_var].max()))) & (p_mag_t.size > 0.) & (k.lower() != 'soho')):
             #elif ((p_mag_t.size > 0.) & (k.lower() != 'soho')):
-                print 'Using Magnetic field observations'
+                #print 'Using Magnetic field observations'
                 #sort the cut window and get the top 10 events
                 p_mat_t = p_mag_t
        
@@ -1065,7 +1075,7 @@ for i in tr_events.index:
                 try:
                 #print output to terminal
 
-                    print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
+                   # print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
                     out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
 
 
