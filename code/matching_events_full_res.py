@@ -732,7 +732,7 @@ for i in tr_events.index:
       tr_events.loc[i,:] = temp_events.loc[temp_events.index.min(),:]
 
 #reset index with new plasma time value
-tr_events.set_index(tr_events.Time_pls,inplace=True)
+tr_events.set_index(tr_events.time_dt_pls,inplace=True)
 
 #get strings for times around each event#
 window = {}
