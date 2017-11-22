@@ -291,12 +291,12 @@ def format_df(inpt_df,p_var,span='3600s',center=True):
     magf_df.loc[:,m_var] = logit_model(magf_df,-10.0575,0.6861,0.7071,0.6640,plasma=False)
 
     #cur arrays to the bar minimum for matching
-    plsm_df = plsm_df.loc[:,p_var]
-    magf_df = magf_df.loc[:,m_var]
+    plsm_df = plsm_df.loc[:,[p_var,'diff_med_speed', 'diff_med_Np', 'diff_med_Vth']]
+    magf_df = magf_df.loc[:,[m_var, 'diff_med_Bx', 'diff_med_By', 'diff_med_Bz']]
     
     #update array with new p-values by matching on indices
-    outp_df  = pd.merge(inpt_df,plsm_df.to_frame(),how='left',left_index=True,right_index=True,sort=True)
-    outp_df  = pd.merge(outp_df,magf_df.to_frame(),how='left',left_index=True,right_index=True,sort=True)
+    outp_df  = pd.merge(inpt_df,plsm_df,how='left',left_index=True,right_index=True,sort=True)
+    outp_df  = pd.merge(outp_df,magf_df,how='left',left_index=True,right_index=True,sort=True)
 
 
     #forward fill NaN event probabilities
@@ -540,6 +540,33 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,trainer_t,ref_chi_t=pd.to_timedelta('10 m
         #get the index of minimum refined chisq value
         i_min = p_mat['chisq'].idxmin()
 
+      
+        #variable to exit while loop
+        looper = 1
+
+        #check to see if chisq min is at an edge but if it is still at an edge after 9 tries give up
+        while (((i_min == p_mat.index.max()) | (i_min == p_mat.index.min())) & (looper < 10)):
+            #get all values in top n_fine at full resolution
+            p_mat  = plsm[k].loc[p_temp.index.min()-(ref_window[k]*(looper+1)):p_temp.index.max()+(ref_window[k]*(looper+1))]
+            #list of to values to compute X^2 minium
+            time = p_mat.index
+            loop_list = []
+            #create list to pass to function
+            for i in time: loop_list.append((ref_chi_t,plsm,k,par,True,False,trainer_t,i))
+
+            #run function and return output
+            outp = []
+            for i in loop_list: outp.append(help_chi_min(i))
+
+            #add chisq times to p_mat array
+            #first is time index second is chisq value
+            for i in outp: p_mat.loc[i[0],'chisq'] = i[1]
+            #get the index of minimum refined chisq value
+            i_min = p_mat['chisq'].idxmin()
+  
+            #Add 1 to running loop
+            looper += 1
+
         #plot chi^2 min
         if plot: chi_ax.scatter(p_mat.index,p_mat.chisq/p_mat.chisq.min(),label='Ref. '+k,color='purple',marker=marker[k])
     
@@ -550,7 +577,13 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,trainer_t,ref_chi_t=pd.to_timedelta('10 m
         chi_ax.set_xlim([p_mat_r.index.min()-pd.to_timedelta('30 minutes'),p_mat_r.index.max()+pd.to_timedelta('30 minutes')])
         chi_ax.set_ylabel('$\chi^2$')
         chi_ax.set_xlabel('Time [UTC]')
-        #chi_ax.set_ylim([0.5,10.])
+        #set plot maximum to be 10% higher than the max value
+        ymax = 1.1*np.nanmax(p_mat.chisq.values/p_mat.chisq.min())
+    
+        #if ymax > 10 then set ymax to 10
+        if ymax > 10.: ymax = 10.
+        
+        chi_ax.set_ylim([0.5,ymax])
         fancy_plot(chi_ax)
         chi_fig.savefig('../plots/spacecraft_events/chisq/chi_min_{0:%Y%m%d_%H%M%S}_{1}.png'.format(trainer_t,k.lower()),bbox_pad=.1,bbox_inches='tight')
         #ax.set_ylim([300,1000.])
@@ -606,7 +639,7 @@ p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 m_var = p_var.replace('predict','predict_sigma')
 #fractional p value to call an "event"
 p_val = 0.950 
-#p_val = 0.9990 
+p_val = 0.9990 
 
 #read in all spacraft events
 #for k in craft: plsm[k] = pd.read_pickle('../{0}/data/y2016_power_formatted.pic'.format(k.lower()))
@@ -629,12 +662,12 @@ def read_in(k):
         mag.set_index(mag.time_dt_mag,inplace=True)
 
         #cut for testing reasons
-        pls = pls['2016/06/04':'2017/07/31']
-        mag = mag['2016/06/04':'2017/07/31']
+        #pls = pls['2016/06/04':'2017/07/31']
+        #mag = mag['2016/06/04':'2017/07/31']
         #pls = pls['2016/07/18':'2016/07/21']
         #mag = mag['2016/07/18':'2016/07/21']
-        #pls = pls['2017/01/25':'2017/01/27']
-        #mag = mag['2017/01/25':'2017/01/27']
+        pls = pls['2017/01/25':'2017/01/27']
+        mag = mag['2017/01/25':'2017/01/27']
 
         #join magnetic field and plasma dataframes
         com_df  = pd.merge(mag,pls,how='outer',left_index=True,right_index=True,suffixes=('_mag','_pls'),sort=True)
@@ -772,11 +805,13 @@ par_hdr =   '''
             The program for finding the &chi;<sup>2</sup> minimum for events between spacecraft works by using a primary spacecraft to find events.
             I selected Wind because I used Wind to train the model, and the events found in Wind are consistent with events found by eye or independent spacecraft 
             algorithms. I define an event discontinuity as a time where our model indicates a {0:4.2f}% probability the solar wind parameters corresponds to a 5&sigma;
-            discontinuity in a component of the magnetic field. Then I create a course grid of 5 minute samples for &plusmn; 3 hours around a event. Then I shift 
-            the other 3 spacecraft onto the Wind using the course grid. Then I select a 1 hour window around the shifted Wind and other spacecraft and derive a first order
+            discontinuity in a component of the magnetic field. Then I create a course grid of solar wind speed samples for &plusmn; 40 minutes around a event.
+            Currently, I find {1:1d} events using the Wind spacecraft to define an event. Then I shift 
+            the other 3 spacecraft onto the Wind using the course grid. Then I select a 80 minute (&plusmn;40 minutes) window around the shifted Wind and other spacecraft and derive a first order
             &chi;<sup>2</sup> minimum. Using the first order &chi;<sup>2</sup> minimum, I create a fine grid 50 minutes (&plusmn; 25 minutes) around the rough &chi;<sup>2</sup> minimum
             time. The fine grid cadence is set to the maximum sampling frequency of a given spacecraft. Then the program stores the &chi;<sup>2</sup> value for 20 minutes (&plusmn; 10 minutes)
-            around each fine grid point. The &chi;<sup>2</sup> reported is the minimum from the time grid.
+            around each fine grid point. However, if the first or last point is the &chi;<sup>2</sup> min. then the program expands the time search window by 20 minutes.
+            The &chi;<sup>2</sup> reported is the minimum from the time grid.
             </p1>
 
             </br>
@@ -789,7 +824,8 @@ par_hdr =   '''
             P-val (plasma) is the p-val for a 5&sigma; discontinuity at the reference Obs. time for a given spacecraft's measured plasma values. 
             P-val (mag.) is the p-val for a 5&sigma; discontinuity given at the reference Obs. time for a given spacecraft's measured magnetic field values.
             Finally, an X in Use Plasma Mod. means the minimization routine use the wind Speed to find the best match &chi;<sup>2</sup> time,
-            while an empty cell denotes using the magnetic field.
+            while an empty cell denotes using the magnetic field. Clicking on the spacecraft shows the &chi;<sup>2</sup> minimization as a function of time for 
+            the wide and refinded windows.
     
             </br>
             </br>
@@ -818,6 +854,24 @@ tab_hdr = '''
                   <td>
                   Used Plasma Mod.
                   </td>
+                  <td>
+                  &delta;SPEED [km/s]
+                  </td>
+                  <td>
+                  &delta;Np [cm<sup>-3</sup>]
+                  </td>
+                  <td>
+                  &delta;Vth [km/s]
+                  </td>
+                  <td>
+                  &delta;Bx [nT]
+                  </td>
+                  <td>
+                  &delta;By [nT]
+                  </td>
+                  <td>
+                  &delta;Bz [nT]
+                  </td>
               </tr>
                   '''
 
@@ -841,6 +895,24 @@ new_row =   '''<tr>
                   <td>
                   {5}
                   </td>
+                  <td>
+                  {8:4.3f}
+                  </td>
+                  <td>
+                  {9:4.3f}
+                  </td>
+                  <td>
+                  {10:4.3f}
+                  </td>
+                  <td>
+                  {11:4.3f}
+                  </td>
+                  <td>
+                  {12:4.3f}
+                  </td>
+                  <td>
+                  {13:4.3f}
+                  </td>
               </tr>'''
 footer = '''</table>
 
@@ -855,9 +927,16 @@ ful_ftr = '''
             </html>'''
 
 
+#Additional output parameters
+par_out = ['diff_med_speed', 'diff_med_Np', 'diff_med_Vth', 'diff_med_Bx', 'diff_med_By', 'diff_med_Bz']
+
+
 # write header for html page
 out_f = open('../html_files/{0}_level_{1:4.0f}_full_res.html'.format(trainer.lower(),p_val*1000.).replace(' ','0'),'w')
-out_f.write(ful_hdr+par_hdr.format(p_val*100.))
+out_f.write(ful_hdr+par_hdr.format(p_val*100.,len(tr_events)))
+
+#window around event to get largers parameter jump values
+a_w = pd.to_timedelta('100 seconds')
 
 #get event slices 
 for i in tr_events.index:
@@ -872,7 +951,7 @@ for i in tr_events.index:
     out_f.write(r'''<b><a href="../plots/spacecraft_events/full_res_event_{0:%Y%m%d_%H%M%S}_zoom.png"> Event on {0:%Y/%m/%d %H:%M:%S} UT (50 Min.)</a> </b>'''.format(i))
     out_f.write(tab_hdr)
     #write trainer spacecraft event
-    out_f.write(new_row.format(trainer,i,0.00,tr_events.loc[i,p_var],tr_events.loc[i,p_var.replace('predict','predict_sigma')],'X',i,trainer.lower()))
+    out_f.write(new_row.format(trainer,i,0.00,tr_events.loc[i,p_var],tr_events.loc[i,p_var.replace('predict','predict_sigma')],'X',i,trainer.lower(),*plsm[trainer].loc[i-a_w:i+a_w,par_out].max()))
 
 
     #create figure showing 
@@ -962,11 +1041,11 @@ for i in tr_events.index:
  
                     if k.lower() == 'soho':
                         print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min))
-                        out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],0.000,'X',i,k.lower()))
+                        out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),0.000,'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
 
                     else: 
                         print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
-                        out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],p_mat.loc[i_min][p_var.replace('predict','predict_sigma')],'X',i,k.lower()))
+                        out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
 
                 except KeyError:
                     print('Missing Index')
@@ -987,7 +1066,7 @@ for i in tr_events.index:
                 #print output to terminal
 
                     print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
-                    out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],p_mat.loc[i_min][p_var.replace('predict','predict_sigma')],'',i,k.lower()))
+                    out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
 
 
                 except KeyError:
