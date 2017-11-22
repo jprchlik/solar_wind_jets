@@ -24,6 +24,10 @@ def format_df(inpt_df,p_var,span='3600s',center=True):
 
 
     '''
+
+
+    #Add Mag field Magnitude
+    inpt_df['Bt'] = np.sqrt(inpt_df.Bx**2.+inpt_df.By**2.+inpt_df.Bz**2.)
    
 
     #range check for variables
@@ -399,9 +403,10 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time):
 
    #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
    if len(par) > 1:
-      par_chi = np.array([np.sum(((c_mat.loc[:,par_i]-t_mat.loc[:,par_i])**2.).values)/float(len(c_mat)+len(t_mat)) for par_i in par])
-      use_par, = np.where(par_chi == np.min(par_chi))
-      par      = list(np.array(par)[use_par])
+      #par_chi = np.array([np.sum((((c_mat.loc[:,par_i]-t_mat.loc[:,par_i])/t_mat.loc[:,par_i].median())**2.).values)/float(len(c_mat)+len(t_mat)) for par_i in par])
+      #use_par, = np.where(par_chi == np.min(par_chi))
+      #par      = list(np.array(par)[use_par])
+      par = ['Bt']
 
 
    #compute chi^2 value for Wind and other spacecraft
@@ -671,8 +676,8 @@ sig_l = 5.0
 p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 m_var = p_var.replace('predict','predict_sigma')
 #fractional p value to call an "event"
-p_val = 0.950 
-p_val = 0.9990 
+p_val = 0.980 
+#p_val = 0.9990 
 
 #read in all spacraft events
 #for k in craft: plsm[k] = pd.read_pickle('../{0}/data/y2016_power_formatted.pic'.format(k.lower()))
@@ -695,12 +700,12 @@ def read_in(k):
         mag.set_index(mag.time_dt_mag,inplace=True)
 
         #cut for testing reasons
-        #pls = pls['2016/06/04':'2017/07/31']
-        #mag = mag['2016/06/04':'2017/07/31']
+        pls = pls['2016/06/04':'2017/07/31']
+        mag = mag['2016/06/04':'2017/07/31']
         #pls = pls['2016/07/18':'2016/07/21']
         #mag = mag['2016/07/18':'2016/07/21']
-        pls = pls['2017/01/25':'2017/01/27']
-        mag = mag['2017/01/25':'2017/01/27']
+        #pls = pls['2017/01/25':'2017/01/27']
+        #mag = mag['2017/01/25':'2017/01/27']
 
         #join magnetic field and plasma dataframes
         com_df  = pd.merge(mag,pls,how='outer',left_index=True,right_index=True,suffixes=('_mag','_pls'),sort=True)
@@ -761,7 +766,7 @@ tr_events = tr_events[~tr_events.duplicated(['group'],keep = 'first')]
 #search window for the star
 s_wind = pd.to_timedelta('30 minutes')
 for i in tr_events.index:
-      temp_events = plsm[trainer][i-s_wind:i+s_wind][plsm[trainer][p_var] > p_val-.10]
+      temp_events = plsm[trainer][i-s_wind:i+s_wind][plsm[trainer][i-s_wind:i+s_wind][p_var] > p_val-.10]
       tr_events.loc[i,:] = temp_events.loc[temp_events.index.min(),:]
 
 #reset index with new plasma time value
@@ -779,8 +784,8 @@ rgh_chi_t = pd.to_timedelta('90 minutes')
 
 #get strings for times around each event when refining chi^2 time
 ref_window = {}
-ref_window['DSCOVR'] = pd.to_timedelta('25 minutes')
-ref_window['ACE'] = pd.to_timedelta('25 minutes')
+ref_window['DSCOVR'] = pd.to_timedelta('15 minutes')
+ref_window['ACE'] = pd.to_timedelta('15 minutes')
 ref_window['SOHO'] = pd.to_timedelta('25 minutes')
 ref_window['Wind'] = pd.to_timedelta('25 minutes')
 
