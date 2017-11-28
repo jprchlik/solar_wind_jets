@@ -14,14 +14,109 @@ from scipy.stats.mstats import theilslopes
 #prevents issues with core affinity (i.e. issues with using all the processes)
 #os.system("taskset -p 0xff %d" % os.getpid())
 
+#Function to read in spacecraft
+def read_in(k,arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_formatted.txt',pls_fmt='{0}_pls_formatted.txt'):
+    """
+    A function to read in text files for a given spacecraft
+
+    Parameters
+    ----------
+    k: string
+        Then name of a spacecraft so to format for file read in
+    arch: string, optional
+        The archive location for the text file to read in (Default = '../cdf/cdftotxt/')
+    mag_fmt: string, optional
+        The file format for the magnetic field observations (Default = '{0}_mag_formatted.txt',
+        where 0 is the formatted k).
+    pls_fmt: string, optional
+        The file format for the plasma observations (Default = '{0}_pls_formatted.txt',
+        where 0 is the formatted k).
+    center = boolean, optional
+        Whether the analyzed point to be center focused (center = True) or right focus (Default = False).
+        Using a right focused model I find better agreement with event found by eye.
+
+    Returns
+    -------
+    plsm: Pandas DataFrame
+        A pandas dataframe with probability values and combined mag and plasma observations.
+    
+    """
+    #Read in plasma and magnetic field data from full res
+    pls = pd.read_table(arch+pls_fmt.format(k.lower()),delim_whitespace=True)
+
+    #no magnetic field data from SOHO
+    if k.lower() != 'soho':
+        mag = pd.read_table(arch+mag_fmt.format(k.lower()),delim_whitespace=True)
+
+        #create datetime objects from time
+        pls['time_dt_pls'] = pd.to_datetime(pls['Time'])
+        mag['time_dt_mag'] = pd.to_datetime(mag['Time'])
+
+        #setup index
+        pls.set_index(pls.time_dt_pls,inplace=True)
+        mag.set_index(mag.time_dt_mag,inplace=True)
+
+        #cut for testing reasons
+        pls = pls['2016/06/04':'2017/07/31']
+        mag = mag['2016/06/04':'2017/07/31']
+        #pls = pls['2016/07/18':'2016/07/21']
+        #mag = mag['2016/07/18':'2016/07/21']
+        #pls = pls['2017/01/25':'2017/01/27']
+        #mag = mag['2017/01/25':'2017/01/27']
+
+        #join magnetic field and plasma dataframes
+        com_df  = pd.merge(mag,pls,how='outer',left_index=True,right_index=True,suffixes=('_mag','_pls'),sort=True)
+
+        #make sure data columns are numeric
+        cols = ['SPEED','Np','Vth','Bx','By','Bz']
+        com_df[cols] = com_df[cols].apply(pd.to_numeric, errors='coerce')
+
+        #replace NaN with previously measured value
+        #com_df.fillna(method='bfill',inplace=True)
+        
+        #get degault formating for pandas dataframe
+        plsm = format_df(com_df,p_var,center=False) 
+    else:
+        #work around for no Mag data in SOHO
+        pls.loc[:,['Bx','By','Bz']] = 0.0
+        pls['time_dt_pls'] = pd.to_datetime(pls['Time'])
+        pls['time_dt_mag'] = pd.to_datetime(pls['Time'])
+        pls.set_index(pls.time_dt_pls,inplace=True)
+        plsm = format_df(pls,p_var,center=center)
+        plsm.loc[:,['Bx','By','Bz']] = -9999.0
+
+    #for rekeying later
+    plsm['craft'] = k
+
+    return plsm
+
 
 #format input data frame
-def format_df(inpt_df,p_var,span='3600s',center=True):
+def format_df(inpt_df,p_var,span='3600s',center=False):
 
     '''
     format_df is a function which formats an input data frame with plasma parameters
-    into a format
+    into a format to be used by the rest of the program. Cheifly, it determines the 
+    p-values for an event.
 
+    Parameters
+    ----------
+    inpt_df: Pandas DataFrame
+        A combined plasma and magnetic field pandas DataFrame.
+    p_var  : string 
+        Formatted string of column name which will contain the trained 
+        sigma levels probability level for training (i.e. 5 sigma).
+    span: string, optional
+        String with pandas to_timedelta like formating (Default = 3600s)
+    center: boolean, optional
+        Boolean specifying with probabilities should compute with point 
+        centered values (center = True) or left sided values (Default = False). 
+
+    Returns
+    -------
+    outp_df: Pandas DataFrame
+        A dataframe with probability values populated based on a 5 sigma
+        trained magnetic field model.
 
     '''
 
@@ -679,59 +774,35 @@ m_var = p_var.replace('predict','predict_sigma')
 p_val = 0.980 
 #p_val = 0.9990 
 
+#get strings for times around each event#
+window = {}
+window['DSCOVR'] = pd.to_timedelta('40 minutes')
+window['ACE'] = pd.to_timedelta('40 minutes')
+window['SOHO'] = pd.to_timedelta('40 minutes')
+window['Wind'] = pd.to_timedelta('40 minutes')
+
+#define rough chi min time  to cal Chi^2 min for each time
+rgh_chi_t = pd.to_timedelta('90 minutes')
+
+#get strings for times around each event when refining chi^2 time
+ref_window = {}
+ref_window['DSCOVR'] = pd.to_timedelta('15 minutes')
+ref_window['ACE'] = pd.to_timedelta('15 minutes')
+ref_window['SOHO'] = pd.to_timedelta('25 minutes')
+ref_window['Wind'] = pd.to_timedelta('25 minutes')
+
+#refined window to calculate Chi^2 min for each time
+ref_chi_t = pd.to_timedelta('30 minutes')
+
+
+#plot window 
+plt_windw = pd.to_timedelta('180 minutes')
+
+
 #read in all spacraft events
 #for k in craft: plsm[k] = pd.read_pickle('../{0}/data/y2016_power_formatted.pic'.format(k.lower()))
-arch = '../cdf/cdftotxt/'
+#arch = '../cdf/cdftotxt/'
 #for k in craft:
-def read_in(k):
-    #Read in plasma and magnetic field data from full res
-    pls = pd.read_table(arch+'{0}_pls_formatted.txt'.format(k.lower()),delim_whitespace=True)
-
-    #no magnetic field data from SOHO
-    if k.lower() != 'soho':
-        mag = pd.read_table(arch+'{0}_mag_formatted.txt'.format(k.lower()),delim_whitespace=True)
-
-        #create datetime objects from time
-        pls['time_dt_pls'] = pd.to_datetime(pls['Time'])
-        mag['time_dt_mag'] = pd.to_datetime(mag['Time'])
-
-        #setup index
-        pls.set_index(pls.time_dt_pls,inplace=True)
-        mag.set_index(mag.time_dt_mag,inplace=True)
-
-        #cut for testing reasons
-        pls = pls['2016/06/04':'2017/07/31']
-        mag = mag['2016/06/04':'2017/07/31']
-        #pls = pls['2016/07/18':'2016/07/21']
-        #mag = mag['2016/07/18':'2016/07/21']
-        #pls = pls['2017/01/25':'2017/01/27']
-        #mag = mag['2017/01/25':'2017/01/27']
-
-        #join magnetic field and plasma dataframes
-        com_df  = pd.merge(mag,pls,how='outer',left_index=True,right_index=True,suffixes=('_mag','_pls'),sort=True)
-
-        #make sure data columns are numeric
-        cols = ['SPEED','Np','Vth','Bx','By','Bz']
-        com_df[cols] = com_df[cols].apply(pd.to_numeric, errors='coerce')
-
-        #replace NaN with previously measured value
-        #com_df.fillna(method='bfill',inplace=True)
-        
-        #get degault formating for pandas dataframe
-        plsm = format_df(com_df,p_var,center=False) 
-    else:
-        #work around for no Mag data in SOHO
-        pls.loc[:,['Bx','By','Bz']] = 0.0
-        pls['time_dt_pls'] = pd.to_datetime(pls['Time'])
-        pls['time_dt_mag'] = pd.to_datetime(pls['Time'])
-        pls.set_index(pls.time_dt_pls,inplace=True)
-        plsm = format_df(pls,p_var,center=False)
-        plsm.loc[:,['Bx','By','Bz']] = -9999.0
-
-    #for rekeying later
-    plsm['craft'] = k
-
-    return plsm
 
 #read in and format spacecraft in parallel
 pool = Pool(processes=4)
@@ -766,35 +837,11 @@ tr_events = tr_events[~tr_events.duplicated(['group'],keep = 'first')]
 #search window for the star
 s_wind = pd.to_timedelta('30 minutes')
 for i in tr_events.index:
-      temp_events = plsm[trainer][i-s_wind:i+s_wind][plsm[trainer][i-s_wind:i+s_wind][p_var] > p_val-.10]
+      temp_events = plsm[trainer][i-s_wind:i+s_wind][plsm[trainer][i-s_wind:i+s_wind][p_var] >.90]
       tr_events.loc[i,:] = temp_events.loc[temp_events.index.min(),:]
 
 #reset index with new plasma time value
 tr_events.set_index(tr_events.time_dt_pls,inplace=True)
-
-#get strings for times around each event#
-window = {}
-window['DSCOVR'] = pd.to_timedelta('40 minutes')
-window['ACE'] = pd.to_timedelta('40 minutes')
-window['SOHO'] = pd.to_timedelta('40 minutes')
-window['Wind'] = pd.to_timedelta('40 minutes')
-
-#define rough chi min time  to cal Chi^2 min for each time
-rgh_chi_t = pd.to_timedelta('90 minutes')
-
-#get strings for times around each event when refining chi^2 time
-ref_window = {}
-ref_window['DSCOVR'] = pd.to_timedelta('15 minutes')
-ref_window['ACE'] = pd.to_timedelta('15 minutes')
-ref_window['SOHO'] = pd.to_timedelta('25 minutes')
-ref_window['Wind'] = pd.to_timedelta('25 minutes')
-
-#refined window to calculate Chi^2 min for each time
-ref_chi_t = pd.to_timedelta('30 minutes')
-
-
-#plot window 
-plt_windw = pd.to_timedelta('180 minutes')
 
 
 #space craft to match with trainer soho
