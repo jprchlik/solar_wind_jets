@@ -408,7 +408,27 @@ def format_df(inpt_df,p_var,span='3600s',center=False):
 #probability model and parameters to use
 def logit_model(df,b0,b1,b2,b3,plasma=True):
     '''
-    Returns logit probability for a given set of parameters
+    Returns a probability value for a set of input parameters
+
+    Parameters
+    ----------
+    df: Pandas DataFrame
+        Pandas DataFrame containing plasma or magnetic field paraemters
+    b0: float
+        Logit model intercept
+    b1: float
+        Logit model slope for parameter 1 (either Bx or proton flow speed) 
+    b2: float
+        Logit model slope for parameter 2 (either By or proton thermal velocity)
+    b3: float
+        Logit model slope for parameter 3 (either Bz or proton number density)
+    plasma: boolean, optinal
+        Use plasma parametes for model (Default = True)  or 
+        use magnetic field parameters (plasma=False)
+    
+    Returns
+    -------
+    logit probability for a given set of parameters
 
     '''
     if plasma:
