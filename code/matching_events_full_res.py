@@ -15,7 +15,7 @@ from scipy.stats.mstats import theilslopes
 #os.system("taskset -p 0xff %d" % os.getpid())
 
 #Function to read in spacecraft
-def read_in(k,arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_formatted.txt',pls_fmt='{0}_pls_formatted.txt'):
+def read_in(k,arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_formatted.txt',pls_fmt='{0}_pls_formatted.txt',center=False):
     """
     A function to read in text files for a given spacecraft
 
@@ -570,34 +570,25 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,trainer_t,ref_chi_t=pd.to_timedelta('10 m
     Parameters
     -----------
     p_mat: Pandas DataFrame
-    Solar wind pandas DataFrame for a space craft roughly sampled
-
+        Solar wind pandas DataFrame for a space craft roughly sampled
     par : list
-    List of parameters to use in the Chi^2 minimization 
-
+        List of parameters to use in the Chi^2 minimization 
     rgh_chi_t: Pandas datetime delta object
-    Time around a given time in p_mat to include in chi^2 minimization  
-
+        Time around a given time in p_mat to include in chi^2 minimization  
     ref_chi_t: Pandas datetime delta object
-    Time around a given time in refined grid to include in chi^2 minimization  
-
+        Time around a given time in refined grid to include in chi^2 minimization  
     plsm: dict
-    Dictionary of plasma DataFrames of plasma Dataframes
-   
+        Dictionary of plasma DataFrames of plasma Dataframes 
     k   : string
-    Spacecraft name in plsm dictionary
-   
+        Spacecraft name in plsm dictionary
     trainer_t: Time index
-    Time index of training spacecraft to match and get Chi^2 min.
-
+        Time index of training spacecraft to match and get Chi^2 min.
     refine: boolean
-    Whether to use a refined window (Default = True)
-
+        Whether to use a refined window (Default = True)
     n_fine : integer
-    Number of chi^2 min values from the rough grid to check with the fine grid (Default = 4)
-
+        Number of chi^2 min values from the rough grid to check with the fine grid (Default = 4)
     plot  : boolean
-    Plot Chi^2 minimization window (Default = False)
+        Plot Chi^2 minimization window (Default = False)
 
     RETURNS
     --------
@@ -821,8 +812,8 @@ sig_l = 5.0
 p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
 m_var = p_var.replace('predict','predict_sigma')
 #fractional p value to call an "event"
-p_val = 0.980 
-#p_val = 0.9990 
+p_val = 0.950 
+p_val = 0.9990 
 
 #get strings for times around each event#
 window = {}
@@ -844,15 +835,12 @@ ref_window['Wind'] = pd.to_timedelta('25 minutes')
 #refined window to calculate Chi^2 min for each time
 ref_chi_t = pd.to_timedelta('30 minutes')
 
-
 #plot window 
 plt_windw = pd.to_timedelta('180 minutes')
 
-
-#read in all spacraft events
-#for k in craft: plsm[k] = pd.read_pickle('../{0}/data/y2016_power_formatted.pic'.format(k.lower()))
-#arch = '../cdf/cdftotxt/'
-#for k in craft:
+#window around event to get largers parameter jump values
+# when writing to file
+a_w = pd.to_timedelta('100 seconds')
 
 #read in and format spacecraft in parallel
 pool = Pool(processes=4)
@@ -919,7 +907,6 @@ Re = 6378. #Earth radius in km
 
 
 #set up html output Event heading
-
 ful_hdr = '''
             <!DOCTYPE html>
             <html>
@@ -1080,8 +1067,6 @@ par_out = ['diff_med_speed', 'diff_med_Np', 'diff_med_Vth', 'diff_med_Bx', 'diff
 out_f = open('../html_files/{0}_level_{1:4.0f}_full_res.html'.format(trainer.lower(),p_val*1000.).replace(' ','0'),'w')
 out_f.write(ful_hdr+par_hdr.format(p_val*100.,len(tr_events)))
 
-#window around event to get largers parameter jump values
-a_w = pd.to_timedelta('100 seconds')
 
 #get event slices 
 for i in tr_events.index:
@@ -1173,7 +1158,7 @@ for i in tr_events.index:
             if (((p_mat_t.size > 0) & (p_mat_t[p_var].max() > mag_tol)) | ((k.lower() == 'soho') & (p_mat_t.size > 0.))):
             #if ((k.lower() == 'soho') & (p_mat_t.size > 0.)):
 
-                i_min = chi_min(p_mat_t,['SPEED'],rgh_chi_t,plsm,k,i,ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot)
+                i_min = chi_min(p_mat_t,['SPEED'],rgh_chi_t,plsm,k,i,ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot,nproc=8)
                 #create figure to test fit
                 if plot:
                     fig, ax = plt.subplots()
@@ -1203,7 +1188,7 @@ for i in tr_events.index:
                 #sort the cut window and get the top 10 events
                 p_mat_t = p_mag_t
        
-                i_min = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,plsm,k,i,ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot)
+                i_min = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,plsm,k,i,ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot,n_proc=8)
 
                 #use full array for index matching
                 p_mat = plsm[k]
