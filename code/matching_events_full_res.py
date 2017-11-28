@@ -458,7 +458,7 @@ def help_chi_min(args):
     return return_chi_min(*args)
 
 #parallize chi^2 computation
-def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time):
+def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time,trainer='Wind'):
 
     """
     return_chi_min computes the chi^2 min. time for a given set of parameters
@@ -480,6 +480,8 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time):
         Time index of training spacecraft to match and get Chi^2 min.
     time: Time index
         Time index of nonprimary spacecraft to offset and match with primary spacecraft
+    trainer: string
+        The spacecraft to use for X^2 comparison (Default=Wind)
 
     RETURNS
     --------
@@ -566,7 +568,7 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time):
 
 
 #function to find the Chi^2 min value given a set of parameters
-def chi_min(p_mat,par,rgh_chi_t,plsm,k,trainer_t,ref_chi_t=pd.to_timedelta('10 minutes'),refine=True,n_fine=4,plot=True ,nproc=1):
+def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,ref_chi_t=pd.to_timedelta('10 minutes'),refine=True,n_fine=4,plot=True ,nproc=1):
     """
     chi_min computes the chi^2 min. time for a given set of parameters
     Parameters
@@ -583,6 +585,10 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,trainer_t,ref_chi_t=pd.to_timedelta('10 m
         Dictionary of plasma DataFrames of plasma Dataframes 
     k   : string
         Spacecraft name in plsm dictionary
+    window : dictionary
+        Spacecraft windows to use when matching
+    ref_window : dictionary
+        Spacecraft windows to use when refined matching
     trainer_t: Time index
         Time index of training spacecraft to match and get Chi^2 min.
     refine: boolean
@@ -646,7 +652,7 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,trainer_t,ref_chi_t=pd.to_timedelta('10 m
             pool2.join()
         else:
             outp = []
-            for i in loop_list: outp.append(dumb_chi_min(i))
+            for i in loop_list: outp.append(help_chi_min(i))
 
 
         #add chisq times to p_mat array
@@ -697,12 +703,12 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,trainer_t,ref_chi_t=pd.to_timedelta('10 m
             #Parallized chisq computation
             if nproc > 1.5:
                 pool3 = Pool(processes=nproc)
-                outp = pool3.map(dumb_chi_min,loop_list)
+                outp = pool3.map(help_chi_min,loop_list)
                 pool3.close()
                 pool3.join()
             else:
                 outp = []
-                for i in loop_list: outp.append(dumb_chi_min(i))
+                for i in loop_list: outp.append(help_chi_min(i))
 
 
             #add chisq times to p_mat array
@@ -1160,7 +1166,7 @@ def main():
                 if (((p_mat_t.size > 0) & (p_mat_t[p_var].max() > mag_tol)) | ((k.lower() == 'soho') & (p_mat_t.size > 0.))):
                 #if ((k.lower() == 'soho') & (p_mat_t.size > 0.)):
     
-                    i_min = chi_min(p_mat_t,['SPEED'],rgh_chi_t,plsm,k,i,ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot,nproc=8)
+                    i_min = chi_min(p_mat_t,['SPEED'],rgh_chi_t,plsm,k,window,ref_window,i,ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot,nproc=1)
                     #create figure to test fit
                     if plot:
                         fig, ax = plt.subplots()
@@ -1190,7 +1196,7 @@ def main():
                     #sort the cut window and get the top 10 events
                     p_mat_t = p_mag_t
            
-                    i_min = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,plsm,k,i,ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot,n_proc=8)
+                    i_min = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,plsm,k,window,ref_window,i,ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot,n_proc=8)
     
                     #use full array for index matching
                     p_mat = plsm[k]
