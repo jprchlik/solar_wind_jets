@@ -26,13 +26,19 @@
             The program for finding the &chi;<sup>2</sup> minimum for events between spacecraft works by using a primary spacecraft to find events.
             I selected Wind because I used Wind to train the model, and the events found in Wind are consistent with events found by eye or independent spacecraft 
             algorithms. I define an event discontinuity as a time where our model indicates a 98.00% probability the solar wind parameters corresponds to a 5&sigma;
-            discontinuity in a component of the magnetic field. Then I create a course grid of solar wind speed samples for &plusmn; 40 minutes around a event.
-            Currently, I find 55 events using the Wind spacecraft to define an event. Then I shift 
-            the other 3 spacecraft onto the Wind using the course grid. Then I select a 80 minute (&plusmn;40 minutes) window around the shifted Wind and other spacecraft and derive a first order
-            &chi;<sup>2</sup> minimum. Using the first order &chi;<sup>2</sup> minimum, I create a fine grid 50 minutes (&plusmn; 25 minutes) around the rough &chi;<sup>2</sup> minimum
-            time. The fine grid cadence is set to the maximum sampling frequency of a given spacecraft. Then the program stores the &chi;<sup>2</sup> value for 20 minutes (&plusmn; 10 minutes)
-            around each fine grid point. However, if the first or last point is the &chi;<sup>2</sup> min. then the program expands the time search window by 20 minutes.
-            The &chi;<sup>2</sup> reported is the minimum from the time grid.
+            discontinuity in a component of the magnetic field. Currently, I find 55 events using the Wind spacecraft to define an event.
+            Then I create a grid of solar wind speed samples for &plusmn; 40 minutes around a event. However, if the spacecraft does not have reliable flow speed 
+            measurements I use the magnitude of the magnetic field. Then I shift 
+            the other 3 spacecraft onto the Wind using the course grid. Then I select a 300 minute (&plusmn;90 minutes) window around the shifted Wind and
+            other spacecraft and derive a first order
+            &chi;<sup>2</sup> minimum. Next, I use the first order &chi;<sup>2</sup> minimum and the same parameter (i.e. preferrably flow speed) and sample &plusmn; 20 minutes
+            around the first minimum with a 150 minute window. The new &chi;<sup>2</sup> minimum is the second order minimum.
+            Using the second order &chi;<sup>2</sup> minimum, I create a fine grid 30 minutes (&plusmn; 15 minutes) around the rough &chi;<sup>2</sup> minimum
+            time for DSCOVR and ACE, but a 50 minute window (&plusmn;25 minutes) for SOHO/CELIAS because SOHO/CELIAS does not take magnetic field observations.
+            The fine grid cadence is set to the maximum sampling frequency of a given spacecraft. Then the program stores the &chi;<sup>2</sup> and cuts the grid and
+            window by half three more times (i.e. 4 refined &chi;<sup>2</sup> minimizations.
+            Globally if the first or last point is the &chi;<sup>2</sup> min. then the program expands the time search window by 20 minutes.
+            The &chi;<sup>2</sup> reported is the minimum for the last refined time.
             </p1>
 
             </br>
@@ -45,7 +51,10 @@
             P-val (plasma) is the p-val for a 5&sigma; discontinuity at the reference Obs. time for a given spacecraft's measured plasma values. 
             P-val (mag.) is the p-val for a 5&sigma; discontinuity given at the reference Obs. time for a given spacecraft's measured magnetic field values.
             Finally, an X in Use Plasma Mod. means the minimization routine use the wind Speed to find the best match &chi;<sup>2</sup> time,
-            while an empty cell denotes using the magnetic field. Clicking on the spacecraft shows the &chi;<sup>2</sup> minimization as a function of time for 
+            while an empty cell denotes using the magnetic field for rough characterization. The final 6 parameters are the absolute maximum values of the discontinouities 
+            for &plusmn;90 seconds around an event. They are a rough guide to what the plasma and magnetic field did during a particular event. However, clicking the Event
+            on YYY/MM/DD HH:MM:SS shows the plasma and magnetic field for two different time windows (&plusmn; 3 hours and &plusmn; 25 minutes).
+            Finally, clicking on the spacecraft name shows the &chi;<sup>2</sup> minimization as a function of time for 
             the wide and refinded windows.
     
             </br>
