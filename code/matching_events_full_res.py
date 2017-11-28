@@ -57,10 +57,10 @@ def read_in(k,arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_formatted.txt',pls_fmt='{
         mag.set_index(mag.time_dt_mag,inplace=True)
 
         #cut for testing reasons
-        pls = pls['2016/06/04':'2017/07/31']
-        mag = mag['2016/06/04':'2017/07/31']
-        #pls = pls['2016/07/18':'2016/07/21']
-        #mag = mag['2016/07/18':'2016/07/21']
+        #pls = pls['2016/06/04':'2017/07/31']
+        #mag = mag['2016/06/04':'2017/07/31']
+        pls = pls['2016/07/18':'2016/07/21']
+        mag = mag['2016/07/18':'2016/07/21']
         #pls = pls['2017/01/25':'2017/01/27']
         #mag = mag['2017/01/25':'2017/01/27']
 
@@ -458,87 +458,117 @@ def help_chi_min(args):
 #parallize chi^2 computation
 def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time):
 
+    """
+    return_chi_min computes the chi^2 min. time for a given set of parameters
+    Parameters
+    -----------
+    rgh_chi_t: Pandas datetime delta object
+        Time around a given time in p_mat to include in chi^2 minimization  
+    plsm: dict
+        Dictionary of plasma DataFrames of plasma Dataframes
+    k   : string
+        Spacecraft name in plsm dictionary
+    par : string,list
+        List of string of parameters to initially try and compute Chi^2 min on
+    try_mag: boolean
+        If true try to force using magnetic field for matching
+    try_pls: boolean
+        If true try to force flow speed matching 
+    trainer_time: Time index
+        Time index of training spacecraft to match and get Chi^2 min.
+    time: Time index
+        Time index of nonprimary spacecraft to offset and match with primary spacecraft
 
+    RETURNS
+    --------
+    time,chisq : datetime index, calculate Chi^2
+    Datetime index of  Chi^2 time and the Chi^2 value
 
-   #get a region around one of the best fit times
-   com_slice = [time-rgh_chi_t,time+rgh_chi_t]
-   c_mat = plsm[k].loc[com_slice[0]:com_slice[1]]
-
-   #update the time index of the match array for comparision with training spacecraft (i=training spacecraft time)
-   c_mat.index = c_mat.index+(trainer_time-time)
-
-
-   #c_mat.SPEED.interpolate('time',inplace=True)
-   #need to use values for correct logic
-
-   #get training spacecraft time range
-   t_mat = plsm[trainer].loc[c_mat.index.min():c_mat.index.max()]
-
-   #use magentic field for refinement for ACE, Wind, and DSCOVR
-   if ((k.lower() != 'soho') & (try_mag)): par = ['Bx','By','Bz']
-
-   #use speed for rough esimation if possible
-   if (((len(c_mat[c_mat['SPEED'] > 0].SPEED) > 10.) & (len(t_mat[t_mat['SPEED'] > 0].SPEED) > 10.) & (try_pls)) | (k.lower() == 'soho')): par = ['SPEED']
-   else: par = ['Bx','By','Bz']
-
-
-   #remove bad Speed values 
-   c_mat.loc[c_mat.SPEED < 0.,'SPEED'] = np.nan
-
-
-   #need to use values for correct logic
-   c_mat = c_mat[np.isfinite(c_mat[par].values)]
-   t_mat = t_mat[np.isfinite(t_mat[par].values)]
-
-   #drop duplicates when using more than one array value
-   #use mag column because in has the higher sampling fequence
-   c_mat = c_mat[~c_mat.index.duplicated(keep='first')]
-   t_mat = t_mat[~t_mat.index.duplicated(keep='first')]
-
-
-   #go to next time if DataFrame is empty
-   if ((len(c_mat) < 2) | (len(t_mat) < 2)): 
-       return time,np.nan
-
-
-   #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid and interpolate
-   c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
-
-
-   #get the median slope and offset
-   #J. Prchlik (2017/11/20)
-   try:
-       med_m,med_i,low_s,hgh_s = theilslopes(t_mat.SPEED.values,c_mat.SPEED.values)
-       c_mat.SPEED = c_mat.SPEED*med_m+med_i
-   except IndexError:
-   #get median offset to apply to match spacecraft
-       off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
-       c_mat.SPEED = c_mat.SPEED-off_speed
+    """
    
 
-   #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
-   if len(par) > 1:
-      #par_chi = np.array([np.sum((((c_mat.loc[:,par_i]-t_mat.loc[:,par_i])/t_mat.loc[:,par_i].median())**2.).values)/float(len(c_mat)+len(t_mat)) for par_i in par])
-      #use_par, = np.where(par_chi == np.min(par_chi))
-      #par      = list(np.array(par)[use_par])
-      par = ['Bt']
 
 
-   #compute chi^2 value for Wind and other spacecraft
-   #added computation number to prefer maximum overlap (i.e. won't shove to an edge) J. Prchlik 2017/11/15
-   chisq = np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)/float(len(c_mat)+len(t_mat))
-   #Try using the median offset rather than chi^2 minimum (Did not work)
-   #chisq = np.nanmedian(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)/float(len(c_mat)+len(t_mat))
+    #get a region around one of the best fit times
+    com_slice = [time-rgh_chi_t,time+rgh_chi_t]
+    c_mat = plsm[k].loc[com_slice[0]:com_slice[1]]
+
+    #update the time index of the match array for comparision with training spacecraft (i=training spacecraft time)
+    c_mat.index = c_mat.index+(trainer_time-time)
+
+
+    #c_mat.SPEED.interpolate('time',inplace=True)
+    #need to use values for correct logic
+
+    #get training spacecraft time range
+    t_mat = plsm[trainer].loc[c_mat.index.min():c_mat.index.max()]
+
+    #use magentic field for refinement for ACE, Wind, and DSCOVR
+    if ((k.lower() != 'soho') & (try_mag)): par = ['Bx','By','Bz']
+
+    #use speed for rough esimation if possible
+    if (((len(c_mat[c_mat['SPEED'] > 0].SPEED) > 10.) & (len(t_mat[t_mat['SPEED'] > 0].SPEED) > 10.) & (try_pls)) | (k.lower() == 'soho')): par = ['SPEED']
+    else: par = ['Bx','By','Bz']
+
+
+    #remove bad Speed values 
+    c_mat.loc[c_mat.SPEED < 0.,'SPEED'] = np.nan
+
+
+    #need to use values for correct logic
+    c_mat = c_mat[np.isfinite(c_mat[par].values)]
+    t_mat = t_mat[np.isfinite(t_mat[par].values)]
+
+    #drop duplicates when using more than one array value
+    #use mag column because in has the higher sampling fequence
+    c_mat = c_mat[~c_mat.index.duplicated(keep='first')]
+    t_mat = t_mat[~t_mat.index.duplicated(keep='first')]
+
+
+    #go to next time if DataFrame is empty
+    if ((len(c_mat) < 2) | (len(t_mat) < 2)): 
+        return time,np.nan
+
+
+    #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid and interpolate
+    c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
+
+
+    #get the median slope and offset
+    #J. Prchlik (2017/11/20)
+    try:
+        med_m,med_i,low_s,hgh_s = theilslopes(t_mat.SPEED.values,c_mat.SPEED.values)
+        c_mat.SPEED = c_mat.SPEED*med_m+med_i
+    except IndexError:
+    #get median offset to apply to match spacecraft
+        off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
+        c_mat.SPEED = c_mat.SPEED-off_speed
     
 
-   return time,chisq
+    #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
+    if len(par) > 1:
+       #par_chi = np.array([np.sum((((c_mat.loc[:,par_i]-t_mat.loc[:,par_i])/t_mat.loc[:,par_i].median())**2.).values)/float(len(c_mat)+len(t_mat)) for par_i in par])
+       #use_par, = np.where(par_chi == np.min(par_chi))
+       #par      = list(np.array(par)[use_par])
+       par = ['Bt']
+
+
+    #compute chi^2 value for Wind and other spacecraft
+    #added computation number to prefer maximum overlap (i.e. won't shove to an edge) J. Prchlik 2017/11/15
+    chisq = np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)/float(len(c_mat)+len(t_mat))
+    #Try using the median offset rather than chi^2 minimum (Did not work)
+    #chisq = np.nanmedian(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)/float(len(c_mat)+len(t_mat))
+     
+
+    return time,chisq
 
 
 #function to find the Chi^2 min value given a set of parameters
 def chi_min(p_mat,par,rgh_chi_t,plsm,k,trainer_t,ref_chi_t=pd.to_timedelta('10 minutes'),refine=True,n_fine=4,plot=True ,nproc=1):
     """
     chi_min computes the chi^2 min. time for a given set of parameters
-
+    Parameters
+    -----------
     p_mat: Pandas DataFrame
     Solar wind pandas DataFrame for a space craft roughly sampled
 
