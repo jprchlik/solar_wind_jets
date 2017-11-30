@@ -3,11 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from fancy_plot import fancy_plot
 from datetime import datetime
-from multiprocessing import Pool,Lock
+from multiprocessing import Pool,Lock,current_process
 from functools import partial
 import os
 import threading
 import sys
+import time
 
 from scipy.stats.mstats import theilslopes
 
@@ -15,7 +16,8 @@ from scipy.stats.mstats import theilslopes
 #os.system("taskset -p 0xff %d" % os.getpid())
 
 #Function to read in spacecraft
-def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_formatted.txt',pls_fmt='{0}_pls_formatted.txt',center=False):
+def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_formatted.txt',pls_fmt='{0}_pls_formatted.txt',
+            start_t='2016/06/04',end_t='2017/07/31',center=False):
     """
     A function to read in text files for a given spacecraft
 
@@ -34,6 +36,10 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag
     center = boolean, optional
         Whether the analyzed point to be center focused (center = True) or right focus (Default = False).
         Using a right focused model I find better agreement with event found by eye.
+    start_t: string, optional
+        Date in YYYY/MM/DD format to start looking for events (Default = '2016/06/04')
+    start_t: string, optional
+        Date in YYYY/MM/DD format to stop looking for events (inclusive, Default = '2017/07/31')
 
     Returns
     -------
@@ -57,10 +63,10 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag
         mag.set_index(mag.time_dt_mag,inplace=True)
 
         #cut for testing reasons
-        #pls = pls['2016/06/04':'2017/07/31']
-        #mag = mag['2016/06/04':'2017/07/31']
-        pls = pls['2016/07/18':'2016/07/21']
-        mag = mag['2016/07/18':'2016/07/21']
+        pls = pls[start_t:end_t]
+        mag = mag[start_t:end_t]
+        #pls = pls['2016/07/18':'2016/07/21']
+        #mag = mag['2016/07/18':'2016/07/21']
         #pls = pls['2017/01/25':'2017/01/27']
         #mag = mag['2017/01/25':'2017/01/27']
 
@@ -70,6 +76,9 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag
         #make sure data columns are numeric
         cols = ['SPEED','Np','Vth','Bx','By','Bz']
         com_df[cols] = com_df[cols].apply(pd.to_numeric, errors='coerce')
+
+        #add Time string
+        com_df['Time'] = com_df.index.to_datetime().strftime('%Y/%m/%dT%H:%M:%S')
 
         #replace NaN with previously measured value
         #com_df.fillna(method='bfill',inplace=True)
@@ -436,9 +445,6 @@ def logit_model(df,b0,b1,b2,b3,plasma=True):
     else:
         return 1./(np.exp(-(df.diff_snr_Bx*b1+df.diff_snr_By*b2+df.diff_snr_Bz*b3+b0))+1.) 
 
-def dumb_chi_min(args):
-    return np.random.random(int(args[0]*5000.))
-
 def help_chi_min(args):
     '''
     Allows for multiple arguments to be called by a Pooled Multiprocessor function
@@ -456,6 +462,22 @@ def help_chi_min(args):
     
     '''
     return return_chi_min(*args)
+
+
+def dumb_chi_min(args):
+    print(args[-1],current_process())
+    #rgh_chi_t = args[0]
+    #plsm      = args[1]
+    #k         = args[2]
+    #par       = args[3]
+    #try_mag   = args[4]
+    #try_pls   = args[5]
+    #trainer_time = args[6]
+    #time      = args[7]
+    #trainer='Wind'
+    chisq = np.random.random(1)
+
+    return args,chisq
 
 #parallize chi^2 computation
 def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time,trainer='Wind'):
@@ -490,8 +512,6 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time,traine
 
     """
    
-
-
 
     #get a region around one of the best fit times
     com_slice = [time-rgh_chi_t,time+rgh_chi_t]
@@ -568,7 +588,7 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time,traine
 
 
 #function to find the Chi^2 min value given a set of parameters
-def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,ref_chi_t=pd.to_timedelta('10 minutes'),refine=True,n_fine=4,plot=True ,nproc=1):
+def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,ref_chi_t=pd.to_timedelta('10 minutes'),refine=True,n_fine=4,plot=True ,nproc=1):
     """
     chi_min computes the chi^2 min. time for a given set of parameters
     Parameters
@@ -591,6 +611,10 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,ref_chi_t=pd.
         Spacecraft windows to use when refined matching
     trainer_t: Time index
         Time index of training spacecraft to match and get Chi^2 min.
+    color: dictionary
+        Dictionary of spacecraft colors (keys should be k)
+    marker: dictionary
+        Dictionary of spacecraft markers (keys should be k)
     refine: boolean
         Whether to use a refined window (Default = True)
     n_fine : integer
@@ -628,13 +652,23 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,ref_chi_t=pd.
 
         #get all values in top n_fine at full resolution
         p_mat  = plsm[k].loc[i_min-t_rgh_wid:i_min+t_rgh_wid]
+        #Use Flow Speed Cadence for rough esitmation
+        p_mat  = p_mat[np.isfinite(p_mat.SPEED)]
 
         #list of to values to compute X^2 minium
         time = p_mat.index
         #create list to sent to processors
         #par_chi_min = partial(return_chi_min,rgh_chi_t,plsm,k,par,False,True,trainer_t)
+   
+        #Commented out by J. Prchlik (2017/11/29 for threading testing)
         loop_list = []
-        for i in time: loop_list.append((t_rgh_chi_t,plsm,k,par,False,True,trainer_t,i))
+        for l in time: loop_list.append((t_rgh_chi_t,plsm,k,par,False,True,trainer_t,l))
+        #parallel issue is with using a pandas Dataframe (need to work out solution)
+        #actually just has issue with really large arrays. No clear solution  other 
+        #than be annoyed for now
+        #for l in time: loop_list.append((t_rgh_chi_t,plsm,k,par,False,True,trainer_t,l))
+        #loop_list = []
+        #for l in time: loop_list.append((0))
         
 
         #clear Threads
@@ -647,17 +681,19 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,ref_chi_t=pd.
 
         if nproc > 1.5:
             pool2 = Pool(processes=nproc)
-            outp = pool2.map(dumb_chi_min,loop_list)
+            #Commented out by J. Prchlik (2017/11/29 for threading testing)
+            #outp = pool2.map(dumb_chi_min,loop_list)
+            outp = pool2.map(help_chi_min,loop_list)
             pool2.close()
             pool2.join()
         else:
             outp = []
-            for i in loop_list: outp.append(help_chi_min(i))
+            for l in loop_list: outp.append(help_chi_min(l))
 
 
         #add chisq times to p_mat array
         #first is time index second is chisq value
-        for i in outp: p_mat.loc[i[0],'chisq'] = i[1]
+        for l in outp: p_mat.loc[l[0],'chisq'] = l[1]
 
         
         
@@ -704,6 +740,7 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,ref_chi_t=pd.
             if nproc > 1.5:
                 pool3 = Pool(processes=nproc)
                 outp = pool3.map(help_chi_min,loop_list)
+                pool3.terminate()
                 pool3.close()
                 pool3.join()
             else:
@@ -770,10 +807,17 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,ref_chi_t=pd.
         #ax.set_ylim([300,1000.])
         plt.close(chi_fig)
     
-
     return i_min
     
-def main():
+def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],mar=['D','o','s','<'],
+         use_craft=False,use_chisq=True,plot=True,refine=True ,verbose=True,nproc=1,p_val=0.999,
+         ref_chi_t = pd.to_timedelta('30 minutes'),rgh_chi_t = pd.to_timedelta('90 minutes')):
+
+
+    '''
+
+
+    '''
     #dictionary for storing the Pandas Data frame
     pls = {}
     mag = {}
@@ -781,21 +825,20 @@ def main():
     
     
     #use space craft position to get range of time values
-    use_craft = False
+    #(use_craft)
+    
     
     #use best chisq to find the best time in between spacecraft
-    use_chisq = True
+    #(use_chisq)
     
     #plot chisq min procedure
-    plot = True 
+    #(plot)
     
     #refine chisq min with closer time grid
-    refine = True 
+    #(refine)
     
     #set use to use all spacecraft
-    craft = ['Wind','DSCOVR','ACE','SOHO']
-    col   = ['blue','black','red','teal']
-    mar   = ['D','o','s','<']
+    
     marker = {}
     color  = {}
     
@@ -820,8 +863,7 @@ def main():
     p_var = 'predict_shock_{0:3.2f}'.format(sig_l).replace('.','')
     m_var = p_var.replace('predict','predict_sigma')
     #fractional p value to call an "event"
-    p_val = 0.950 
-    p_val = 0.9990 
+    #(p_val) = 0.950 
     
     #get strings for times around each event#
     window = {}
@@ -831,7 +873,7 @@ def main():
     window['Wind'] = pd.to_timedelta('40 minutes')
     
     #define rough chi min time  to cal Chi^2 min for each time
-    rgh_chi_t = pd.to_timedelta('90 minutes')
+    #(rgh_chi_t = pd.to_timedelta('90 minutes')
     
     #get strings for times around each event when refining chi^2 time
     ref_window = {}
@@ -841,7 +883,7 @@ def main():
     ref_window['Wind'] = pd.to_timedelta('25 minutes')
     
     #refined window to calculate Chi^2 min for each time
-    ref_chi_t = pd.to_timedelta('30 minutes')
+    #(ref_chi_t)
     
     #plot window 
     plt_windw = pd.to_timedelta('180 minutes')
@@ -853,6 +895,7 @@ def main():
     #read in and format spacecraft in parallel
     pool = Pool(processes=4)
     outp = pool.map(read_in,craft)
+    pool.terminate()
     pool.close()
     pool.join()
     
@@ -1078,10 +1121,12 @@ def main():
     
     #get event slices 
     for i in tr_events.index:
+        #print processing time
+        start_time = time.time()
         print('########################################')
         print('NEW EVENT')
         print(trainer)
-        #print('{0:%Y/%m/%d %H:%M:%S}, p (plasma)={1:4.3f}, p (mag.) = {2:4.3f}'.format(i,tr_events.loc[i,p_var],tr_events.loc[i,p_var.replace('predict','predict_sigma')]))
+        print('{0:%Y/%m/%d %H:%M:%S}, p (plasma)={1:4.3f}, p (mag.) = {2:4.3f}'.format(i,tr_events.loc[i,p_var],tr_events.loc[i,p_var.replace('predict','predict_sigma')]))
         #get time slice around event
        
         #create table to output html table and link to github png files (https://cdn.rawgit.com/jprchlik/solar_wind_jets/4cf1c6e7)
@@ -1161,17 +1206,18 @@ def main():
                 #mag tolerance for using magnetometer data to match events rather than plasma parameters
                 mag_tol = 0.0
                 
+
+                #temporary plasma array to use for X^2 matching
+                t_plsm = {}
+                half_day = pd.to_timedelta('9 hours')
+                for ll in plsm.keys(): t_plsm[ll] = plsm[ll].loc[i-half_day:i+half_day]
     
     
                 if (((p_mat_t.size > 0) & (p_mat_t[p_var].max() > mag_tol)) | ((k.lower() == 'soho') & (p_mat_t.size > 0.))):
                 #if ((k.lower() == 'soho') & (p_mat_t.size > 0.)):
     
-                    i_min = chi_min(p_mat_t,['SPEED'],rgh_chi_t,plsm,k,window,ref_window,i,ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot,nproc=1)
-                    #create figure to test fit
-                    if plot:
-                        fig, ax = plt.subplots()
-                        ax.set_title(k)
-    
+                    i_min = chi_min(p_mat_t,['SPEED'],rgh_chi_t,t_plsm,k,window,ref_window,i,color,marker,ref_chi_t=ref_chi_t,
+                                    refine=refine,n_fine=1,plot=plot,nproc=nproc)
                     #use full array for index matching
                     p_mat = plsm[k]
     
@@ -1196,7 +1242,8 @@ def main():
                     #sort the cut window and get the top 10 events
                     p_mat_t = p_mag_t
            
-                    i_min = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,plsm,k,window,ref_window,i,ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot,n_proc=8)
+                    i_min = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,t_plsm,k,window,ref_window,i,color,marker,
+                                    ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot,nproc=nproc)
     
                     #use full array for index matching
                     p_mat = plsm[k]
@@ -1213,7 +1260,8 @@ def main():
                 else:
                    print('No Plasma or Mag. Observations')
                    continue
-    
+
+
             #get a region around one of the best fit times
             plt_slice = [i_min-plt_windw,i_min+plt_windw]
             b_mat = plsm[k].loc[plt_slice[0]:plt_slice[1]]
@@ -1253,6 +1301,8 @@ def main():
             #print separater 
             print('########################################')
         
+        #print end comupation time per event
+        if verbose: print("--- Process time for Event %s seconds ---" % (time.time() - start_time))
       
         #get training spacecraft time range
         plt_slice = [i-plt_windw,i+plt_windw]
