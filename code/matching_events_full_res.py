@@ -1264,7 +1264,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
 
             #get a region around one of the best fit times
             plt_slice = [i_min-plt_windw,i_min+plt_windw]
-            b_mat = plsm[k].loc[plt_slice[0]:plt_slice[1]]
+            b_mat = t_plsm[k].loc[plt_slice[0]:plt_slice[1]]
             
             #update the time index of the match array for comparision with training spacecraft (i=training spacecraft time)
             b_mat.index = b_mat.index+(i-i_min)
@@ -1306,7 +1306,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
       
         #get training spacecraft time range
         plt_slice = [i-plt_windw,i+plt_windw]
-        t_mat = plsm[trainer].loc[plt_slice[0]:plt_slice[1]]
+        t_mat = t_plsm[trainer].loc[plt_slice[0]:plt_slice[1]]
     
     
     
@@ -1372,11 +1372,17 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     
         #close output file
         out_f.write(footer)
+
+        #close opened plots
+        plt.close(bfig)
+        plt.clf()
+        plt.close()
     
     #write footer and close file
     
     out_f.write(ful_ftr)
     out_f.close()
+
 
 
 
