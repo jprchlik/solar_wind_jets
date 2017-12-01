@@ -16,8 +16,8 @@ from scipy.stats.mstats import theilslopes
 #os.system("taskset -p 0xff %d" % os.getpid())
 
 #Function to read in spacecraft
-def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_formatted.txt',pls_fmt='{0}_pls_formatted.txt',
-            start_t='2016/06/04',end_t='2017/07/31',center=False):
+def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_2015_2017_formatted.txt',pls_fmt='{0}_pls_2015_2017_formatted.txt',
+            start_t='2015/11/18',end_t='2016/06/10',center=False):
     """
     A function to read in text files for a given spacecraft
 
@@ -461,7 +461,11 @@ def help_chi_min(args):
     
     
     '''
-    return return_chi_min(*args)
+
+    try:
+        return return_chi_min(*args)
+    except:
+        return args[7],np.nan
 
 
 def dumb_chi_min(args):
@@ -653,7 +657,9 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         #get all values in top n_fine at full resolution
         p_mat  = plsm[k].loc[i_min-t_rgh_wid:i_min+t_rgh_wid]
         #Use Flow Speed Cadence for rough esitmation
-        p_mat  = p_mat[np.isfinite(p_mat.SPEED)]
+        pt_mat  = p_mat[np.isfinite(p_mat.SPEED)]
+        #if no SPEED Values then use Total magentic field downsampled by 5
+        if len(p_mat) < 5: pt_mat = p_mat[np.isfinite(p_mat.Bt)].iloc[::5,:]
 
         #list of to values to compute X^2 minium
         time = p_mat.index
@@ -758,8 +764,8 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
             #variable to exit while loop
             looper = 1
 
-            #check to see if chisq min is at an edge but if it is still at an edge after 9 tries give up
-            while (((i_min == p_mat.index.max()) | (i_min == p_mat.index.min())) & (looper < 10)):
+            #check to see if chisq min is at an edge but if it is still at an edge after 3 tries give up
+            while (((i_min == p_mat.index.max()) | (i_min == p_mat.index.min())) & (looper < 4)):
                 #get all values in top n_fine at full resolution
                 p_mat  = plsm[k].loc[p_temp.index.min()-(t_ref_wid*(looper+1)):p_temp.index.max()+(t_ref_wid*(looper+1))]
                 #list of to values to compute X^2 minium
@@ -811,9 +817,9 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
     
 def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],mar=['D','o','s','<'],
          use_craft=False,use_chisq=True,plot=True,refine=True ,verbose=True,nproc=1,p_val=0.999,
-         ref_chi_t = pd.to_timedelta('30 minutes'),rgh_chi_t = pd.to_timedelta('90 minutes')):
-
-
+         ref_chi_t = pd.to_timedelta('30 minutes'),rgh_chi_t = pd.to_timedelta('90 minutes'),
+         arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_2015_2017_formatted.txt',pls_fmt='{0}_pls_2015_2017_formatted.txt',
+         start_t='2017/11/17',end_t='2017/07/31',center=False):
     '''
     Function which finds solar wind events in a specific spacecraft. Then the program does a Chi^2 minimization to find the event
     in the other spacecraft. In doing so it creates a series of plots and a html table to summarize the results.
