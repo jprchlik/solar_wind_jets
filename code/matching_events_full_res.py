@@ -815,8 +815,47 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
 
 
     '''
+    Function which finds solar wind events in a specific spacecraft. Then the program does a Chi^2 minimization to find the event
+    in the other spacecraft. In doing so it creates a series of plots and a html table to summarize the results.
 
-
+    Parameters
+    -----------
+    craft: list, optional
+        List of spacecraft to analyze for events. The first spacecraft in the list finds the events and is the reference point
+        for the Chi^2 minimization (Default = ['Wind','DSCOVR','ACE','SOHO']).
+    col  : list, optional
+        List of matplotlib colors for plotting spacecraft points. The color list index corresponds to the index in craft
+        (Default = ['blue','black','red','teal']).
+    mar  : list, optional
+        List of matplotlib markers for plotting spacecraft points. The marker list index corresponds to the index in craft
+        (Default = ['D','o','s','<']).
+    use_craft : boolean, optional
+        Use spacecraft positions to restrict finding range (Default = False). It turns out a lot of events are not radial 
+        therefore use_craft is no useful. 
+    use_chisq : boolean, optional
+        Use Chi^2 minimization to find corresponding events between spacecraft. The Chi^2 minimum value relates to a given 
+        spacecraft and the first spacecraft in the craft list (Default = True).
+    plot      : boolean, optional
+        Plot the Chi^2 minimum values as a function of time for a given spacecraft with respect to the reference spacecraft
+        (Default = True). You should keep this parameter on because the output html file references this created file.
+    refine:  boolean, optional
+        Refine Chi^2 minimization by loop with smaller ranges,windows around previous minimum at the highest possible
+        observational cadence (Default = True).
+    verbose: boolean, optional
+        Print the process time for an event (Default = True).
+    nproc  : integer, optional
+        Number of processors to use in Chi^2 minimization (Default = 1). For 1 event I see a 30% time decrease by using
+        nproc=8 over nproc=1.
+    p_val : float, optional
+        Probability value (0<p_val<1.0) used to define an event (Default = 0.999). Do not set value below 0.90 for two reasons.
+        One that creates a lot of "bad events" (i.e. events not seen in all four spacecraft or use instrument spikes.) two 
+        currently the code has a cut of 0.90 to define an event start.
+    ref_chi_t : pandas time delta object, optional
+        Size of window around an event (+/-) to find the Chi^2 minimum for a refined window (Default = pd.to_timedelta('30 minutes')).
+        During refinement the window will run once and shrink two times by 1+loop (Default = 30,15,10).
+    rgh_chi_t : pandas time delta object, optional
+        Size of window around an event (+/-) to find the Chi^2 minimum for a rough window (Default = pd.to_timedelta('90 minutes')).
+        During the rough minimization the window will run once and shrink once by 1+loop (Default = 90,45).
     '''
     #dictionary for storing the Pandas Data frame
     pls = {}
