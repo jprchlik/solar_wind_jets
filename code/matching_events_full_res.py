@@ -17,7 +17,7 @@ from scipy.stats.mstats import theilslopes
 
 #Function to read in spacecraft
 def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_2015_2017_formatted.txt',pls_fmt='{0}_pls_2015_2017_formatted.txt',
-            start_t='2015/11/18',end_t='2016/06/10',center=False):
+            start_t='2017/07/28',end_t='2017/09/24',center=False):
     """
     A function to read in text files for a given spacecraft
 
