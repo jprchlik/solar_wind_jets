@@ -26,7 +26,7 @@
             The program for finding the &chi;<sup>2</sup> minimum for events between spacecraft works by using a primary spacecraft to find events.
             I selected Wind because I used Wind to train the model, and the events found in Wind are consistent with events found by eye or independent spacecraft 
             algorithms. I define an event discontinuity as a time where our model indicates a 98.00% probability the solar wind parameters corresponds to a 5&sigma;
-            discontinuity in a component of the magnetic field. Currently, I find 55 events using the Wind spacecraft to define an event.
+            discontinuity in a component of the magnetic field. Currently, I find 116 events using the Wind spacecraft to define an event.
             Then I create a grid of solar wind speed samples for &plusmn; 40 minutes around a event. However, if the spacecraft does not have reliable flow speed 
             measurements I use the magnitude of the magnetic field. Then I shift 
             the other 3 spacecraft onto the Wind using the course grid. Then I select a 300 minute (&plusmn;90 minutes) window around the shifted Wind and
@@ -21011,7 +21011,1574 @@
          </br>
          </br>
 
-
-         
+                <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170810_112238_bigg.png"> Event on 2017/08/10 11:22:38 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170810_112238_zoom.png"> Event on 2017/08/10 11:22:38 UT (50 Min.)</a> </b>
+    
+               <table style="width=100%">
+                  <tr>
+                      <td>
+                      Spacecraft
+                      </td>
+                      <td>
+                      Obs. Time [UT]
+                      </td>
+                      <td>
+                      Offset [min]
+                      </td>
+                      <td>
+                      p-val (plasma) 
+                      </td>
+                      <td>
+                      p-val (mag.) 
+                      </td>
+                      <td>
+                      Used Plasma Mod.
+                      </td>
+                      <td>
+                      &delta;SPEED [km/s]
+                      </td>
+                      <td>
+                      &delta;Np [cm<sup>-3</sup>]
+                      </td>
+                      <td>
+                      &delta;Vth [km/s]
+                      </td>
+                      <td>
+                      &delta;Bx [nT]
+                      </td>
+                      <td>
+                      &delta;By [nT]
+                      </td>
+                      <td>
+                      &delta;Bz [nT]
+                      </td>
+                  </tr>
+                      <tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170810_112238_wind.png">Wind</a>
+                      </td>
+                      <td>
+                      2017/08/10 11:22:38
+                      </td>
+                      <td>
+                       0.00
+                      </td>
+                      <td>
+                      0.922
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      -0.010
+                      </td>
+                      <td>
+                      0.240
+                      </td>
+                      <td>
+                      -0.440
+                      </td>
+                      <td>
+                      0.510
+                      </td>
+                      <td>
+                      -0.090
+                      </td>
+                      <td>
+                      -0.255
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170810_112238_dscovr.png">DSCOVR</a>
+                      </td>
+                      <td>
+                      2017/08/10 11:24:01
+                      </td>
+                      <td>
+                       1.38
+                      </td>
+                      <td>
+                      0.059
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      4.530
+                      </td>
+                      <td>
+                      -0.510
+                      </td>
+                      <td>
+                      -8.740
+                      </td>
+                      <td>
+                      1.900
+                      </td>
+                      <td>
+                      -0.715
+                      </td>
+                      <td>
+                      2.575
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170810_112238_ace.png">ACE</a>
+                      </td>
+                      <td>
+                      2017/08/10 11:26:04
+                      </td>
+                      <td>
+                       3.43
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                      0.710
+                      </td>
+                      <td>
+                      -1.330
+                      </td>
+                      <td>
+                      2.640
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170810_112238_soho.png">SOHO</a>
+                      </td>
+                      <td>
+                      2017/08/10 10:55:43
+                      </td>
+                      <td>
+                      -26.92
+                      </td>
+                      <td>
+                      0.055
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      2.500
+                      </td>
+                      <td>
+                      1.195
+                      </td>
+                      <td>
+                      3.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                  </tr></table>
+    
+             </br>
+             </br>
+             </br>
+    
+    
+             <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170831_043527_bigg.png"> Event on 2017/08/31 04:35:27 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170831_043527_zoom.png"> Event on 2017/08/31 04:35:27 UT (50 Min.)</a> </b>
+    
+               <table style="width=100%">
+                  <tr>
+                      <td>
+                      Spacecraft
+                      </td>
+                      <td>
+                      Obs. Time [UT]
+                      </td>
+                      <td>
+                      Offset [min]
+                      </td>
+                      <td>
+                      p-val (plasma) 
+                      </td>
+                      <td>
+                      p-val (mag.) 
+                      </td>
+                      <td>
+                      Used Plasma Mod.
+                      </td>
+                      <td>
+                      &delta;SPEED [km/s]
+                      </td>
+                      <td>
+                      &delta;Np [cm<sup>-3</sup>]
+                      </td>
+                      <td>
+                      &delta;Vth [km/s]
+                      </td>
+                      <td>
+                      &delta;Bx [nT]
+                      </td>
+                      <td>
+                      &delta;By [nT]
+                      </td>
+                      <td>
+                      &delta;Bz [nT]
+                      </td>
+                  </tr>
+                      <tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170831_043527_wind.png">Wind</a>
+                      </td>
+                      <td>
+                      2017/08/31 04:35:27
+                      </td>
+                      <td>
+                       0.00
+                      </td>
+                      <td>
+                      0.959
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      37.180
+                      </td>
+                      <td>
+                      24.650
+                      </td>
+                      <td>
+                      6.570
+                      </td>
+                      <td>
+                      2.020
+                      </td>
+                      <td>
+                      0.020
+                      </td>
+                      <td>
+                      1.680
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170831_043527_dscovr.png">DSCOVR</a>
+                      </td>
+                      <td>
+                      2017/08/31 04:36:30
+                      </td>
+                      <td>
+                       1.05
+                      </td>
+                      <td>
+                      0.078
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      3.465
+                      </td>
+                      <td>
+                      -0.320
+                      </td>
+                      <td>
+                      -0.155
+                      </td>
+                      <td>
+                      1.930
+                      </td>
+                      <td>
+                      0.270
+                      </td>
+                      <td>
+                      -1.085
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170831_043527_ace.png">ACE</a>
+                      </td>
+                      <td>
+                      2017/08/31 04:44:00
+                      </td>
+                      <td>
+                       8.55
+                      </td>
+                      <td>
+                      0.518
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      22.235
+                      </td>
+                      <td>
+                      9.130
+                      </td>
+                      <td>
+                      5.040
+                      </td>
+                      <td>
+                      1.680
+                      </td>
+                      <td>
+                      -0.160
+                      </td>
+                      <td>
+                      0.310
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170831_043527_soho.png">SOHO</a>
+                      </td>
+                      <td>
+                      2017/08/31 04:50:49
+                      </td>
+                      <td>
+                      15.37
+                      </td>
+                      <td>
+                      0.633
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      28.000
+                      </td>
+                      <td>
+                      9.250
+                      </td>
+                      <td>
+                      9.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                  </tr></table>
+    
+             </br>
+             </br>
+             </br>
+    
+    
+             <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170906_230844_bigg.png"> Event on 2017/09/06 23:08:44 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170906_230844_zoom.png"> Event on 2017/09/06 23:08:44 UT (50 Min.)</a> </b>
+    
+               <table style="width=100%">
+                  <tr>
+                      <td>
+                      Spacecraft
+                      </td>
+                      <td>
+                      Obs. Time [UT]
+                      </td>
+                      <td>
+                      Offset [min]
+                      </td>
+                      <td>
+                      p-val (plasma) 
+                      </td>
+                      <td>
+                      p-val (mag.) 
+                      </td>
+                      <td>
+                      Used Plasma Mod.
+                      </td>
+                      <td>
+                      &delta;SPEED [km/s]
+                      </td>
+                      <td>
+                      &delta;Np [cm<sup>-3</sup>]
+                      </td>
+                      <td>
+                      &delta;Vth [km/s]
+                      </td>
+                      <td>
+                      &delta;Bx [nT]
+                      </td>
+                      <td>
+                      &delta;By [nT]
+                      </td>
+                      <td>
+                      &delta;Bz [nT]
+                      </td>
+                  </tr>
+                      <tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170906_230844_wind.png">Wind</a>
+                      </td>
+                      <td>
+                      2017/09/06 23:08:44
+                      </td>
+                      <td>
+                       0.00
+                      </td>
+                      <td>
+                      1.000
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      173.930
+                      </td>
+                      <td>
+                      8.170
+                      </td>
+                      <td>
+                      42.330
+                      </td>
+                      <td>
+                      4.420
+                      </td>
+                      <td>
+                      1.345
+                      </td>
+                      <td>
+                      8.860
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170906_230844_dscovr.png">DSCOVR</a>
+                      </td>
+                      <td>
+                      2017/09/06 23:14:10
+                      </td>
+                      <td>
+                       5.43
+                      </td>
+                      <td>
+                      0.990
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      158.750
+                      </td>
+                      <td>
+                      2.245
+                      </td>
+                      <td>
+                      51.620
+                      </td>
+                      <td>
+                      8.690
+                      </td>
+                      <td>
+                      1.780
+                      </td>
+                      <td>
+                      6.000
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170906_230844_ace.png">ACE</a>
+                      </td>
+                      <td>
+                      2017/09/06 23:16:15
+                      </td>
+                      <td>
+                       7.52
+                      </td>
+                      <td>
+                      0.970
+                      </td>
+                      <td>
+                      0.002
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      174.220
+                      </td>
+                      <td>
+                      2.785
+                      </td>
+                      <td>
+                      50.300
+                      </td>
+                      <td>
+                      9.860
+                      </td>
+                      <td>
+                      1.710
+                      </td>
+                      <td>
+                      6.310
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170906_230844_soho.png">SOHO</a>
+                      </td>
+                      <td>
+                      2017/09/06 23:18:11
+                      </td>
+                      <td>
+                       9.45
+                      </td>
+                      <td>
+                      0.142
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      139.000
+                      </td>
+                      <td>
+                      11.665
+                      </td>
+                      <td>
+                      13.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                  </tr></table>
+    
+             </br>
+             </br>
+             </br>
+    
+    
+             <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170907_222713_bigg.png"> Event on 2017/09/07 22:27:13 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170907_222713_zoom.png"> Event on 2017/09/07 22:27:13 UT (50 Min.)</a> </b>
+    
+               <table style="width=100%">
+                  <tr>
+                      <td>
+                      Spacecraft
+                      </td>
+                      <td>
+                      Obs. Time [UT]
+                      </td>
+                      <td>
+                      Offset [min]
+                      </td>
+                      <td>
+                      p-val (plasma) 
+                      </td>
+                      <td>
+                      p-val (mag.) 
+                      </td>
+                      <td>
+                      Used Plasma Mod.
+                      </td>
+                      <td>
+                      &delta;SPEED [km/s]
+                      </td>
+                      <td>
+                      &delta;Np [cm<sup>-3</sup>]
+                      </td>
+                      <td>
+                      &delta;Vth [km/s]
+                      </td>
+                      <td>
+                      &delta;Bx [nT]
+                      </td>
+                      <td>
+                      &delta;By [nT]
+                      </td>
+                      <td>
+                      &delta;Bz [nT]
+                      </td>
+                  </tr>
+                      <tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170907_222713_wind.png">Wind</a>
+                      </td>
+                      <td>
+                      2017/09/07 22:27:13
+                      </td>
+                      <td>
+                       0.00
+                      </td>
+                      <td>
+                      1.000
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      209.280
+                      </td>
+                      <td>
+                      1.180
+                      </td>
+                      <td>
+                      42.550
+                      </td>
+                      <td>
+                      11.710
+                      </td>
+                      <td>
+                      8.710
+                      </td>
+                      <td>
+                      2.070
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170907_222713_dscovr.png">DSCOVR</a>
+                      </td>
+                      <td>
+                      2017/09/07 22:28:00
+                      </td>
+                      <td>
+                       0.78
+                      </td>
+                      <td>
+                      0.778
+                      </td>
+                      <td>
+                      0.006
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      106.990
+                      </td>
+                      <td>
+                      0.260
+                      </td>
+                      <td>
+                      28.040
+                      </td>
+                      <td>
+                      8.785
+                      </td>
+                      <td>
+                      8.255
+                      </td>
+                      <td>
+                      3.060
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170907_222713_ace.png">ACE</a>
+                      </td>
+                      <td>
+                      2017/09/07 22:34:47
+                      </td>
+                      <td>
+                       7.57
+                      </td>
+                      <td>
+                      0.970
+                      </td>
+                      <td>
+                      0.196
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      201.680
+                      </td>
+                      <td>
+                      2.050
+                      </td>
+                      <td>
+                      21.690
+                      </td>
+                      <td>
+                      8.230
+                      </td>
+                      <td>
+                      5.160
+                      </td>
+                      <td>
+                      -0.020
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170907_222713_soho.png">SOHO</a>
+                      </td>
+                      <td>
+                      2017/09/07 22:39:20
+                      </td>
+                      <td>
+                      12.12
+                      </td>
+                      <td>
+                      0.769
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      283.000
+                      </td>
+                      <td>
+                      3.505
+                      </td>
+                      <td>
+                      41.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                  </tr></table>
+    
+             </br>
+             </br>
+             </br>
+    
+    
+             <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170908_141100_bigg.png"> Event on 2017/09/08 14:11:00 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170908_141100_zoom.png"> Event on 2017/09/08 14:11:00 UT (50 Min.)</a> </b>
+    
+               <table style="width=100%">
+                  <tr>
+                      <td>
+                      Spacecraft
+                      </td>
+                      <td>
+                      Obs. Time [UT]
+                      </td>
+                      <td>
+                      Offset [min]
+                      </td>
+                      <td>
+                      p-val (plasma) 
+                      </td>
+                      <td>
+                      p-val (mag.) 
+                      </td>
+                      <td>
+                      Used Plasma Mod.
+                      </td>
+                      <td>
+                      &delta;SPEED [km/s]
+                      </td>
+                      <td>
+                      &delta;Np [cm<sup>-3</sup>]
+                      </td>
+                      <td>
+                      &delta;Vth [km/s]
+                      </td>
+                      <td>
+                      &delta;Bx [nT]
+                      </td>
+                      <td>
+                      &delta;By [nT]
+                      </td>
+                      <td>
+                      &delta;Bz [nT]
+                      </td>
+                  </tr>
+                      <tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170908_141100_wind.png">Wind</a>
+                      </td>
+                      <td>
+                      2017/09/08 14:11:00
+                      </td>
+                      <td>
+                       0.00
+                      </td>
+                      <td>
+                      0.990
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      14.800
+                      </td>
+                      <td>
+                      1.390
+                      </td>
+                      <td>
+                      1.495
+                      </td>
+                      <td>
+                      0.610
+                      </td>
+                      <td>
+                      1.650
+                      </td>
+                      <td>
+                      11.080
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170908_141100_dscovr.png">DSCOVR</a>
+                      </td>
+                      <td>
+                      2017/09/08 13:55:30
+                      </td>
+                      <td>
+                      -15.50
+                      </td>
+                      <td>
+                      0.082
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      -14.550
+                      </td>
+                      <td>
+                      0.912
+                      </td>
+                      <td>
+                      -1.200
+                      </td>
+                      <td>
+                      -2.155
+                      </td>
+                      <td>
+                      1.710
+                      </td>
+                      <td>
+                      5.530
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170908_141100_ace.png">ACE</a>
+                      </td>
+                      <td>
+                      2017/09/08 14:15:58
+                      </td>
+                      <td>
+                       4.97
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                      -0.970
+                      </td>
+                      <td>
+                      1.130
+                      </td>
+                      <td>
+                      9.610
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170908_141100_soho.png">SOHO</a>
+                      </td>
+                      <td>
+                      2017/09/08 13:28:48
+                      </td>
+                      <td>
+                      -42.20
+                      </td>
+                      <td>
+                      0.059
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      15.000
+                      </td>
+                      <td>
+                      4.995
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                  </tr></table>
+    
+             </br>
+             </br>
+             </br>
+    
+    
+             <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170914_001336_bigg.png"> Event on 2017/09/14 00:13:36 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170914_001336_zoom.png"> Event on 2017/09/14 00:13:36 UT (50 Min.)</a> </b>
+    
+               <table style="width=100%">
+                  <tr>
+                      <td>
+                      Spacecraft
+                      </td>
+                      <td>
+                      Obs. Time [UT]
+                      </td>
+                      <td>
+                      Offset [min]
+                      </td>
+                      <td>
+                      p-val (plasma) 
+                      </td>
+                      <td>
+                      p-val (mag.) 
+                      </td>
+                      <td>
+                      Used Plasma Mod.
+                      </td>
+                      <td>
+                      &delta;SPEED [km/s]
+                      </td>
+                      <td>
+                      &delta;Np [cm<sup>-3</sup>]
+                      </td>
+                      <td>
+                      &delta;Vth [km/s]
+                      </td>
+                      <td>
+                      &delta;Bx [nT]
+                      </td>
+                      <td>
+                      &delta;By [nT]
+                      </td>
+                      <td>
+                      &delta;Bz [nT]
+                      </td>
+                  </tr>
+                      <tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170914_001336_wind.png">Wind</a>
+                      </td>
+                      <td>
+                      2017/09/14 00:13:36
+                      </td>
+                      <td>
+                       0.00
+                      </td>
+                      <td>
+                      0.982
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      25.565
+                      </td>
+                      <td>
+                      6.820
+                      </td>
+                      <td>
+                      18.120
+                      </td>
+                      <td>
+                      3.740
+                      </td>
+                      <td>
+                      2.680
+                      </td>
+                      <td>
+                      2.090
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170914_001336_dscovr.png">DSCOVR</a>
+                      </td>
+                      <td>
+                      2017/09/14 00:22:40
+                      </td>
+                      <td>
+                       9.07
+                      </td>
+                      <td>
+                      0.987
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      19.690
+                      </td>
+                      <td>
+                      8.390
+                      </td>
+                      <td>
+                      30.570
+                      </td>
+                      <td>
+                      3.620
+                      </td>
+                      <td>
+                      2.785
+                      </td>
+                      <td>
+                      0.855
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170914_001336_ace.png">ACE</a>
+                      </td>
+                      <td>
+                      2017/09/14 00:38:30
+                      </td>
+                      <td>
+                      24.90
+                      </td>
+                      <td>
+                      0.946
+                      </td>
+                      <td>
+                      0.013
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      18.325
+                      </td>
+                      <td>
+                      7.440
+                      </td>
+                      <td>
+                      19.630
+                      </td>
+                      <td>
+                      4.130
+                      </td>
+                      <td>
+                      -0.420
+                      </td>
+                      <td>
+                      -0.770
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170914_001336_soho.png">SOHO</a>
+                      </td>
+                      <td>
+                      2017/09/14 00:38:29
+                      </td>
+                      <td>
+                      24.88
+                      </td>
+                      <td>
+                      0.106
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      50.500
+                      </td>
+                      <td>
+                      1.220
+                      </td>
+                      <td>
+                      11.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                  </tr></table>
+    
+             </br>
+             </br>
+             </br>
+    
+    
+             <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170914_101323_bigg.png"> Event on 2017/09/14 10:13:23 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170914_101323_zoom.png"> Event on 2017/09/14 10:13:23 UT (50 Min.)</a> </b>
+    
+               <table style="width=100%">
+                  <tr>
+                      <td>
+                      Spacecraft
+                      </td>
+                      <td>
+                      Obs. Time [UT]
+                      </td>
+                      <td>
+                      Offset [min]
+                      </td>
+                      <td>
+                      p-val (plasma) 
+                      </td>
+                      <td>
+                      p-val (mag.) 
+                      </td>
+                      <td>
+                      Used Plasma Mod.
+                      </td>
+                      <td>
+                      &delta;SPEED [km/s]
+                      </td>
+                      <td>
+                      &delta;Np [cm<sup>-3</sup>]
+                      </td>
+                      <td>
+                      &delta;Vth [km/s]
+                      </td>
+                      <td>
+                      &delta;Bx [nT]
+                      </td>
+                      <td>
+                      &delta;By [nT]
+                      </td>
+                      <td>
+                      &delta;Bz [nT]
+                      </td>
+                  </tr>
+                      <tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170914_101323_wind.png">Wind</a>
+                      </td>
+                      <td>
+                      2017/09/14 10:13:23
+                      </td>
+                      <td>
+                       0.00
+                      </td>
+                      <td>
+                      0.967
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      35.335
+                      </td>
+                      <td>
+                      18.855
+                      </td>
+                      <td>
+                      11.125
+                      </td>
+                      <td>
+                      0.210
+                      </td>
+                      <td>
+                      5.895
+                      </td>
+                      <td>
+                      6.090
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170914_101323_dscovr.png">DSCOVR</a>
+                      </td>
+                      <td>
+                      2017/09/14 10:26:30
+                      </td>
+                      <td>
+                      13.12
+                      </td>
+                      <td>
+                      0.762
+                      </td>
+                      <td>
+                      0.002
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      34.650
+                      </td>
+                      <td>
+                      15.520
+                      </td>
+                      <td>
+                      10.750
+                      </td>
+                      <td>
+                      1.900
+                      </td>
+                      <td>
+                      7.825
+                      </td>
+                      <td>
+                      5.310
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170914_101323_ace.png">ACE</a>
+                      </td>
+                      <td>
+                      2017/09/14 10:14:05
+                      </td>
+                      <td>
+                       0.70
+                      </td>
+                      <td>
+                      0.177
+                      </td>
+                      <td>
+                      0.001
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      20.170
+                      </td>
+                      <td>
+                      2.795
+                      </td>
+                      <td>
+                      2.115
+                      </td>
+                      <td>
+                      -2.370
+                      </td>
+                      <td>
+                      2.970
+                      </td>
+                      <td>
+                      0.900
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170914_101323_soho.png">SOHO</a>
+                      </td>
+                      <td>
+                      2017/09/14 10:41:52
+                      </td>
+                      <td>
+                      28.48
+                      </td>
+                      <td>
+                      0.086
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      78.000
+                      </td>
+                      <td>
+                      2.440
+                      </td>
+                      <td>
+                      7.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                  </tr></table>
+    
+             </br>
+             </br>
+             </br>
+    
+    
+             <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170917_102317_bigg.png"> Event on 2017/09/17 10:23:17 UT (6 Hour)</a> </b>     <b><a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/full_res_event_20170917_102317_zoom.png"> Event on 2017/09/17 10:23:17 UT (50 Min.)</a> </b>
+    
+               <table style="width=100%">
+                  <tr>
+                      <td>
+                      Spacecraft
+                      </td>
+                      <td>
+                      Obs. Time [UT]
+                      </td>
+                      <td>
+                      Offset [min]
+                      </td>
+                      <td>
+                      p-val (plasma) 
+                      </td>
+                      <td>
+                      p-val (mag.) 
+                      </td>
+                      <td>
+                      Used Plasma Mod.
+                      </td>
+                      <td>
+                      &delta;SPEED [km/s]
+                      </td>
+                      <td>
+                      &delta;Np [cm<sup>-3</sup>]
+                      </td>
+                      <td>
+                      &delta;Vth [km/s]
+                      </td>
+                      <td>
+                      &delta;Bx [nT]
+                      </td>
+                      <td>
+                      &delta;By [nT]
+                      </td>
+                      <td>
+                      &delta;Bz [nT]
+                      </td>
+                  </tr>
+                      <tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170917_102317_wind.png">Wind</a>
+                      </td>
+                      <td>
+                      2017/09/17 10:23:17
+                      </td>
+                      <td>
+                       0.00
+                      </td>
+                      <td>
+                      0.921
+                      </td>
+                      <td>
+                       nan
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      57.520
+                      </td>
+                      <td>
+                      -0.690
+                      </td>
+                      <td>
+                      5.315
+                      </td>
+                      <td>
+                      6.130
+                      </td>
+                      <td>
+                      3.950
+                      </td>
+                      <td>
+                      -2.710
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170917_102317_dscovr.png">DSCOVR</a>
+                      </td>
+                      <td>
+                      2017/09/17 10:28:30
+                      </td>
+                      <td>
+                       5.22
+                      </td>
+                      <td>
+                      0.311
+                      </td>
+                      <td>
+                      0.001
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      48.620
+                      </td>
+                      <td>
+                      -0.380
+                      </td>
+                      <td>
+                      3.820
+                      </td>
+                      <td>
+                      5.365
+                      </td>
+                      <td>
+                      4.690
+                      </td>
+                      <td>
+                      1.195
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170917_102317_ace.png">ACE</a>
+                      </td>
+                      <td>
+                      2017/09/17 10:29:01
+                      </td>
+                      <td>
+                       5.73
+                      </td>
+                      <td>
+                      0.129
+                      </td>
+                      <td>
+                      0.001
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      18.110
+                      </td>
+                      <td>
+                      0.040
+                      </td>
+                      <td>
+                      -5.590
+                      </td>
+                      <td>
+                      1.920
+                      </td>
+                      <td>
+                      3.760
+                      </td>
+                      <td>
+                      -1.270
+                      </td>
+                  </tr><tr>
+                      <td>
+                      <a href="https://cdn.rawgit.com/jprchlik/solar_wind_jets/d973334c/plots/spacecraft_events_p98_20171128/chisq/chi_min_20170917_102317_soho.png">SOHO</a>
+                      </td>
+                      <td>
+                      2017/09/17 11:14:29
+                      </td>
+                      <td>
+                      51.20
+                      </td>
+                      <td>
+                      0.049
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      X
+                      </td>
+                      <td>
+                      49.500
+                      </td>
+                      <td>
+                      0.180
+                      </td>
+                      <td>
+                      7.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                      <td>
+                      0.000
+                      </td>
+                  </tr></table>
+    
+             </br>
+             </br>
+             </br>
+    
+    
+             
             </body>
             </html>
