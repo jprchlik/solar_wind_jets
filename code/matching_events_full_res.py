@@ -17,7 +17,7 @@ from scipy.stats.mstats import theilslopes
 
 #Function to read in spacecraft
 def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_2015_2017_formatted.txt',pls_fmt='{0}_pls_2015_2017_formatted.txt',
-            start_t='2017/07/28',end_t='2017/09/24',center=False):
+            start_t='2016/12/01',end_t='2017/09/24',center=False):
     """
     A function to read in text files for a given spacecraft
 
@@ -399,8 +399,8 @@ def format_df(inpt_df,p_var,span='3600s',center=False):
     magf_df.loc[:,m_var] = logit_model(magf_df,-10.0575,0.6861,0.7071,0.6640,plasma=False)
 
     #cur arrays to the bar minimum for matching
-    plsm_df = plsm_df.loc[:,[p_var,'diff_med_speed', 'diff_med_Np', 'diff_med_Vth']]
-    magf_df = magf_df.loc[:,[m_var, 'diff_med_Bx', 'diff_med_By', 'diff_med_Bz']]
+    plsm_df = plsm_df.loc[:,[p_var,'diff_med_speed', 'diff_med_Np', 'diff_med_Vth','diff_sig_speed', 'diff_sig_Np', 'diff_sig_Vth']]
+    magf_df = magf_df.loc[:,[m_var,'diff_med_Bx', 'diff_med_By', 'diff_med_Bz', 'diff_sig_Bx', 'diff_sig_By', 'diff_sig_Bz']]
     
     #update array with new p-values by matching on indices
     outp_df  = pd.merge(inpt_df,plsm_df,how='left',left_index=True,right_index=True,sort=True)
@@ -592,7 +592,7 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time,traine
 
 
 #function to find the Chi^2 min value given a set of parameters
-def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,ref_chi_t=pd.to_timedelta('10 minutes'),refine=True,n_fine=4,plot=True ,nproc=1):
+def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,ref_chi_t=pd.to_timedelta('10 minutes'),refine=True,n_fine=4,plot=True ,nproc=1,use_discon=False):
     """
     chi_min computes the chi^2 min. time for a given set of parameters
     Parameters
@@ -623,8 +623,10 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         Whether to use a refined window (Default = True)
     n_fine : integer
         Number of chi^2 min values from the rough grid to check with the fine grid (Default = 4)
-    plot  : boolean
+    plot  : boolean,optional
         Plot Chi^2 minimization window (Default = False)
+    use_discon : boolean,optional
+        Only use discontinuity (Default = False)
 
     RETURNS
     --------
@@ -649,6 +651,9 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
 
     #loop and squeeze rough window
     for j in range(2):
+
+        #Dont loop if use_discon 
+        if ((j == 1) & (use_discon)): continue
         #looping time around window to try to match
         t_rgh_wid = window[k]/(j+1)
         #looping range of window size
@@ -663,6 +668,12 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
 
         #list of to values to compute X^2 minium
         time = p_mat.index
+   
+
+        #Just use discontinuity
+        if use_discon: time=p_mat_r.index
+        
+
         #create list to sent to processors
         #par_chi_min = partial(return_chi_min,rgh_chi_t,plsm,k,par,False,True,trainer_t)
    
@@ -816,7 +827,7 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
     return i_min
     
 def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],mar=['D','o','s','<'],
-         use_craft=False,use_chisq=True,plot=True,refine=True ,verbose=True,nproc=1,p_val=0.999,
+         use_craft=False,use_chisq=True,use_discon=False,plot=True,refine=True ,verbose=True,nproc=1,p_val=0.999,
          ref_chi_t = pd.to_timedelta('30 minutes'),rgh_chi_t = pd.to_timedelta('90 minutes'),
          arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_2015_2017_formatted.txt',pls_fmt='{0}_pls_2015_2017_formatted.txt',
          start_t='2017/11/17',end_t='2017/07/31',center=False):
@@ -841,6 +852,9 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     use_chisq : boolean, optional
         Use Chi^2 minimization to find corresponding events between spacecraft. The Chi^2 minimum value relates to a given 
         spacecraft and the first spacecraft in the craft list (Default = True).
+    use_discon: boolean, optional
+        Use Chi^2 minimization to find corresponding events between spacecraft, but only set on discontinuities. 
+        The Chi^2 minimum value relates to a given spacecraft and the first spacecraft in the craft list (Default = False).
     plot      : boolean, optional
         Plot the Chi^2 minimum values as a function of time for a given spacecraft with respect to the reference spacecraft
         (Default = True). You should keep this parameter on because the output html file references this created file.
@@ -916,6 +930,15 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     window['ACE'] = pd.to_timedelta('40 minutes')
     window['SOHO'] = pd.to_timedelta('40 minutes')
     window['Wind'] = pd.to_timedelta('40 minutes')
+
+    if use_discon:
+        #get strings for times around each event if using donconitinity matching#
+        window = {}
+        window['DSCOVR'] = pd.to_timedelta('90 minutes')
+        window['ACE'] = pd.to_timedelta('90 minutes')
+        window['SOHO'] = pd.to_timedelta('90 minutes')
+        window['Wind'] = pd.to_timedelta('90 minutes')
+        
     
     #define rough chi min time  to cal Chi^2 min for each time
     #(rgh_chi_t = pd.to_timedelta('90 minutes')
@@ -1306,6 +1329,91 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                    print('No Plasma or Mag. Observations')
                    continue
 
+            #use the largets set of discontinuties 
+            elif use_discon:
+                #calculate difference in parameters
+                p_mat['del_speed'] = np.abs(p_mat['SPEED'].diff(1))
+                p_mat['del_Np'] = np.abs(p_mat['Np'].diff(1))
+                p_mat['del_Vth'] = np.abs(p_mat['Vth'].diff(1))
+                p_mat['del_Bx'] = np.abs(p_mat['Bx'].diff(1))
+                p_mat['del_By'] = np.abs(p_mat['By'].diff(1))
+                p_mat['del_Bz'] = np.abs(p_mat['Bz'].diff(1))
+
+                #find largest magnetic field discontinuties 
+                p_mat['del_Bt'] = np.sqrt(p_mat.del_Bx**2.+p_mat.del_By**2.+p_mat.del_Bz**2.) 
+
+                #find largest speed discontinuties 
+                p_mat_t = p_mat.sort_values('del_speed',ascending=False)[:10]
+
+             
+                #find largest mag field discontinuies 
+                p_mag_t = p_mat.sort_values('del_Bt',ascending=False)[:10]
+    
+                #mag tolerance for using magnetometer data to match events rather than plasma parameters
+                mag_tol = 0.5
+                
+
+                #temporary plasma array to use for X^2 matching
+                t_plsm = {}
+                half_day = pd.to_timedelta('9 hours')
+                for ll in plsm.keys(): t_plsm[ll] = plsm[ll].loc[i-half_day:i+half_day]
+    
+    
+                if (((p_mat_t.size > 0) & (p_mat_t[p_var].max() > mag_tol)) | ((k.lower() == 'soho') & (p_mat_t.size > 0.))):
+                #if ((k.lower() == 'soho') & (p_mat_t.size > 0.)):
+    
+                    i_min = chi_min(p_mat_t,['SPEED'],rgh_chi_t,t_plsm,k,window,ref_window,i,color,marker,ref_chi_t=ref_chi_t,
+                                    refine=refine,n_fine=1,plot=plot,nproc=nproc,use_discon=use_discon)
+                    #use full array for index matching
+                    p_mat = plsm[k]
+    
+                    try:
+     
+                        if k.lower() == 'soho':
+                            #print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min))
+                            out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),0.000,'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
+    
+                        else: 
+                            #print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
+                            out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
+    
+                    except KeyError:
+                        print('Missing Index')
+    
+    
+                #else no plasma observations                                                                                                                                                      
+                elif (((p_mat_t.size == 0) | (p_mat_t[p_var].max() <= mag_tol) | (np.isnan(p_mat_t[p_var].max()))) & (p_mag_t.size > 0.) & (k.lower() != 'soho')):
+                #elif ((p_mag_t.size > 0.) & (k.lower() != 'soho')):
+                    #sort the cut window and get the top 10 events
+                    p_mat_t = p_mag_t
+           
+                    i_min = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,t_plsm,k,window,ref_window,i,color,marker,
+                                    ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot,nproc=nproc,use_discon=use_discon)
+    
+                    #use full array for index matching
+                    p_mat = plsm[k]
+                    try:
+                    #print output to terminal
+                       # print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
+                        out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
+    
+    
+                    except KeyError:
+                        print('Missing Index')
+           
+                else:
+                   print('No Plasma or Mag. Observations')
+                   continue
+
+
+            #get a region around one of the best fit times
+            plt_slice = [i_min-plt_windw,i_min+plt_windw]
+            b_mat = t_plsm[k].loc[plt_slice[0]:plt_slice[1]]
+            
+            #update the time index of the match array for comparision with training spacecraft (i=training spacecraft time)
+            b_mat.index = b_mat.index+(i-i_min)
+    
+            #plot plasma parameters
 
             #get a region around one of the best fit times
             plt_slice = [i_min-plt_windw,i_min+plt_windw]
