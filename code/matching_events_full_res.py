@@ -727,7 +727,6 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         for l in outp: p_mat.loc[l[0],'chisq'] = l[1]
 
         
-        print(p_mat)
         
         #get the index of minimum chisq value
         i_min = p_mat['chisq'].idxmin()
@@ -848,8 +847,8 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         plt.close(chi_fig)
    
     #get upper and lower bounds in Chi^2
-    i_upp = (p_mat.loc[i_min:,'chisq']-2.*p_mat[i_min,'chisq']).abs().idxmin()
-    i_low = (p_mat.loc[:i_min,'chisq']-2.*p_mat[i_min,'chisq']).abs().idxmin()
+    i_upp = (p_mat.loc[i_min:'2100/10/01','chisq']-2.*p_mat.loc[i_min,'chisq']).abs().idxmin()
+    i_low = (p_mat.loc['1900/10/01':i_min,'chisq']-2.*p_mat.loc[i_min,'chisq']).abs().idxmin()
 
     #return best fit, 1sigma upper limit, 1 sigma lower limit
     return i_min,i_upp,i_low
@@ -1151,6 +1150,12 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                       Offset [min]
                       </td>
                       <td>
+                      Pos. Unc. [s]
+                      </td>
+                      <td>
+                      Neg. Unc. [s]
+                      </td>
+                      <td>
                       p-val (plasma) 
                       </td>
                       <td>
@@ -1183,7 +1188,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     #data format for new row
     new_row =   '''<tr>
                       <td>
-                      <a href="../plots/spacecraft_events/chisq/chi_min_{6:%Y%m%d_%H%M%S}_{7}.png">{0}</a>
+                      <a href="../plots/spacecraft_events/chisq/chi_min_{8:%Y%m%d_%H%M%S}_{9}.png">{0}</a>
                       </td>
                       <td>
                       {1:%Y/%m/%d %H:%M:%S}
@@ -1192,19 +1197,19 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                       {2:5.2f}
                       </td>
                       <td>
-                      {3:4.3f}
+                      {3:5.2f}
                       </td>
                       <td>
-                      {4:4.3f}
+                      {4:5.2f}
                       </td>
                       <td>
-                      {5}
+                      {5:4.3f}
                       </td>
                       <td>
-                      {8:4.3f}
+                      {6:4.3f}
                       </td>
                       <td>
-                      {9:4.3f}
+                      {7}
                       </td>
                       <td>
                       {10:4.3f}
@@ -1217,6 +1222,12 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                       </td>
                       <td>
                       {13:4.3f}
+                      </td>
+                      <td>
+                      {14:4.3f}
+                      </td>
+                      <td>
+                      {15:4.3f}
                       </td>
                   </tr>'''
     footer = '''</table>
@@ -1256,7 +1267,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
         out_f.write(r'''<b><a href="../plots/spacecraft_events/full_res_event_{0:%Y%m%d_%H%M%S}_zoom.png"> Event on {0:%Y/%m/%d %H:%M:%S} UT (50 Min.)</a> </b>'''.format(i))
         out_f.write(tab_hdr)
         #write trainer spacecraft event
-        out_f.write(new_row.format(trainer,i,0.00,tr_events.loc[i,p_var],tr_events.loc[i-a_w:i+a_w,p_var.replace('predict','predict_sigma')].max(),'X',i,trainer.lower(),*plsm[trainer].loc[i-a_w:i+a_w,par_out].max()))
+        out_f.write(new_row.format(trainer,i,0.00,0.00,0.00,tr_events.loc[i,p_var],tr_events.loc[i-a_w:i+a_w,p_var.replace('predict','predict_sigma')].max(),'X',i,trainer.lower(),*plsm[trainer].loc[i-a_w:i+a_w,par_out].max()))
     
     
         #create figure showing 
@@ -1311,34 +1322,35 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                 else:
                    print('No Plasma Observations')
       
-            #use chisq minimum of top events in 2 hour window
-            elif use_chisq:
+            #elif use_chisq:
          
             #use the largets set of discontinuties 
             elif ((use_discon) | (use_chisq)):
-               if use_discon:
-                    #calculate difference in parameters
-                    p_mat['del_speed'] = np.abs(p_mat['SPEED'].diff(1))
-                    p_mat['del_Np'] = np.abs(p_mat['Np'].diff(1))
-                    p_mat['del_Vth'] = np.abs(p_mat['Vth'].diff(1))
-                    p_mat['del_Bx'] = np.abs(p_mat['Bx'].diff(1))
-                    p_mat['del_By'] = np.abs(p_mat['By'].diff(1))
-                    p_mat['del_Bz'] = np.abs(p_mat['Bz'].diff(1))
+                #parameters if using discontinuity
+                if use_discon:
+                     #calculate difference in parameters
+                     p_mat['del_speed'] = np.abs(p_mat['SPEED'].diff(1))
+                     p_mat['del_Np'] = np.abs(p_mat['Np'].diff(1))
+                     p_mat['del_Vth'] = np.abs(p_mat['Vth'].diff(1))
+                     p_mat['del_Bx'] = np.abs(p_mat['Bx'].diff(1))
+                     p_mat['del_By'] = np.abs(p_mat['By'].diff(1))
+                     p_mat['del_Bz'] = np.abs(p_mat['Bz'].diff(1))
 
-                    #find largest magnetic field discontinuties 
-                    p_mat['del_Bt'] = np.sqrt(p_mat.del_Bx**2.+p_mat.del_By**2.+p_mat.del_Bz**2.) 
+                     #find largest magnetic field discontinuties 
+                     p_mat['del_Bt'] = np.sqrt(p_mat.del_Bx**2.+p_mat.del_By**2.+p_mat.del_Bz**2.) 
 
-                    #find largest speed discontinuties 
-                    p_mat_t = p_mat.sort_values('del_speed',ascending=False)[:10]
+                     #find largest speed discontinuties 
+                     p_mat_t = p_mat.sort_values('del_speed',ascending=False)[:10]
 
              
-                    #find largest mag field discontinuies 
-                    p_mag_t = p_mat.sort_values('del_Bt',ascending=False)[:10]
+                     #find largest mag field discontinuies 
+                     p_mag_t = p_mat.sort_values('del_Bt',ascending=False)[:10]
     
-                    #mag tolerance for using magnetometer data to match events rather than plasma parameters
-                    mag_tol = 0.0
+                     #mag tolerance for using magnetometer data to match events rather than plasma parameters
+                     mag_tol = 0.0
 
-                if use_chisq:
+                #use chisq minimum of top events in 2 hour window
+                elif use_chisq:
                     #downsample to 5 minutes for time matching in chisq
                     #remove downsampling J. Prchlik 2017/11/20
                     p_mat_t = p_mat #.resample(downsamp).median()
@@ -1352,7 +1364,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     
                     #mag tolerance for using magnetometer data to match events rather than plasma parameters
                     mag_tol = 0.0
-                
+               
 
                 
 
@@ -1374,11 +1386,11 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
      
                         if k.lower() == 'soho':
                             #print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min))
-                            out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds()/60.,(i_low-i_min).total_seconds()/60.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),0.000,'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
+                            out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds()/3600.,(i_low-i_min).total_seconds()/3600.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),0.000,'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
     
                         else: 
                             #print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
-                            out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds()/60.,(i_low-i_min).total_seconds()/60.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
+                            out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds()/3600.,(i_low-i_min).total_seconds()/3600.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
     
                     except KeyError:
                         print('Missing Index')
@@ -1398,7 +1410,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                     try:
                     #print output to terminal
                        # print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
-                        out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds()/60.,(i_low-i_min).total_seconds()/60.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
+                        out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds()/3600.,(i_low-i_min).total_seconds()/3600.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
     
     
                     except KeyError:
