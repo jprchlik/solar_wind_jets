@@ -876,6 +876,24 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     rgh_chi_t : pandas time delta object, optional
         Size of window around an event (+/-) to find the Chi^2 minimum for a rough window (Default = pd.to_timedelta('90 minutes')).
         During the rough minimization the window will run once and shrink once by 1+loop (Default = 90,45).
+    arch: string, optional
+        The archive location for the text file to read in (Default = '../cdf/cdftotxt/')
+    mag_fmt: string, optional
+        The file format for the magnetic field observations (Default = '{0}_mag_formatted.txt',
+        where 0 is the formatted k).
+    pls_fmt: string, optional
+        The file format for the plasma observations (Default = '{0}_pls_formatted.txt',
+        where 0 is the formatted k).
+    start_t: string, optional
+        Date in YYYY/MM/DD format to start looking for events (Default = '2016/06/04')
+    start_t: string, optional
+        Date in YYYY/MM/DD format to stop looking for events (inclusive, Default = '2017/07/31')
+    center = boolean, optional
+        Whether the analyzed point to be center focused (center = True) or right focus (Default = False).
+        Using a right focused model I find better agreement with events found by eye.
+
+    Returns
+    -------
     '''
     #dictionary for storing the Pandas Data frame
     pls = {}
@@ -952,7 +970,11 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     
     #refined window to calculate Chi^2 min for each time
     #(ref_chi_t)
-    
+    #Parameters for file read in and parsing
+    par_read_in = partial(read_in,arch=arch,mag_fmt=mag_fmt,pls_fmt=pls_fmt,start_t=start_t,end_t=end_t,center=center)
+                         
+
+
     #plot window 
     plt_windw = pd.to_timedelta('180 minutes')
     
@@ -962,7 +984,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     
     #read in and format spacecraft in parallel
     pool = Pool(processes=4)
-    outp = pool.map(read_in,craft)
+    outp = pool.map(par_read_in,craft)
     pool.terminate()
     pool.close()
     pool.join()
