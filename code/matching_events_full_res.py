@@ -574,18 +574,21 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time,traine
     
 
     #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
+    #Try using the parameter with the largest difference  in B values preceding and including the event (2017/12/11 J. Prchlik)
     if len(par) > 1:
        #par_chi = np.array([np.sum((((c_mat.loc[:,par_i]-t_mat.loc[:,par_i])/t_mat.loc[:,par_i].median())**2.).values)/float(len(c_mat)+len(t_mat)) for par_i in par])
        #use_par, = np.where(par_chi == np.min(par_chi))
-       #par      = list(np.array(par)[use_par])
-       par = ['Bt']
+       par_chi = np.array([(t_mat.loc['1950/10/10':trainer_time,par_i].diff().abs().max()) for par_i in par])
+       use_par, = np.where(par_chi == np.max(par_chi))
+       par      = list(np.array(par)[use_par])
+       #par = ['Bt']
 
 
     #compute locate variation in parameters
-    #from 10 pixels left of observation (will weight leading up to event more)
-    loc_var = 150
-    t_mat['lc_std_'+par[0]] = t_mat[par].rolling(loc_var,center=False,min_periods=1).std()**2.
-    c_mat['lc_std_'+par[0]] = c_mat[par].rolling(loc_var,center=False,min_periods=1).std()**2.
+    #from 15 pixels around the observation [J. Prchlik 2017/12/11]
+    loc_var = 15
+    t_mat['lc_std_'+par[0]] = t_mat[par].rolling(loc_var,center=True ,min_periods=1).std()**2.
+    c_mat['lc_std_'+par[0]] = c_mat[par].rolling(loc_var,center=True ,min_periods=1).std()**2.
 
 
     #fill the first values
@@ -765,7 +768,8 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
             #create list to sent to processors
             #ref_chi_min = partial(return_chi_min,ref_chi_t,plsm,k,par,True,False,trainer_t)
             loop_list = []
-            for i in time: loop_list.append((t_ref_chi_t,plsm,k,par,True,False,trainer_t,i))
+            #try only using SPEED 2017/12/11
+            for i in time: loop_list.append((t_ref_chi_t,plsm,k,par,True ,False,trainer_t,i))
     
             #Parallized chisq computation
             if nproc > 1.5:
@@ -994,10 +998,10 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     ref_window['ACE'] = pd.to_timedelta('15 minutes')
     ref_window['SOHO'] = pd.to_timedelta('25 minutes')
     ref_window['Wind'] = pd.to_timedelta('25 minutes')
-    ref_window['DSCOVR'] = pd.to_timedelta('5 minutes')
-    ref_window['ACE'] = pd.to_timedelta('5 minutes')
-    ref_window['SOHO'] = pd.to_timedelta('5 minutes')
-    ref_window['Wind'] = pd.to_timedelta('5 minutes')
+    #ref_window['DSCOVR'] = pd.to_timedelta('5 minutes')
+    #ref_window['ACE'] = pd.to_timedelta('5 minutes')
+    #ref_window['SOHO'] = pd.to_timedelta('5 minutes')
+    #ref_window['Wind'] = pd.to_timedelta('5 minutes')
     
     #refined window to calculate Chi^2 min for each time
     #(ref_chi_t)
