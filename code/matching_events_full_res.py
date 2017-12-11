@@ -1386,11 +1386,11 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
      
                         if k.lower() == 'soho':
                             #print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min))
-                            out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds()/3600.,(i_low-i_min).total_seconds()/3600.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),0.000,'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
+                            out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds(),(i_low-i_min).total_seconds(),p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),0.000,'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
     
                         else: 
                             #print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
-                            out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds()/3600.,(i_low-i_min).total_seconds()/3600.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
+                            out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds(),(i_low-i_min).total_seconds(),p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
     
                     except KeyError:
                         print('Missing Index')
@@ -1410,7 +1410,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                     try:
                     #print output to terminal
                        # print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
-                        out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds()/3600.,(i_low-i_min).total_seconds()/3600.,p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
+                        out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds(),(i_low-i_min).total_seconds(),p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
     
     
                     except KeyError:
