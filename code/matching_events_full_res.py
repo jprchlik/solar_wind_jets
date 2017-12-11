@@ -589,7 +589,7 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time,traine
     #compute chi^2 value for Wind and other spacecraft
     #added computation number to prefer maximum overlap (i.e. won't shove to an edge) J. Prchlik 2017/11/15
     #Added uncertainty based on locale variables 2017/12/11 (J. Prchlik)
-    chisq = np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values/(t_mat[['lc_std_'+par].values+c_mat['lc_std'+par].values))
+    chisq = np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values/(t_mat['lc_std_'+par].values+c_mat['lc_std'+par].values))
     #Try using the median offset rather than chi^2 minimum (Did not work)
     #chisq = np.nanmedian(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)/float(len(c_mat)+len(t_mat))
      
