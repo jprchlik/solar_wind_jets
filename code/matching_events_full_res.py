@@ -581,9 +581,15 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time,traine
        par = ['Bt']
 
 
+    #compute locate variation in parameters
+    #from 10 pixels left of observation (will weight leading up to event more)
+    t_mat['lc_std_'+par] = t_mat[par].rolling(10,center=False).std()**2.
+    c_mat['lc_std_'+par] = c_mat[par].rolling(10,center=False).std()**2.
+
     #compute chi^2 value for Wind and other spacecraft
     #added computation number to prefer maximum overlap (i.e. won't shove to an edge) J. Prchlik 2017/11/15
-    chisq = np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)/float(len(c_mat)+len(t_mat))
+    #Added uncertainty based on locale variables 2017/12/11 (J. Prchlik)
+    chisq = np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values/(t_mat[['lc_std_'+par].values+c_mat['lc_std'+par].values))
     #Try using the median offset rather than chi^2 minimum (Did not work)
     #chisq = np.nanmedian(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)/float(len(c_mat)+len(t_mat))
      
@@ -718,7 +724,7 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         i_min = p_mat['chisq'].idxmin()
 
         #plot chi^2 min
-        if plot: chi_ax.scatter(p_mat.index,p_mat.chisq/p_mat.chisq.min(),label=k,color=color[k],marker=marker[k])
+        if plot: chi_ax.scatter(p_mat.index,p_mat.chisq,label=k,color=color[k],marker=marker[k])
     
     #use fine grid around observations to match time offset locally
     if refine:
@@ -801,7 +807,7 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
             #get the index of minimum refined chisq value
             i_min = p_mat['chisq'].idxmin()
             #plot chi^2 min
-            if plot: chi_ax.scatter(p_mat.index,p_mat.chisq/p_mat.chisq.min(),label='Ref. {0:1d} {1} '.format(j+1,k),marker=marker[k])
+            if plot: chi_ax.scatter(p_mat.index,p_mat.chisq,label='Ref. {0:1d} {1} '.format(j+1,k),marker=marker[k])
 
     
     
