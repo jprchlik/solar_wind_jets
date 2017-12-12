@@ -600,7 +600,12 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time,traine
     #compute chi^2 value for Wind and other spacecraft
     #added computation number to prefer maximum overlap (i.e. won't shove to an edge) J. Prchlik 2017/11/15
     #Added uncertainty based on locale variables 2017/12/11 (J. Prchlik)
-    chisq = np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values/(t_mat['lc_std_'+par[0]].values+c_mat['lc_std_'+par[0]].values))
+    #add logic to only get run upto event if using mag. fields 2017/10/11 J. Prchlik
+    if par[0] == 'SPEED':
+        chisq = np.sum(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values/(t_mat['lc_std_'+par[0]].values+c_mat['lc_std_'+par[0]].values))
+    else:
+        pad = pd.to_timedelta('1 minutes')
+        chisq = np.sum(((c_mat.loc[:trainer_time+pad,par]-t_mat.loc[:trainer_time+pad,par])**2.).values/(t_mat['lc_std_'+par[0]].values+c_mat['lc_std_'+par[0]].values))
     #Try using the median offset rather than chi^2 minimum (Did not work)
     #chisq = np.nanmedian(((c_mat.loc[:,par]-t_mat.loc[:,par])**2.).values)/float(len(c_mat)+len(t_mat))
      
@@ -744,14 +749,17 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         if k.lower() != 'soho': par = ['Bx','By','Bz']
         else: par = ['SPEED']
 
-        #Find 4 lowest chisq min times
-        p_temp = p_mat.sort_values('chisq',ascending=True )[:n_fine]
+        #Find 4 lowest chisq min times 
+        #p_temp = p_mat.sort_values('chisq',ascending=True )[:n_fine]
 
-        #set the min value to interative solve for refinemnet
-        i_min = p_temp['chisq'].idxmin()
+        #set the min value to interative solve for refinmenet
+        #i_min = p_temp['chisq'].idxmin()
  
         #loop and squeeze refinement window
         for j in range(3):
+            #interatively solve around 1 sigma
+            #2017/12/11 J. Prchlik
+            i_sig = p_mat.loc[p_mat['chisq'] < 2.*p_mat['chisq'].min(),:]
 
             #looping time around window to try to match
             t_ref_wid = ref_window[k]/(j+1)
@@ -759,8 +767,11 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
             t_ref_chi_t = ref_chi_t/(j+1)
 
             #get all values in top n_fine at full resolution
-            p_mat  = plsm[k].loc[i_min-t_ref_wid:i_min+t_ref_wid]
+            #p_mat  = plsm[k].loc[i_min-t_ref_wid:i_min+t_ref_wid]
             #print(p_temp.index.min()-rgh_chi_t,p_temp.index.max()+rgh_chi_t)
+            #interatively solve around 1 sigma
+            #2017/12/11 J. Prchlik
+            p_mat  = plsm[k].loc[i_sig.index.min():i_sig.index.max()]
  
             #list of to values to compute X^2 minium
             time = p_mat.index
@@ -796,7 +807,7 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
             #check to see if chisq min is at an edge but if it is still at an edge after 3 tries give up
             while (((i_min == p_mat.index.max()) | (i_min == p_mat.index.min())) & (looper < 4)):
                 #get all values in top n_fine at full resolution
-                p_mat  = plsm[k].loc[p_temp.index.min()-(t_ref_wid*(looper+1)):p_temp.index.max()+(t_ref_wid*(looper+1))]
+                p_mat  = plsm[k].loc[p_mat.index.min()-(t_ref_wid*(looper+1)):p_mat.index.max()+(t_ref_wid*(looper+1))]
                 #list of to values to compute X^2 minium
                 time = p_mat.index
                 loop_list = []
@@ -994,14 +1005,14 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     
     #get strings for times around each event when refining chi^2 time
     ref_window = {}
-    ref_window['DSCOVR'] = pd.to_timedelta('15 minutes')
-    ref_window['ACE'] = pd.to_timedelta('15 minutes')
-    ref_window['SOHO'] = pd.to_timedelta('25 minutes')
-    ref_window['Wind'] = pd.to_timedelta('25 minutes')
-    #ref_window['DSCOVR'] = pd.to_timedelta('5 minutes')
-    #ref_window['ACE'] = pd.to_timedelta('5 minutes')
-    #ref_window['SOHO'] = pd.to_timedelta('5 minutes')
-    #ref_window['Wind'] = pd.to_timedelta('5 minutes')
+    #ref_window['DSCOVR'] = pd.to_timedelta('15 minutes')
+    #ref_window['ACE'] = pd.to_timedelta('15 minutes')
+    #ref_window['SOHO'] = pd.to_timedelta('25 minutes')
+    #ref_window['Wind'] = pd.to_timedelta('25 minutes')
+    ref_window['DSCOVR'] = pd.to_timedelta('5 minutes')
+    ref_window['ACE'] = pd.to_timedelta('5 minutes')
+    ref_window['SOHO'] = pd.to_timedelta('5 minutes')
+    ref_window['Wind'] = pd.to_timedelta('5 minutes')
     
     #refined window to calculate Chi^2 min for each time
     #(ref_chi_t)
@@ -1133,7 +1144,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                 P-val (mag.) is the p-val for a 5&sigma; discontinuity given at the reference Obs. time for a given spacecraft's measured magnetic field values.
                 Finally, an X in Use Plasma Mod. means the minimization routine use the wind Speed to find the best match &chi;<sup>2</sup> time,
                 while an empty cell denotes using the magnetic field. Clicking on the spacecraft shows the &chi;<sup>2</sup> minimization as a function of time for 
-                the wide and refinded windows.
+                the wide and refined windows.
         
                 </br>
                 </br>
