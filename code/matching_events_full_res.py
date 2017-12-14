@@ -896,8 +896,8 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
 
     RETURNS
     --------
-    i_min : datetime index
-    Average Dynamic Time warp and its start deviation
+    i_min,i_upp,i_low : datetime index
+    Average Dynamic Time warp and its upper and lower limit standard deviation
 
     """
 
@@ -921,17 +921,6 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         p_mat  = plsm[k].loc[i_min-t_rgh_wid:i_min+t_rgh_wid]
         t_mat  = plsm[trainer].loc[trainer_t-t_rgh_wid:trainer_t+t_rgh_wid]
 
-        #get the median slope and offset
-        #J. Prchlik (2017/11/20)
-        try:
-            med_m,med_i,low_s,hgh_s = theilslopes(t_mat.SPEED.values,p_mat.SPEED.values)
-            p_mat.SPEED = p_mat.SPEED*med_m+med_i
-        except IndexError:
-        #get median offset to apply to match spacecraft
-            off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
-            p_mat.SPEED = p_mat.SPEED-off_speed
-        
-
         #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
         #Try using the parameter with the largest difference  in B values preceding and including the event (2017/12/11 J. Prchlik)
         if len(par) > 1:
@@ -939,12 +928,18 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
            use_par, = np.where(par_chi == np.max(par_chi))
            par      = list(np.array(par)[use_par])
 
+        #dropa na values of index of p_mat and t_mat for given par
+        t_mat.dropna(how='all',subset=par,inplace=True,axis=0)
+        p_mat.dropna(how='all',subset=par,inplace=True,axis=0)
+
         #get dynamic time warping value   
-        dist, cost, path = mlpy.dtw_std(t_mat[par].dropna().values,p_mat[par].dropna().values,dist_only=False)
+        dist, cost, path = mlpy.dtw_std(t_mat[par[0]].values,p_mat[par[0]].values,dist_only=False)
         
 
         #get training number value
         t_nind = t_mat.index.get_loc(trainer_t)
+        print(t_nind)
+        print(path[0])
 
         #find where path equals number index value
         t_path, = np.where(path[0] == t_nind)
@@ -958,9 +953,11 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         i_min = (np.sum((p_mat.iloc[s_path,:].index - p_mat.iloc[s_path,:].index.min()).to_pytimedelta())
                 /len(p_mat.iloc[s_path,:].index)) + p_mat.iloc[s_path,:].index.min()
         #calculate the mean absolute difference over the entire range
-        i_std = (np.sum(np.abs((p_mat.iloc[s_path,:].index - t_mat.iloc[t_path,:].index).to_pytimedelta()))/(len(p_mat.iloc[s_path,:].index)^2))
-        i_max = i_min+i_std 
-        i_min = i_min-i_std 
+        i_std = (np.sum(np.abs((p_mat.iloc[path[1],:].index - t_mat.iloc[path[0],:].index 
+                 + (trainer_t-i_min)).to_pytimedelta()))/(len(p_mat.iloc[path[0],:].index)^2))
+        #calculate upper and lower limits
+        i_upp = i_min+i_std 
+        i_low = i_min-i_std 
 
         #plot chi^2 min
         #if plot: chi_ax.scatter(p_mat.index,p_mat.chisq/p_mat.chisq.min(),label=k,color=color[k],marker=marker[k])
@@ -1006,20 +1003,20 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
     
     #set up plot for chi^2 min
     if plot:
-        chi_ax.legend(loc='best',frameon=False,scatterpoints=1)
-        chi_ax.set_xlim([p_mat_r.index.min()-pd.to_timedelta('30 minutes'),p_mat_r.index.max()+pd.to_timedelta('30 minutes')])
-        chi_ax.set_ylabel('$\chi^2$')
-        chi_ax.set_xlabel('Time [UTC]')
-        #set plot maximum to be 10% higher than the max value
-        #ymax = 1.1*np.nanmax(p_mat.chisq.values/p_mat.chisq.min())
+       # chi_ax.legend(loc='best',frameon=False,scatterpoints=1)
+       # chi_ax.set_xlim([p_mat_r.index.min()-pd.to_timedelta('30 minutes'),p_mat_r.index.max()+pd.to_timedelta('30 minutes')])
+       # chi_ax.set_ylabel('$\chi^2$')
+       # chi_ax.set_xlabel('Time [UTC]')
+       # #set plot maximum to be 10% higher than the max value
+       # #ymax = 1.1*np.nanmax(p_mat.chisq.values/p_mat.chisq.min())
     
-        ##if ymax > 10 then set ymax to 10
-        #if ymax > 10.: ymax = 10.
-        ymax= 10
-        
-        chi_ax.set_ylim([0.5,ymax])
-        fancy_plot(chi_ax)
-        chi_fig.savefig('../plots/spacecraft_events/chisq/chi_min_{0:%Y%m%d_%H%M%S}_{1}.png'.format(trainer_t,k.lower()),bbox_pad=.1,bbox_inches='tight')
+       # ##if ymax > 10 then set ymax to 10
+       # #if ymax > 10.: ymax = 10.
+       # ymax= 10
+       # 
+       # chi_ax.set_ylim([0.5,ymax])
+       # fancy_plot(chi_ax)
+       # chi_fig.savefig('../plots/spacecraft_events/chisq/chi_min_{0:%Y%m%d_%H%M%S}_{1}.png'.format(trainer_t,k.lower()),bbox_pad=.1,bbox_inches='tight')
         #ax.set_ylim([300,1000.])
         plt.close(chi_fig)
    
