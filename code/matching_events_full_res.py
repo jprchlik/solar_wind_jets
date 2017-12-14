@@ -924,7 +924,7 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
         #Try using the parameter with the largest difference  in B values preceding and including the event (2017/12/11 J. Prchlik)
         if len(par) > 1:
-           par_chi = np.array([(t_mat.loc['1950/10/10':trainer_time,par_i].diff().abs().max()) for par_i in par])
+           par_chi = np.array([(t_mat.loc['1950/10/10':trainer_t,par_i].diff().abs().max()) for par_i in par])
            use_par, = np.where(par_chi == np.max(par_chi))
            par      = list(np.array(par)[use_par])
 
@@ -937,9 +937,7 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         
 
         #get training number value
-        t_nind = t_mat.index.get_loc(trainer_t)
-        print(t_nind)
-        print(path[0])
+        t_nind = t_mat.index.get_loc(trainer_t,meathod='nearest')
 
         #find where path equals number index value
         t_path, = np.where(path[0] == t_nind)
@@ -971,33 +969,58 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
 
         #loop and squeeze refinement window
         for j in range(3):
-            #interatively solve around 1 sigma
-            #2017/12/11 J. Prchlik
-            i_sig = p_mat.loc[p_mat['chisq'] < 2.*p_mat['chisq'].min(),:]
 
-            #looping time around window to try to match
-            t_ref_wid = ref_window[k]/(j+1)
-            #looping range of window size
-            t_ref_chi_t = ref_chi_t/(j+1)
+            #define refined widow as 3*simga
+            r_rgh_wid = 3*i_std
 
             #get all values in top n_fine at full resolution
-            #p_mat  = plsm[k].loc[i_min-t_ref_wid:i_min+t_ref_wid]
-            #print(p_temp.index.min()-rgh_chi_t,p_temp.index.max()+rgh_chi_t)
-            #interatively solve around 1 sigma
-            #2017/12/11 J. Prchlik
-            p_mat  = plsm[k].loc[i_sig.index.min():i_sig.index.max()]
- 
-            #add chisq times to p_mat array
-            #first is time index second is chisq value
-            for i in outp: p_mat.loc[i[0],'chisq'] = i[1]
-            #get the index of minimum refined chisq value
-            i_min = p_mat['chisq'].idxmin()
-      
+            p_mat  = plsm[k].loc[i_min-t_rgh_wid:i_min+t_rgh_wid]
+            t_mat  = plsm[trainer].loc[trainer_t-t_rgh_wid:trainer_t+t_rgh_wid]
 
-            #get the index of minimum refined chisq value
-            i_min = p_mat['chisq'].idxmin()
-            #plot chi^2 min
-            #if plot: chi_ax.scatter(p_mat.index,p_mat.chisq/p_mat.chisq.min(),label='Ref. {0:1d} {1} '.format(j+1,k),marker=marker[k])
+
+            #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
+            #Try using the parameter with the largest difference  in B values preceding and including the event (2017/12/11 J. Prchlik)
+            if len(par) > 1:
+               par_chi = np.array([(t_mat.loc['1950/10/10':trainer_t,par_i].diff().abs().max()) for par_i in par])
+               use_par, = np.where(par_chi == np.max(par_chi))
+               par      = list(np.array(par)[use_par])
+
+            #dropa na values of index of p_mat and t_mat for given par
+            t_mat.dropna(how='all',subset=par,inplace=True,axis=0)
+            p_mat.dropna(how='all',subset=par,inplace=True,axis=0)
+
+            #do no addition refinement if window is smaller than 5 points
+            if ((len(p_mat) < 5) | (len(t_mat) < 5)): continue
+
+            #get dynamic time warping value   
+            dist, cost, path = mlpy.dtw_std(t_mat[par[0]].values,p_mat[par[0]].values,dist_only=False)
+            
+
+            print(dist)
+            print(path)
+   
+            #get training number value (need nearest because switching to mag. from plasma data)
+            t_nind = t_mat.index.get_loc(trainer_t,meathod='nearest')
+            print(t_nind)
+            print(path[0])
+
+            #find where path equals number index value
+            t_path, = np.where(path[0] == t_nind)
+            #if more than one location returned grab the first and remove array type
+            if len(t_path) == 0: continue
+
+            #get the other spacecraft's number index to match to the training craft
+            s_path = path[1][t_path] 
+
+            #get the index of dtw value
+            i_min = (np.sum((p_mat.iloc[s_path,:].index - p_mat.iloc[s_path,:].index.min()).to_pytimedelta())
+                    /len(p_mat.iloc[s_path,:].index)) + p_mat.iloc[s_path,:].index.min()
+            #calculate the mean absolute difference over the entire range
+            i_std = (np.sum(np.abs((p_mat.iloc[path[1],:].index - t_mat.iloc[path[0],:].index 
+                     + (trainer_t-i_min)).to_pytimedelta()))/(len(p_mat.iloc[path[0],:].index)^2))
+            #calculate upper and lower limits
+            i_upp = i_min+i_std 
+            i_low = i_min-i_std 
 
     
     
