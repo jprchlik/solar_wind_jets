@@ -952,7 +952,7 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
                 /len(p_mat.iloc[s_path,:].index)) + p_mat.iloc[s_path,:].index.min()
         #calculate the mean absolute difference over the entire range
         i_std = (np.sum(np.abs((p_mat.iloc[path[1],:].index - t_mat.iloc[path[0],:].index 
-                 + (trainer_t-i_min)).to_pytimedelta()))/(len(p_mat.iloc[path[0],:].index)^2))
+                 + (trainer_t-i_min)).to_pytimedelta()))/(len(t_mat.iloc[path[0],:].index)^2))
         #calculate upper and lower limits
         i_upp = i_min+i_std 
         i_low = i_min-i_std 
@@ -996,13 +996,9 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
             dist, cost, path = mlpy.dtw_std(t_mat[par[0]].values,p_mat[par[0]].values,dist_only=False)
             
 
-            print(dist)
-            print(path)
    
             #get training number value (need nearest because switching to mag. from plasma data)
             t_nind = t_mat.index.get_loc(trainer_t,method='nearest')
-            print(t_nind)
-            print(path[0])
 
             #find where path equals number index value
             t_path, = np.where(path[0] == t_nind)
@@ -1017,10 +1013,15 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
                     /len(p_mat.iloc[s_path,:].index)) + p_mat.iloc[s_path,:].index.min()
             #calculate the mean absolute difference over the entire range
             i_std = (np.sum(np.abs((p_mat.iloc[path[1],:].index - t_mat.iloc[path[0],:].index 
-                     + (trainer_t-i_min)).to_pytimedelta()))/(len(p_mat.iloc[path[0],:].index)^2))
+                     + (trainer_t-i_min)).to_pytimedelta()))/(len(t_mat.iloc[path[0],:].index)^2))
+  
+            print(i_min)
+            print(i_std)
             #calculate upper and lower limits
             i_upp = i_min+i_std 
             i_low = i_min-i_std 
+            print(i_upp)
+            print(i_low)
 
     
     
