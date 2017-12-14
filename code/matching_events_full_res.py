@@ -906,6 +906,7 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
     if plot:
         chi_fig,chi_ax = plt.subplots()
 
+
     #inital guess is no time shift
     i_min = trainer_t
 
@@ -920,6 +921,10 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         #get all values in top n_fine at full resolution
         p_mat  = plsm[k].loc[i_min-t_rgh_wid:i_min+t_rgh_wid]
         t_mat  = plsm[trainer].loc[trainer_t-t_rgh_wid:trainer_t+t_rgh_wid]
+
+        #use speed for rough esimation if possible
+        if ( (len(t_mat[t_mat['SPEED'] > 0].SPEED) > 10.) | (k.lower() == 'soho')): par = ['SPEED']
+        else: par = ['Bx','By','Bz']
 
         #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
         #Try using the parameter with the largest difference  in B values preceding and including the event (2017/12/11 J. Prchlik)
@@ -958,25 +963,29 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         i_low = i_min-i_std 
 
         #plot chi^2 min
-        #if plot: chi_ax.scatter(p_mat.index,p_mat.chisq/p_mat.chisq.min(),label=k,color=color[k],marker=marker[k])
+        if plot: chi_ax.errorbar(j,i_min,yerr=i_std,label=k,color=color[k],fmt=marker[k])
     
     #use fine grid around observations to match time offset locally
     if refine:
 
         #use magentic field for refinement for ACE, Wind, and DSCOVR
-        if k.lower() != 'soho': par = ['Bx','By','Bz']
-        else: par = ['SPEED']
+        #if k.lower() != 'soho': par = ['Bx','By','Bz']
+        #else: par = ['SPEED']
+        #par = ['SPEED']
 
         #loop and squeeze refinement window
         for j in range(3):
 
             #define refined widow as 3*simga
-            r_rgh_wid = 3*i_std
+            t_ref_wid = 3*i_std
 
             #get all values in top n_fine at full resolution
-            p_mat  = plsm[k].loc[i_min-t_rgh_wid:i_min+t_rgh_wid]
-            t_mat  = plsm[trainer].loc[trainer_t-t_rgh_wid:trainer_t+t_rgh_wid]
+            p_mat  = plsm[k].loc[i_min-t_ref_wid:i_min+t_ref_wid]
+            t_mat  = plsm[trainer].loc[trainer_t-t_ref_wid:trainer_t+t_ref_wid]
 
+            #use speed for rough esimation if possible
+            if ( (len(t_mat[t_mat['SPEED'] > 0].SPEED) > 10.) | (k.lower() == 'soho')): par = ['SPEED']
+            else: par = ['Bx','By','Bz']
 
             #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
             #Try using the parameter with the largest difference  in B values preceding and including the event (2017/12/11 J. Prchlik)
@@ -1015,13 +1024,11 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
             i_std = (np.sum(np.abs((p_mat.iloc[path[1],:].index - t_mat.iloc[path[0],:].index 
                      + (trainer_t-i_min)).to_pytimedelta()))/(len(t_mat.iloc[path[0],:].index)^2))
   
-            print(i_min)
-            print(i_std)
             #calculate upper and lower limits
             i_upp = i_min+i_std 
             i_low = i_min-i_std 
-            print(i_upp)
-            print(i_low)
+
+            if plot: chi_ax.errorbar(j,i_min,yerr=i_std,label='Refined '+k,color=color[k],fmt=marker[k])
 
     
     
