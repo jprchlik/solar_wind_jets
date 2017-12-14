@@ -937,7 +937,7 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         
 
         #get training number value
-        t_nind = t_mat.index.get_loc(trainer_t,meathod='nearest')
+        t_nind = t_mat.index.get_loc(trainer_t,method='nearest')
 
         #find where path equals number index value
         t_path, = np.where(path[0] == t_nind)
@@ -1000,7 +1000,7 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
             print(path)
    
             #get training number value (need nearest because switching to mag. from plasma data)
-            t_nind = t_mat.index.get_loc(trainer_t,meathod='nearest')
+            t_nind = t_mat.index.get_loc(trainer_t,method='nearest')
             print(t_nind)
             print(path[0])
 
