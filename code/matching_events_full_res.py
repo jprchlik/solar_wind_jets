@@ -963,14 +963,14 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         i_low = i_min-i_std 
 
         #plot chi^2 min
-        if plot: chi_ax.errorbar(j,i_min,yerr=i_std,label=k,color=color[k],fmt=marker[k])
+        if plot: chi_ax.errorbar(j,i_min,yerr=i_std,label=k+' '+par[0],color=color[k],fmt=marker[k])
     
     #use fine grid around observations to match time offset locally
     if refine:
 
         #use magentic field for refinement for ACE, Wind, and DSCOVR
-        #if k.lower() != 'soho': par = ['Bx','By','Bz']
-        #else: par = ['SPEED']
+        if k.lower() != 'soho': par = ['Bx','By','Bz']
+        else: par = ['SPEED']
         #par = ['SPEED']
 
         #loop and squeeze refinement window
@@ -978,19 +978,17 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
 
             #define refined widow as 3*simga
             t_ref_wid = 3*i_std
+            t_ref_pas = i_std
 
             #get all values in top n_fine at full resolution
-            p_mat  = plsm[k].loc[i_min-t_ref_wid:i_min+t_ref_wid]
-            t_mat  = plsm[trainer].loc[trainer_t-t_ref_wid:trainer_t+t_ref_wid]
+            p_mat  = plsm[k].loc[i_min-t_ref_wid:i_min+t_ref_pas]
+            t_mat  = plsm[trainer].loc[trainer_t-t_ref_wid:trainer_t+t_ref_pas]
 
-            #use speed for rough esimation if possible
-            if ( (len(t_mat[t_mat['SPEED'] > 0].SPEED) > 10.) | (k.lower() == 'soho')): par = ['SPEED']
-            else: par = ['Bx','By','Bz']
 
             #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
             #Try using the parameter with the largest difference  in B values preceding and including the event (2017/12/11 J. Prchlik)
             if len(par) > 1:
-               par_chi = np.array([(t_mat.loc['1950/10/10':trainer_t,par_i].diff().abs().max()) for par_i in par])
+               par_chi = np.array([(t_mat.loc[trainer_t-t_ref_wid:trainer_t+t_ref_wid,par_i].diff().abs().max()) for par_i in par])
                use_par, = np.where(par_chi == np.max(par_chi))
                par      = list(np.array(par)[use_par])
 
@@ -1028,16 +1026,15 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
             i_upp = i_min+i_std 
             i_low = i_min-i_std 
 
-            if plot: chi_ax.errorbar(j,i_min,yerr=i_std,label='Refined '+k,color=color[k],fmt=marker[k])
+            if plot: chi_ax.errorbar(j+2,i_min,yerr=i_std,label='Refined {0} {1}'.format(k,par[0]),color=color[k],fmt=marker[k])
 
     
     
     #set up plot for chi^2 min
     if plot:
-       # chi_ax.legend(loc='best',frameon=False,scatterpoints=1)
-       # chi_ax.set_xlim([p_mat_r.index.min()-pd.to_timedelta('30 minutes'),p_mat_r.index.max()+pd.to_timedelta('30 minutes')])
-       # chi_ax.set_ylabel('$\chi^2$')
-       # chi_ax.set_xlabel('Time [UTC]')
+        chi_ax.legend(loc='best',frameon=False,scatterpoints=1)
+        chi_ax.set_xlabel('Iteration')
+        chi_ax.set_ylabel('Best Fit Time [UTC]')
        # #set plot maximum to be 10% higher than the max value
        # #ymax = 1.1*np.nanmax(p_mat.chisq.values/p_mat.chisq.min())
     
@@ -1046,8 +1043,8 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
        # ymax= 10
        # 
        # chi_ax.set_ylim([0.5,ymax])
-       # fancy_plot(chi_ax)
-       # chi_fig.savefig('../plots/spacecraft_events/chisq/chi_min_{0:%Y%m%d_%H%M%S}_{1}.png'.format(trainer_t,k.lower()),bbox_pad=.1,bbox_inches='tight')
+        fancy_plot(chi_ax)
+        chi_fig.savefig('../plots/spacecraft_events/chisq/chi_min_{0:%Y%m%d_%H%M%S}_{1}.png'.format(trainer_t,k.lower()),bbox_pad=.1,bbox_inches='tight')
         #ax.set_ylim([300,1000.])
         plt.close(chi_fig)
    
