@@ -9,6 +9,7 @@ import os
 import threading
 import sys
 import time
+import mlpy #for dynamic time shifting
 
 from scipy.stats.mstats import theilslopes
 
@@ -702,22 +703,9 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         #Commented out by J. Prchlik (2017/11/29 for threading testing)
         loop_list = []
         for l in time: loop_list.append((t_rgh_chi_t,plsm,k,par,False,True,trainer_t,l))
-        #parallel issue is with using a pandas Dataframe (need to work out solution)
-        #actually just has issue with really large arrays. No clear solution  other 
-        #than be annoyed for now
-        #for l in time: loop_list.append((t_rgh_chi_t,plsm,k,par,False,True,trainer_t,l))
-        #loop_list = []
-        #for l in time: loop_list.append((0))
         
 
-        #clear Threads
-        #print('Number of Threads')
-        #print(threading.active_count())
-        #all_th = threading.enumerate()
-        #for i in all_th: i.clear()
-
-
-
+        #Do computation in Par. if requested (2017/12/14 J. Prchlik)
         if nproc > 1.5:
             pool2 = Pool(processes=nproc)
             #Commented out by J. Prchlik (2017/11/29 for threading testing)
@@ -868,8 +856,180 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
     #return best fit, 1sigma upper limit, 1 sigma lower limit
     return i_min,i_upp,i_low
     
+def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,ref_chi_t=pd.to_timedelta('10 minutes'),refine=True,n_fine=4,plot=True ,nproc=1,use_discon=False,trainer='Wind'):
+    """
+    dtw_min computes the average dynamic time warping value for a given set of parameters
+    Parameters
+    -----------
+    p_mat: Pandas DataFrame
+        Solar wind pandas DataFrame for a space craft roughly sampled
+    par : list
+        List of parameters to use in the Chi^2 minimization 
+    rgh_chi_t: Pandas datetime delta object
+        Time around a given time in p_mat to include in chi^2 minimization  
+    ref_chi_t: Pandas datetime delta object
+        Time around a given time in refined grid to include in chi^2 minimization  
+    plsm: dict
+        Dictionary of plasma DataFrames of plasma Dataframes 
+    k   : string
+        Spacecraft name in plsm dictionary
+    window : dictionary
+        Spacecraft windows to use when matching
+    ref_window : dictionary
+        Spacecraft windows to use when refined matching
+    trainer_t: Time index
+        Time index of training spacecraft to match and get Chi^2 min.
+    color: dictionary
+        Dictionary of spacecraft colors (keys should be k)
+    marker: dictionary
+        Dictionary of spacecraft markers (keys should be k)
+    refine: boolean
+        Whether to use a refined window (Default = True)
+    n_fine : integer
+        Number of chi^2 min values from the rough grid to check with the fine grid (Default = 4)
+    plot  : boolean,optional
+        Plot Chi^2 minimization window (Default = False)
+    use_discon : boolean,optional
+        Only use discontinuity (Default = False)
+    trainer : string, optional
+        Spacecraft to match back to in dynamic time warping (Default = 'Wind')
+
+    RETURNS
+    --------
+    i_min : datetime index
+    Average Dynamic Time warp and its start deviation
+
+    """
+
+
+    #if plot create plotting axis
+    if plot:
+        chi_fig,chi_ax = plt.subplots()
+
+    #inital guess is no time shift
+    i_min = trainer_t
+
+    #loop and squeeze rough window
+    for j in range(2):
+
+        #looping time around window to try to match
+        t_rgh_wid = window[k]/(j+1)
+        #looping range of window size
+        t_rgh_chi_t = ref_chi_t/(j+1)
+
+        #get all values in top n_fine at full resolution
+        p_mat  = plsm[k].loc[i_min-t_rgh_wid:i_min+t_rgh_wid]
+        t_mat  = plsm[trainer].loc[trainer_t-t_rgh_wid:trainer_t+t_rgh_wid]
+
+        #get the median slope and offset
+        #J. Prchlik (2017/11/20)
+        try:
+            med_m,med_i,low_s,hgh_s = theilslopes(t_mat.SPEED.values,p_mat.SPEED.values)
+            p_mat.SPEED = p_mat.SPEED*med_m+med_i
+        except IndexError:
+        #get median offset to apply to match spacecraft
+            off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
+            p_mat.SPEED = p_mat.SPEED-off_speed
+        
+
+        #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
+        #Try using the parameter with the largest difference  in B values preceding and including the event (2017/12/11 J. Prchlik)
+        if len(par) > 1:
+           par_chi = np.array([(t_mat.loc['1950/10/10':trainer_time,par_i].diff().abs().max()) for par_i in par])
+           use_par, = np.where(par_chi == np.max(par_chi))
+           par      = list(np.array(par)[use_par])
+
+        #get dynamic time warping value   
+        dist, cost, path = mlpy.dtw_std(t_mat[par].dropna().values,p_mat[par].dropna().values,dist_only=False)
+        
+
+        #get training number value
+        t_nind = t_mat.index.get_loc(trainer_t)
+
+        #find where path equals number index value
+        t_path, = np.where(path[0] == t_nind)
+        #if more than one location returned grab the first and remove array type
+        if len(t_path) == 0: continue
+
+        #get the other spacecraft's number index to match to the training craft
+        s_path = path[1][t_path] 
+
+        #get the index of dtw value
+        i_min = (np.sum((p_mat.iloc[s_path,:].index - p_mat.iloc[s_path,:].index.min()).to_pytimedelta())
+                /len(p_mat.iloc[s_path,:].index)) + p_mat.iloc[s_path,:].index.min()
+        #calculate the mean absolute difference over the entire range
+        i_std = (np.sum(np.abs((p_mat.iloc[s_path,:].index - t_mat.iloc[t_path,:].index).to_pytimedelta()))/(len(p_mat.iloc[s_path,:].index)^2))
+        i_max = i_min+i_std 
+        i_min = i_min-i_std 
+
+        #plot chi^2 min
+        #if plot: chi_ax.scatter(p_mat.index,p_mat.chisq/p_mat.chisq.min(),label=k,color=color[k],marker=marker[k])
+    
+    #use fine grid around observations to match time offset locally
+    if refine:
+
+        #use magentic field for refinement for ACE, Wind, and DSCOVR
+        if k.lower() != 'soho': par = ['Bx','By','Bz']
+        else: par = ['SPEED']
+
+        #loop and squeeze refinement window
+        for j in range(3):
+            #interatively solve around 1 sigma
+            #2017/12/11 J. Prchlik
+            i_sig = p_mat.loc[p_mat['chisq'] < 2.*p_mat['chisq'].min(),:]
+
+            #looping time around window to try to match
+            t_ref_wid = ref_window[k]/(j+1)
+            #looping range of window size
+            t_ref_chi_t = ref_chi_t/(j+1)
+
+            #get all values in top n_fine at full resolution
+            #p_mat  = plsm[k].loc[i_min-t_ref_wid:i_min+t_ref_wid]
+            #print(p_temp.index.min()-rgh_chi_t,p_temp.index.max()+rgh_chi_t)
+            #interatively solve around 1 sigma
+            #2017/12/11 J. Prchlik
+            p_mat  = plsm[k].loc[i_sig.index.min():i_sig.index.max()]
+ 
+            #add chisq times to p_mat array
+            #first is time index second is chisq value
+            for i in outp: p_mat.loc[i[0],'chisq'] = i[1]
+            #get the index of minimum refined chisq value
+            i_min = p_mat['chisq'].idxmin()
+      
+
+            #get the index of minimum refined chisq value
+            i_min = p_mat['chisq'].idxmin()
+            #plot chi^2 min
+            #if plot: chi_ax.scatter(p_mat.index,p_mat.chisq/p_mat.chisq.min(),label='Ref. {0:1d} {1} '.format(j+1,k),marker=marker[k])
+
+    
+    
+    #set up plot for chi^2 min
+    if plot:
+        chi_ax.legend(loc='best',frameon=False,scatterpoints=1)
+        chi_ax.set_xlim([p_mat_r.index.min()-pd.to_timedelta('30 minutes'),p_mat_r.index.max()+pd.to_timedelta('30 minutes')])
+        chi_ax.set_ylabel('$\chi^2$')
+        chi_ax.set_xlabel('Time [UTC]')
+        #set plot maximum to be 10% higher than the max value
+        #ymax = 1.1*np.nanmax(p_mat.chisq.values/p_mat.chisq.min())
+    
+        ##if ymax > 10 then set ymax to 10
+        #if ymax > 10.: ymax = 10.
+        ymax= 10
+        
+        chi_ax.set_ylim([0.5,ymax])
+        fancy_plot(chi_ax)
+        chi_fig.savefig('../plots/spacecraft_events/chisq/chi_min_{0:%Y%m%d_%H%M%S}_{1}.png'.format(trainer_t,k.lower()),bbox_pad=.1,bbox_inches='tight')
+        #ax.set_ylim([300,1000.])
+        plt.close(chi_fig)
+   
+    #get upper and lower bounds in Chi^2
+
+    #return best fit, 1sigma upper limit, 1 sigma lower limit
+    return i_min,i_upp,i_low
+    
 def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],mar=['D','o','s','<'],
-         use_craft=False,use_chisq=True,use_discon=False,plot=True,refine=True ,verbose=True,nproc=1,p_val=0.999,
+         use_craft=False,use_chisq=True,use_discon=False,use_dtw=False,plot=True,refine=True ,verbose=True,nproc=1,p_val=0.999,
          ref_chi_t = pd.to_timedelta('30 minutes'),rgh_chi_t = pd.to_timedelta('90 minutes'),
          arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_2015_2017_formatted.txt',pls_fmt='{0}_pls_2015_2017_formatted.txt',
          start_t='2017/11/17',end_t='2017/07/31',center=False):
@@ -897,6 +1057,8 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     use_discon: boolean, optional
         Use Chi^2 minimization to find corresponding events between spacecraft, but only set on discontinuities. 
         The Chi^2 minimum value relates to a given spacecraft and the first spacecraft in the craft list (Default = False).
+    use_dwt: boolean, optional
+        Dynamic time warping to find the best off set time (Default= False).
     plot      : boolean, optional
         Plot the Chi^2 minimum values as a function of time for a given spacecraft with respect to the reference spacecraft
         (Default = True). You should keep this parameter on because the output html file references this created file.
@@ -1340,7 +1502,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
             #elif use_chisq:
          
             #use the largets set of discontinuties 
-            elif ((use_discon) | (use_chisq)):
+            elif ((use_discon) | (use_chisq) | (use_dtw)):
                 #parameters if using discontinuity
                 if use_discon:
                      #calculate difference in parameters
@@ -1365,7 +1527,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                      mag_tol = 0.0
 
                 #use chisq minimum of top events in 2 hour window
-                elif use_chisq:
+                elif ((use_chisq) | (use_dtw)):
                     #downsample to 5 minutes for time matching in chisq
                     #remove downsampling J. Prchlik 2017/11/20
                     p_mat_t = p_mat #.resample(downsamp).median()
@@ -1392,8 +1554,14 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                 if (((p_mat_t.size > 0) & (p_mat_t[p_var].max() > mag_tol)) | ((k.lower() == 'soho') & (p_mat_t.size > 0.))):
                 #if ((k.lower() == 'soho') & (p_mat_t.size > 0.)):
     
-                    i_min,i_upp,i_low = chi_min(p_mat_t,['SPEED'],rgh_chi_t,t_plsm,k,window,ref_window,i,color,marker,ref_chi_t=ref_chi_t,
-                                    refine=refine,n_fine=1,plot=plot,nproc=nproc,use_discon=use_discon)
+                    #set up logic for dyanmic time warping minimum
+                    if use_dtw:
+                        i_min,i_upp,i_low = dtw_min(p_mat_t,['SPEED'],rgh_chi_t,t_plsm,k,window,ref_window,i,color,marker,ref_chi_t=ref_chi_t,
+                                        refine=refine,n_fine=1,plot=plot,nproc=nproc,use_discon=use_discon)
+                    #else use chi^2 procedures
+                    else:
+                        i_min,i_upp,i_low = chi_min(p_mat_t,['SPEED'],rgh_chi_t,t_plsm,k,window,ref_window,i,color,marker,ref_chi_t=ref_chi_t,
+                                        refine=refine,n_fine=1,plot=plot,nproc=nproc,use_discon=use_discon)
                     #use full array for index matching
                     p_mat = plsm[k]
     
@@ -1417,8 +1585,14 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                     #sort the cut window and get the top 10 events
                     p_mat_t = p_mag_t
            
-                    i_min,i_upp,i_low = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,t_plsm,k,window,ref_window,i,color,marker,
-                                    ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot,nproc=nproc,use_discon=use_discon)
+                    #set up logic for dyanmic time warping minimum
+                    if use_dtw:
+                        i_min,i_upp,i_low = dtw_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,t_plsm,k,window,ref_window,i,color,marker,ref_chi_t=ref_chi_t,
+                                        refine=refine,n_fine=1,plot=plot,nproc=nproc,use_discon=use_discon)
+                    #else use chi^2 procedures
+                    else:
+                        i_min,i_upp,i_low = chi_min(p_mat_t,['Bx','By','Bz'],rgh_chi_t,t_plsm,k,window,ref_window,i,color,marker,
+                                        ref_chi_t=ref_chi_t,refine=refine,n_fine=1,plot=plot,nproc=nproc,use_discon=use_discon)
     
                     #use full array for index matching
                     p_mat = plsm[k]
