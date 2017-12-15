@@ -954,14 +954,15 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
             c_mat.index = t_mat.index+(trainer_t-i_min)
 
             #if few points for comparison only used baseline offset
-            if good.size < 10.:
+            if ((good.size < 10.) & (par[0] == 'SPEED')):
                 med_m,med_i = 1.0,0.0 
                 off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
                 p_mat.SPEED = p_mat.SPEED-off_speed
+                if med_m > 0: p_mat.SPEED = p_mat.SPEED*med_m+med_i
             else:
-                med_m,med_i,low_s,hgh_s = theilslopes(t_mat.SPEED.values[good],c_mat.SPEED.values[good])
+                off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
+                p_mat.SPEED = p_mat.SPEED-off_speed
             #only apply slope if greater than 0
-            if med_m > 0: p_mat.SPEED = p_mat.SPEED*med_m+med_i
         except IndexError:
         #get median offset to apply to match spacecraft
             off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
