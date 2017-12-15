@@ -244,7 +244,7 @@ def format_df(inpt_df,p_var,span='3600s',center=False):
         span_pls = span
 
     #time cadence parameter to add to plasma and magnetic field time series
-    par_ind_mag = magf_df.del_time_mag.median()**2./60./magf_df.del_time_mag
+    par_ind_mag = magf_df.del_time_mag.median()**2./60./magf_df.del_time_mag*(plsm_df.del_time_pls/magf_df.del_time_mag) #add correction for higher cadence observations
     par_ind_pls = plsm_df.del_time_pls.median()**2./60./plsm_df.del_time_pls
 
     #calculate difference in parameters
@@ -273,9 +273,9 @@ def format_df(inpt_df,p_var,span='3600s',center=False):
     plsm_df['accl_diff_Vth']   = plsm_df.diff_med_Vth-plsm_df.roll_diff_med_Vth
 
     #calculate sigma in plasma parameters from rollin median
-    plsm_df['diff_sig_speed'] = np.sqrt((plsm_df.diff_med_speed**2.).rolling(span_pls,min_periods=3,center=center).median())
-    plsm_df['diff_sig_Np']    = np.sqrt((plsm_df.diff_med_Np   **2.).rolling(span_pls,min_periods=3,center=center).median()) 
-    plsm_df['diff_sig_Vth']   = np.sqrt((plsm_df.diff_med_Vth  **2.).rolling(span_pls,min_periods=3,center=center).median()) 
+    plsm_df['diff_sig_speed'] = np.sqrt((plsm_df.diff_med_speed**2.).rolling(span_pls,min_periods=3,center=False).median())
+    plsm_df['diff_sig_Np']    = np.sqrt((plsm_df.diff_med_Np   **2.).rolling(span_pls,min_periods=3,center=False).median()) 
+    plsm_df['diff_sig_Vth']   = np.sqrt((plsm_df.diff_med_Vth  **2.).rolling(span_pls,min_periods=3,center=False).median()) 
 
     #calculate acceleration in plasma parameters from rolling median
     plsm_df['accl_sig_speed'] = np.sqrt((plsm_df['accl_diff_speed']**2.).rolling(span_pls,min_periods=3,center=center).median()) 
@@ -315,9 +315,9 @@ def format_df(inpt_df,p_var,span='3600s',center=False):
     magf_df['diff_med_Bz'] = magf_df.Bz-magf_df.roll_med_Bz
 
     #calculate sigma in B parameters from rollin median
-    magf_df['diff_sig_Bx'] = np.sqrt((magf_df.diff_med_Bx**2.).rolling(span_mag,min_periods=3,center=center).median())
-    magf_df['diff_sig_By'] = np.sqrt((magf_df.diff_med_By**2.).rolling(span_mag,min_periods=3,center=center).median())
-    magf_df['diff_sig_Bz'] = np.sqrt((magf_df.diff_med_Bz**2.).rolling(span_mag,min_periods=3,center=center).median())
+    magf_df['diff_sig_Bx'] = np.sqrt((magf_df.diff_med_Bx**2.).rolling(span_mag,min_periods=3,center=False).median())
+    magf_df['diff_sig_By'] = np.sqrt((magf_df.diff_med_By**2.).rolling(span_mag,min_periods=3,center=False).median())
+    magf_df['diff_sig_Bz'] = np.sqrt((magf_df.diff_med_Bz**2.).rolling(span_mag,min_periods=3,center=False).median())
 
     #calculate snr in B parameters from rollin median
     #Change to difference in sigma per minute time period 2017/10/31
