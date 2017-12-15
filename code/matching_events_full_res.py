@@ -947,7 +947,8 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         try:
             c_mat.index = t_mat.index+(trainer_t-i_min)
             med_m,med_i,low_s,hgh_s = theilslopes(t_mat.SPEED.values,c_mat.SPEED.values)
-            p_mat.SPEED = p_mat.SPEED*med_m+med_i
+            #only apply slope if greater than 0
+            if med_m > 0: p_mat.SPEED = p_mat.SPEED*med_m+med_i
         except IndexError:
         #get median offset to apply to match spacecraft
             off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
