@@ -244,7 +244,7 @@ def format_df(inpt_df,p_var,span='3600s',center=False):
         span_pls = span
 
     #time cadence parameter to add to plasma and magnetic field time series
-    par_ind_mag = magf_df.del_time_mag.median()**2./60./magf_df.del_time_mag*(plsm_df.del_time_pls/magf_df.del_time_mag) #add correction for higher cadence observations
+    par_ind_mag = magf_df.del_time_mag.median()**2./60./magf_df.del_time_mag*(plsm_df.del_time_pls.median()/magf_df.del_time_mag.median()) #add correction for higher cadence observations
     par_ind_pls = plsm_df.del_time_pls.median()**2./60./plsm_df.del_time_pls
 
     #calculate difference in parameters
