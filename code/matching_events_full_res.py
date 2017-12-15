@@ -923,7 +923,7 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         t_mat  = plsm[trainer].loc[trainer_t-t_rgh_wid:trainer_t+t_rgh_wid]
 
         #use speed for rough esimation if possible
-        if ( (len(t_mat[t_mat['SPEED'] > 0].SPEED) > 10.) | (k.lower() == 'soho')): par = ['SPEED']
+        if ( ((len(t_mat[t_mat['SPEED'] > 0].SPEED) > 10.) & (len(p_mat[p_mat['SPEED'] > 0].SPEED) > 10.)) | (k.lower() == 'soho')): par = ['SPEED']
         else: par = ['Bx','By','Bz']
 
         #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
