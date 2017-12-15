@@ -943,30 +943,32 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         #get the median slope and offset
         #J. Prchlik (2017/11/20)
         #Dont use interpolated time for solving dynamic time warp (J. Prchlik 2017/12/15)
-        try:
-            #create copy of p_mat
-            c_mat = p_mat.copy()
-            #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid to correct offset (2017/12/15 J. Prchlik)
-            c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
+        #only try SPEED corrections for SOHO observations
+        if k.lower() == 'soho':
+            try:
+                #create copy of p_mat
+                c_mat = p_mat.copy()
+                #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid to correct offset (2017/12/15 J. Prchlik)
+                c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
 
-            #only comoare no NaN values
-            good, = np.where(((np.isfinite(t_mat.SPEED.values)) & (np.isfinite(c_mat.SPEED.values))))
-            c_mat.index = t_mat.index+(trainer_t-i_min)
+                #only comoare no NaN values
+                good, = np.where(((np.isfinite(t_mat.SPEED.values)) & (np.isfinite(c_mat.SPEED.values))))
+                c_mat.index = t_mat.index+(trainer_t-i_min)
 
-            #if few points for comparison only used baseline offset
-            if ((good.size < 10.) & (par[0] == 'SPEED')):
-                med_m,med_i = 1.0,0.0 
+                #if few points for comparison only used baseline offset
+                if (((good.size < 10.) & (par[0] == 'SPEED')):
+                    med_m,med_i = 1.0,0.0 
+                    off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
+                    p_mat.SPEED = p_mat.SPEED-off_speed
+                    if med_m > 0: p_mat.SPEED = p_mat.SPEED*med_m+med_i
+                else:
+                    off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
+                    p_mat.SPEED = p_mat.SPEED-off_speed
+                #only apply slope if greater than 0
+            except IndexError:
+            #get median offset to apply to match spacecraft
                 off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
-                p_mat.SPEED = p_mat.SPEED-off_speed
-                if med_m > 0: p_mat.SPEED = p_mat.SPEED*med_m+med_i
-            else:
-                off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
-                p_mat.SPEED = p_mat.SPEED-off_speed
-            #only apply slope if greater than 0
-        except IndexError:
-        #get median offset to apply to match spacecraft
-            off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
-            p_mat.SPEED = p_mat.SPEED-off_speed
+                 = p_mat.SPEED-off_speed
     
 
 
@@ -1011,7 +1013,7 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
 
             #define refined widow as 3*simga
             t_ref_wid = 3*i_std
-            t_ref_pas = i_std
+            t_ref_pas = 2*i_std
 
             #get all values in top n_fine at full resolution
             p_mat  = plsm[k].loc[i_min-t_ref_wid:i_min+t_ref_pas]
