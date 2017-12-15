@@ -937,21 +937,34 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         t_mat.dropna(how='all',subset=par,inplace=True,axis=0)
         p_mat.dropna(how='all',subset=par,inplace=True,axis=0)
 
-        #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid to correct offset (2017/12/15 J. Prchlik)
-        c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
+
 
 
         #get the median slope and offset
         #J. Prchlik (2017/11/20)
         #Dont use interpolated time for solving dynamic time warp (J. Prchlik 2017/12/15)
         try:
+            #create copy of p_mat
+            c_mat = p_mat.copy()
+            #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid to correct offset (2017/12/15 J. Prchlik)
+            c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
+
+            #only comoare no NaN values
+            good, = np.where(((np.isfinite(t_mat.SPEED.values)) & (np.isfinite(c_mat.SPEED.values))))
             c_mat.index = t_mat.index+(trainer_t-i_min)
-            med_m,med_i,low_s,hgh_s = theilslopes(t_mat.SPEED.values,c_mat.SPEED.values)
+
+            #if few points for comparison only used baseline offset
+            if good.size < 10.:
+                med_m,med_i = 1.0,0.0 
+                off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
+                p_mat.SPEED = p_mat.SPEED-off_speed
+            else:
+                med_m,med_i,low_s,hgh_s = theilslopes(t_mat.SPEED.values[good],c_mat.SPEED.values[good])
             #only apply slope if greater than 0
             if med_m > 0: p_mat.SPEED = p_mat.SPEED*med_m+med_i
         except IndexError:
         #get median offset to apply to match spacecraft
-            off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
+            off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
             p_mat.SPEED = p_mat.SPEED-off_speed
     
 
