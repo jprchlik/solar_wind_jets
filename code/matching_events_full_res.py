@@ -937,6 +937,24 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         t_mat.dropna(how='all',subset=par,inplace=True,axis=0)
         p_mat.dropna(how='all',subset=par,inplace=True,axis=0)
 
+        #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid to correct offset (2017/12/15 J. Prchlik)
+        c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
+
+
+        #get the median slope and offset
+        #J. Prchlik (2017/11/20)
+        #Dont use interpolated time for solving dynamic time warp (J. Prchlik 2017/12/15)
+        try:
+            c_mat.index = t_mat.index+(trainer_t-i_min)
+            med_m,med_i,low_s,hgh_s = theilslopes(t_mat.SPEED.values,c_mat.SPEED.values)
+            p_mat.SPEED = p_mat.SPEED*med_m+med_i
+        except IndexError:
+        #get median offset to apply to match spacecraft
+            off_speed = c_mat.SPEED.median()-t_mat.SPEED.median()
+            p_mat.SPEED = p_mat.SPEED-off_speed
+    
+
+
         #get dynamic time warping value   
         dist, cost, path = mlpy.dtw_std(t_mat[par[0]].values,p_mat[par[0]].values,dist_only=False)
         
@@ -1082,7 +1100,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     use_discon: boolean, optional
         Use Chi^2 minimization to find corresponding events between spacecraft, but only set on discontinuities. 
         The Chi^2 minimum value relates to a given spacecraft and the first spacecraft in the craft list (Default = False).
-    use_dwt: boolean, optional
+    use_dtw: boolean, optional
         Dynamic time warping to find the best off set time (Default= False).
     plot      : boolean, optional
         Plot the Chi^2 minimum values as a function of time for a given spacecraft with respect to the reference spacecraft
@@ -1600,7 +1618,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                             #print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
                             out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds(),(i_low-i_min).total_seconds(),p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
     
-                    except KeyError:
+                    except ((KeyError) | (IndexError)):
                         print('Missing Index')
     
     
@@ -1627,7 +1645,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                         out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds(),(i_low-i_min).total_seconds(),p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
     
     
-                    except KeyError:
+                    except ((KeyError) | (IndexError)):
                         print('Missing Index')
            
                 else:
