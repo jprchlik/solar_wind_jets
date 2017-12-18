@@ -946,7 +946,8 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         #J. Prchlik (2017/11/20)
         #Dont use interpolated time for solving dynamic time warp (J. Prchlik 2017/12/15)
         #only try SPEED corrections for SOHO observations
-        if k.lower() == 'soho':
+        #Only apply speed correction after 1 iteration (J. Prchlik 2017/12/18)
+        if ((k.lower() == 'soho') & (j > 0)):
             try:
                 #create copy of p_mat
                 c_mat = p_mat.copy()
