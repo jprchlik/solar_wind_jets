@@ -906,6 +906,8 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
     if plot:
         chi_fig,chi_ax = plt.subplots()
 
+    #scanning array for determining which B component to use for fitting
+    sc_reg = pd.to_timedelta('2 minutes')
 
     #inital guess is no time shift
     i_min = trainer_t
@@ -923,13 +925,13 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         t_mat  = plsm[trainer].loc[trainer_t-t_rgh_wid:trainer_t+t_rgh_wid]
 
         #use speed for rough esimation if possible
-        if ( ((len(t_mat[t_mat['SPEED'] > 0].SPEED) > 10.) & (len(p_mat[p_mat['SPEED'] > 0].SPEED) > 10.)) | (k.lower() == 'soho')): par = ['SPEED']
+        if ( ((len(t_mat[t_mat['SPEED'] > 0].SPEED) > 1000.) & (len(p_mat[p_mat['SPEED'] > 0].SPEED) > 1000.)) | (k.lower() == 'soho')): par = ['SPEED']
         else: par = ['Bx','By','Bz']
 
         #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
         #Try using the parameter with the largest difference  in B values preceding and including the event (2017/12/11 J. Prchlik)
         if len(par) > 1:
-           par_chi = np.array([(t_mat.loc['1950/10/10':trainer_t,par_i].diff().abs().max()) for par_i in par])
+           par_chi = np.array([(t_mat.loc[trainer_t-sc_reg:trainer_t+sc_reg,par_i].diff().abs().max()) for par_i in par])
            use_par, = np.where(par_chi == np.max(par_chi))
            par      = list(np.array(par)[use_par])
 
@@ -956,7 +958,7 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
                 c_mat.index = t_mat.index+(trainer_t-i_min)
 
                 #if few points for comparison only used baseline offset
-                if (((good.size < 10.) & (par[0] == 'SPEED')):
+                if ((good.size < 10.) & (par[0] == 'SPEED')):
                     med_m,med_i = 1.0,0.0 
                     off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
                     p_mat.SPEED = p_mat.SPEED-off_speed
@@ -968,7 +970,7 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
             except IndexError:
             #get median offset to apply to match spacecraft
                 off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
-                 = p_mat.SPEED-off_speed
+                p_mat.SPEED = p_mat.SPEED-off_speed
     
 
 
@@ -1012,8 +1014,8 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         for j in range(3):
 
             #define refined widow as 3*simga
-            t_ref_wid = 3*i_std
-            t_ref_pas = 2*i_std
+            t_ref_wid = 3*i_std#/(j+1)
+            t_ref_pas = 2*i_std#/(j+1)
 
             #get all values in top n_fine at full resolution
             p_mat  = plsm[k].loc[i_min-t_ref_wid:i_min+t_ref_pas]
@@ -1023,13 +1025,42 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
             #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
             #Try using the parameter with the largest difference  in B values preceding and including the event (2017/12/11 J. Prchlik)
             if len(par) > 1:
-               par_chi = np.array([(t_mat.loc[trainer_t-t_ref_wid:trainer_t+t_ref_wid,par_i].diff().abs().max()) for par_i in par])
+               par_chi = np.array([(t_mat.loc[trainer_t-sc_reg:trainer_t+sc_reg,par_i].diff().abs().max()) for par_i in par])
                use_par, = np.where(par_chi == np.max(par_chi))
                par      = list(np.array(par)[use_par])
 
             #dropa na values of index of p_mat and t_mat for given par
             t_mat.dropna(how='all',subset=par,inplace=True,axis=0)
             p_mat.dropna(how='all',subset=par,inplace=True,axis=0)
+            #get the median slope and offset
+            #J. Prchlik (2017/11/20)
+            #Dont use interpolated time for solving dynamic time warp (J. Prchlik 2017/12/15)
+            #only try SPEED corrections for SOHO observations
+            if k.lower() == 'soho':
+                try:
+                    #create copy of p_mat
+                    c_mat = p_mat.copy()
+                    #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid to correct offset (2017/12/15 J. Prchlik)
+                    c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
+
+                    #only comoare no NaN values
+                    good, = np.where(((np.isfinite(t_mat.SPEED.values)) & (np.isfinite(c_mat.SPEED.values))))
+                    c_mat.index = t_mat.index+(trainer_t-i_min)
+
+                    #if few points for comparison only used baseline offset
+                    if ((good.size < 10.) & (par[0] == 'SPEED')):
+                        med_m,med_i = 1.0,0.0 
+                        off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
+                        p_mat.SPEED = p_mat.SPEED-off_speed
+                        if med_m > 0: p_mat.SPEED = p_mat.SPEED*med_m+med_i
+                    else:
+                        off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
+                        p_mat.SPEED = p_mat.SPEED-off_speed
+                    #only apply slope if greater than 0
+                except IndexError:
+                    #get median offset to apply to match spacecraft
+                    off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
+                    p_mat.SPEED = p_mat.SPEED-off_speed
 
             #do no addition refinement if window is smaller than 5 points
             if ((len(p_mat) < 5) | (len(t_mat) < 5)): continue
