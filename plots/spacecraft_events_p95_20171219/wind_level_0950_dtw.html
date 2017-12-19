@@ -18,22 +18,32 @@
                 <body>
                 
                 <h1>
-                Finding &chi;<sup>2</sup> Minimization 
+                Finding Optimal Time Offset 
                 </h1>
                 </br>
                 </br>
                 <p1>
-                The program for finding the &chi;<sup>2</sup> minimum for events between spacecraft works by using a primary spacecraft to find events.
+                The program for finding optimal time offsets for events between spacecraft works by using a primary spacecraft to find events (Wind).
                 I selected Wind because I used Wind to train the model, and the events found in Wind are consistent with events found by eye or independent spacecraft 
                 algorithms. I define an event discontinuity as a time where our model indicates a 95.00% probability the solar wind parameters corresponds to a 5&sigma;
-                discontinuity in a component of the magnetic field. Then I create a course grid of solar wind speed samples for &plusmn; 40 minutes around a event.
-                Currently, I find 207 events using the Wind spacecraft to define an event. Then I shift 
-                the other 3 spacecraft onto the Wind using the course grid. Then I select a 80 minute (&plusmn;40 minutes) window around the shifted Wind and other spacecraft and derive a first order
-                &chi;<sup>2</sup> minimum. Using the first order &chi;<sup>2</sup> minimum, I create a fine grid 50 minutes (&plusmn; 25 minutes) around the rough &chi;<sup>2</sup> minimum
-                time. The fine grid cadence is set to the maximum sampling frequency of a given spacecraft. Then the program stores the &chi;<sup>2</sup> value for 20 minutes (&plusmn; 10 minutes)
-                around each fine grid point. However, if the first or last point is the &chi;<sup>2</sup> min. then the program expands the time search window by 20 minutes.
-                The &chi;<sup>2</sup> reported is the minimum from the time grid.
+                discontinuity in a component of the magnetic field.
+                Currently, the program finds 207 events using the Wind spacecraft to define an event between 2015/06/04-2017/09/24 (2.25 years).  
                 </p1>
+
+                <p2>
+                After the code finds an event,  
+                the code tries to match plasma and magnetic field parameters from the other three spacecraft (ACE, DSCOVR, and SOHO/CELIAS).
+                Initially, the program uses a 60 minute search window to find the best time offset between the training spacecraft (Wind) 
+                and the pupil spacecrafts (ACE, DSCOVR, SOHO/CELIAS). The 60 minute window returns a rough time offset between the pupil and 
+                trainer spacecraft. Then pupil shifts to the trainer spacecraft and recomputes the time offset using a 30 minute window, which
+                is the rough time offset. Then using the rough offset, the code iteratively solves a refined time offset. The refined time 
+                offset comes from 3 iterations of a 3/2 &sigma; cut preceding/following the event time. The 3/2 squeezing ratio stems for considerable
+                noise (perhaps physical) after a discontinuity. Therefore, the optimal time prefers agreement before the event rather than after. Finally,
+                after 3 iterations the code computes the offset at the discontinuity point and uncertainty from the variation in time offsets in the window. 
+                Each refinement method uses Dynamic Time Warping (DTW), which finds the minimum cost between two similar time series. The results improve 
+                the &chi;<sup>2</sup> results, and DTW preforms the analysis approximately a factor of 20 quicker than the 
+                &chi;<sup>2</sup> meathod (20 seconds compared to 600 seconds per event). 
+                </p2>
     
                 </br>
                 </br>
@@ -44,8 +54,8 @@
                 given row. Then next column (Obs. Time [UT]) gives the time of the "event" in the reference frame of the spacecraft. Offset is the offset in minutes from the Wind observation.
                 P-val (plasma) is the p-val for a 5&sigma; discontinuity at the reference Obs. time for a given spacecraft's measured plasma values. 
                 P-val (mag.) is the p-val for a 5&sigma; discontinuity given at the reference Obs. time for a given spacecraft's measured magnetic field values.
-                Finally, an X in Use Plasma Mod. means the minimization routine use the wind Speed to find the best match &chi;<sup>2</sup> time,
-                while an empty cell denotes using the magnetic field. Clicking on the spacecraft shows the &chi;<sup>2</sup> minimization as a function of time for 
+                while an empty cell denotes using the magnetic field. Clicking on the spacecraft shows the DTW convergence as a function of iteration number for 
+                Finally, an X in Use Plasma Mod. means the minimization routine use the wind Speed to find the best match (deprecated functionality),
                 the wide and refined windows.
         
                 </br>
