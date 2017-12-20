@@ -1308,14 +1308,16 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     #attempting to pick one event at a time J. Prchlik (2017/10/30) (Did not work as 1pm of the same day)
     #tr_events = tr_events[~tr_events.duplicated(['str_hour'],keep = 'first')]
     #loop over events and get best probability for event within 1 hour
-    tr_events['group'] = range(tr_events.index.size)
-    for i in tr_events.index:
-        tr_events['t_off'] = abs((i-tr_events.index).total_seconds())
-        match = tr_events[tr_events['t_off'] < 3600.] #anytime where the offest is less than 1 hour 
-        tr_events.loc[match.index,'group'] = match.group.values[0]
-    
-    #use groups to cut out duplicates
-    tr_events = tr_events[~tr_events.duplicated(['group'],keep = 'first')]
+    #only do if center == False (2017/12/20 J. Prchlik)
+    if center == False:
+        tr_events['group'] = range(tr_events.index.size)
+        for i in tr_events.index:
+            tr_events['t_off'] = abs((i-tr_events.index).total_seconds())
+            match = tr_events[tr_events['t_off'] < 3600.] #anytime where the offest is less than 1 hour 
+            tr_events.loc[match.index,'group'] = match.group.values[0]
+        
+        #use groups to cut out duplicates
+        tr_events = tr_events[~tr_events.duplicated(['group'],keep = 'first')]
     
     #For an hour around an event find the minimum time to get a precise break point using a 10% lower prob. threshold
     #search window for the star
