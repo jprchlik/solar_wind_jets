@@ -993,9 +993,15 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         #get the index of dtw value
         i_min = (np.sum((p_mat.iloc[s_path,:].index - p_mat.iloc[s_path,:].index.min()).to_pytimedelta())
                 /len(p_mat.iloc[s_path,:].index)) + p_mat.iloc[s_path,:].index.min()
-        #calculate the mean absolute difference over the entire range
-        i_std = (np.sum(np.abs((p_mat.iloc[path[1],:].index - t_mat.iloc[path[0],:].index 
-                 + (trainer_t-i_min)).to_pytimedelta()))/(len(t_mat.iloc[path[0],:].index)^2))
+        #calculate the mean absolute difference over the entire range 2017/12/20 J. Prchlik
+        #calculate the mean absolute difference over the inner 10 pixels (2*err_wid[error window])
+        #2017/12/20 J. Prchlik 
+        err_wid = 5
+        i_std = (np.sum(np.abs((p_mat.iloc[path[1]].index - t_mat.iloc[path[0]].index 
+                 + (trainer_t-i_min)).to_pytimedelta()[t_path[0]-err_wid:t_path[0]+err_wid]))/((2*err_wid)**2))
+
+        #Convert back to py time delta
+        i_std = pd.to_timedelta(i_std)
         #calculate upper and lower limits
         i_upp = i_min+i_std 
         i_low = i_min-i_std 
@@ -1309,7 +1315,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     #tr_events = tr_events[~tr_events.duplicated(['str_hour'],keep = 'first')]
     #loop over events and get best probability for event within 1 hour
     #only do if center == False (2017/12/20 J. Prchlik)
-    if center == False:
+    if ((center == False) | (center)):
         tr_events['group'] = range(tr_events.index.size)
         for i in tr_events.index:
             tr_events['t_off'] = abs((i-tr_events.index).total_seconds())
@@ -1319,15 +1325,15 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
         #use groups to cut out duplicates
         tr_events = tr_events[~tr_events.duplicated(['group'],keep = 'first')]
     
-    #For an hour around an event find the minimum time to get a precise break point using a 10% lower prob. threshold
-    #search window for the star
-    s_wind = pd.to_timedelta('30 minutes')
-    for i in tr_events.index:
-          temp_events = plsm[trainer][i-s_wind:i+s_wind][plsm[trainer][i-s_wind:i+s_wind][p_var] >.90]
-          tr_events.loc[i,:] = temp_events.loc[temp_events.index.min(),:]
-    
-    #reset index with new plasma time value
-    tr_events.set_index(tr_events.time_dt_pls,inplace=True)
+        #For an hour around an event find the minimum time to get a precise break point using a 10% lower prob. threshold
+        #search window for the star
+        s_wind = pd.to_timedelta('30 minutes')
+        for i in tr_events.index:
+              temp_events = plsm[trainer][i-s_wind:i+s_wind][plsm[trainer][i-s_wind:i+s_wind][p_var] > p_val]
+              tr_events.loc[i,:] = temp_events.loc[temp_events.index.min(),:]
+        
+        #reset index with new plasma time value
+        tr_events.set_index(tr_events.time_dt_pls,inplace=True)
     
     
     #space craft to match with trainer soho
