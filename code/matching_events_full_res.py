@@ -907,7 +907,7 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         chi_fig,chi_ax = plt.subplots()
 
     #scanning array for determining which B component to use for fitting
-    sc_reg = pd.to_timedelta('2 minutes')
+    sc_reg = pd.to_timedelta('3 minutes')
 
     #inital guess is no time shift
     i_min = trainer_t
@@ -931,7 +931,7 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
         #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
         #Try using the parameter with the largest difference  in B values preceding and including the event (2017/12/11 J. Prchlik)
         if len(par) > 1:
-           par_chi = np.array([(t_mat.loc[trainer_t-sc_reg:trainer_t+sc_reg,par_i].diff().abs().max()) for par_i in par])
+           par_chi = np.array([(t_mat.loc[trainer_t-sc_reg:trainer_t+sc_reg,par_i].max()-t_mat.loc[trainer_t-sc_reg:trainer_t+sc_reg,par_i].min()).max() for par_i in par])
            use_par, = np.where(par_chi == np.max(par_chi))
            par      = list(np.array(par)[use_par])
 
@@ -1022,11 +1022,16 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
             p_mat  = plsm[k].loc[i_min-t_ref_wid:i_min+t_ref_pas]
             t_mat  = plsm[trainer].loc[trainer_t-t_ref_wid:trainer_t+t_ref_pas]
 
+            #Make sure both spacecraft have observations in range (Only do after rough calculations
+            # 2017/12/20 J. Prchlik
+            p_mat  = plsm[k].loc[t_mat.index.min():t_mat.index.max()]
+            t_mat  = plsm[trainer].loc[p_mat.index.min():p_mat.index.max()]
+
 
             #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
             #Try using the parameter with the largest difference  in B values preceding and including the event (2017/12/11 J. Prchlik)
             if len(par) > 1:
-               par_chi = np.array([(t_mat.loc[trainer_t-sc_reg:trainer_t+sc_reg,par_i].diff().abs().max()) for par_i in par])
+               par_chi = np.array([(t_mat.loc[trainer_t-sc_reg:trainer_t+sc_reg,par_i].max()-t_mat.loc[trainer_t-sc_reg:trainer_t+sc_reg,par_i].min()).max() for par_i in par])
                use_par, = np.where(par_chi == np.max(par_chi))
                par      = list(np.array(par)[use_par])
 
