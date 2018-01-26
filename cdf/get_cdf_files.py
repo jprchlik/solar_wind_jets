@@ -78,8 +78,14 @@ def download_files(craft,param,archive,years,start,end):
 
     #ftp connection
     ftp = ftplib.FTP(archive.split('/')[2],'anonymous')
+
+    #separator to join archive string back
+    sep = '/'
+
+    #change to base directory
+    ftp.cwd(sep.join(archive.split('/')[3:]))
     try:
-        grab_files(a_dir,year,start,end,ftp)
+        grab_files(craft,param,years,start,end,ftp)
     except:
         print('FTP connection failed unexpectly. Closing connection',sys.exc_info()[0])
     #close ftp connection
