@@ -95,7 +95,30 @@ def download_files(craft,param,archive,years,start,end):
 #Main function to run
 def main(f_types=['mag','plsm','orb'],space_c=['ace','dscovr','wind'],
          archive='ftp://cdaweb.gsfc.nasa.gov/pub/data/',start=datetime(2015,6,1),end=None,
-         nproc=6):
+         nproc=1):
+    '''
+    Python module for downloading cdf files from ftp archive to your local machine.
+    
+    Parameters:
+    ----------
+    f_types: list, optional
+        List of parameters to download for ftp archive (default = ['mag','plsm','orb').
+        Currently only accepts 'mag', 'plsm', and/or 'orb'.
+    space_c: list, optional 
+        List of spacecraft to download data for (default = ['ace','dscovr','wind']). 
+        Currently only accepts 'ace', 'dscovr', and/or 'wind'.
+    archive: string, optional
+        String containing the base location of the ftp archive (default = 'ftp://cdaweb.gsfc.nasa.gov/pub/data/').
+    start: datetime object, optional
+        The start time to look for solar wind observations. Currently only uses year (Default = datetime(2015,6,1).
+    end  : datetime object, optional
+        The end tiem to look for solar wind observations. Currenly only uses year (Default = None).
+        If end = None then program will get the current UTC year.
+    nproc: int, optional
+        Number of processors to you to download files (Default = 1).
+   
+
+    '''
 
 
     #if end time is not specified set now to end date
