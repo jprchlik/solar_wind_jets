@@ -3,6 +3,7 @@ import urllib
 from datetime import datetime,timedelta
 import itertools
 import sys,os
+from multiprocessing import Pool
 
 
 def set_directory(craft,param):
@@ -120,5 +121,11 @@ def main(f_types=['mag','plsm','orb'],space_c=['ace','dscovr','wind'],
             print('Directory Already Exists. Proceeding...')
         input_list.append([i[0],i[1],archive,years,start,end])
 
-    #loop and download files
-    for i in input_list: download_files_wrapper(i)
+    #loop and download files if nproc less than 2 otherwise download in parellel
+    if nproc < 2:
+        for i in input_list: download_files_wrapper(i)
+    else:
+        pool = Pool(processes=nproc)
+        outp = pool.map(download_files_wrapper,input_list)
+        pool.close()
+        pool.join()
