@@ -2,6 +2,8 @@ from spacepy import pycdf
 import numpy as np
 import pandas as pd
 from glob import glob
+import os,sys
+import pandas as pd
 
 from multiprocessing import Pool
 
@@ -36,13 +38,13 @@ def looper(s_idx):
         pls_key = ['Epoch','SPEED','Np','THERMAL_SPD','DQF']
 
     #Get magnetic and plasma cdf files
-    fpls = glob(archive+'*20170[8-9]*cdf')
-    fmag = glob(mrchive+'*k1*cdf')
+    fpls = glob(archive+'**cdf')
+    fmag = glob(mrchive+'*h0*cdf')
     
     #convert to textfile
     #Commented to fix time error J. Prchlik 2017/11/14
     #just ace currupted magnetic field observations
-    #cdf_to_text(fpls,pls_key,sc1,'pls')
+    cdf_to_text(fpls,pls_key,sc1,'pls')
     #commented out J. Prchlik 2017/11/14 to fix wrong Vth in ACE
     cdf_to_text(fmag,mag_key,sc1,'mag')
 
@@ -66,44 +68,93 @@ def cdf_to_text(f_list,keys,craft,context):
     #output format
     out_fmt = '{0:%Y/%m/%dT%H:%M:%S}  {2:15.2f}  {3:15.2f}  {4:15.2f}             {1}\n'
 
-    #output text file
-    out_fil = open('{0}_{1}_2017_2017_formatted.txt'.format(craft,context),'w')
+    #get name of output file
+    out_fil = '{0}_{1}_2015_2017_formatted.txt'.format(craft,context)
 
+    #see if output file already exists
+    out_chk = os.path.isfile(out_fil)
 
-    #write header
-    out_fil.write(out_hdr.format(*header))
+    #if file exists read in the file
+    if out_chk: 
+        tab = pd.read_table(out_fil,delim_whitespace=True)
+        #create datetime objects from time
+        tab['Time'] = pd.to_datetime(tab['Time'])
+        #setup index
+        #tab.set_index(tab.time_dt,inplace=True)
 
-   
+    #create new table
+    else:
+        tab = pd.DataFrame(columns=header)
+    #out_fil = open('{0}_{1}_2017_2017_formatted.txt'.format(craft,context),'w')
+
+    ###write header
+    #out_fil.write(out_hdr.format(*header))
+
+    #day text 
+    day_txt = tab.Time.dt.strftime('%Y%m%d')
 
     #loop over all files and write text file
     for i in f_list:
 
+        #get day of observation
+        day = i.split('_')[-2]
+ 
+        #check if day is already in file
+        day_chk = (day_txt == day).any()
+   
+        #if day already exists continue in loop
+        if day_chk: continue
+     
         #read cdffile
         cdf = pycdf.CDF(i)
 
 
         #loop through cdf and write
+        ####SWITCH TO PANDAS Tabling 2018/01/26 (J. Prchlik)
+        ####if ((context == 'pls') & (craft == 'wind')):
+        ####    for k,j in enumerate(cdf[keys[0]][...]): out_fil.write(out_fmt.format(j,int(cdf[keys[4]][k]),float(cdf[keys[1]][k]),float(cdf[keys[2]][k]),float(cdf[keys[3]][k])))
+        ####elif ((context == 'pls') & (craft == 'dscovr')):
+        ####    SPEED = np.sqrt(np.sum(cdf['V_GSE'][...]**2,axis=1))
+        ####    for k,j in enumerate(cdf[keys[0]][...]): out_fil.write(out_fmt.format(j,int(cdf[keys[4]][k]),SPEED[k],float(cdf[keys[2]][k]),float(cdf[keys[3]][k])))
+        ####elif ((context == 'pls') & (craft == 'ace')):
+        ####    SPEED = np.sqrt(np.sum(cdf['V_GSE'][...]**2,axis=1))
+        ####    Vth   = 1.E-3*np.sqrt(2.*kb/mp*cdf[keys[3]][...]) #convert Thermal Temp to Speed
+        ####    for k,j in enumerate(cdf[keys[0]][...]): out_fil.write(out_fmt.format(j,int(cdf[keys[4]][k]),SPEED[k],float(cdf[keys[2]][k]),float(Vth[k])))
+        ####elif ((context == 'mag') & (craft == 'wind')):
+        ####    #decrease the wind cadence 10 s in magfield
+        ####    loopers = range(0,len(cdf[keys[0]][...]),90) 
+        ####    for k in loopers: out_fil.write(out_fmt.format(cdf[keys[0]][k][0],int(cdf[keys[2]][k]),(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]))
+        ####elif ((context == 'mag') & (craft == 'dscovr')):
+        ####    #decrease the wind cadence 10 s in magfield
+        ####    loopers = range(0,len(cdf[keys[0]][...]),10) 
+        ####    for k in loopers: out_fil.write(out_fmt.format(cdf[keys[0]][k],int(cdf[keys[2]][k]),(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]))
+        ####elif ((context == 'mag') & (craft == 'ace')):
+        ####    #for k,j in enumerate(cdf[keys[0]][...]): out_fil.write(out_fmt.format(j,int(cdf[keys[2]][k]),(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]))
+        ####    #Hacked for k1 observations
+        ####    for k,j in enumerate(cdf[keys[0]][...]): out_fil.write(out_fmt.format(j,int(0),(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]))
         if ((context == 'pls') & (craft == 'wind')):
-            for k,j in enumerate(cdf[keys[0]][...]): out_fil.write(out_fmt.format(j,int(cdf[keys[4]][k]),float(cdf[keys[1]][k]),float(cdf[keys[2]][k]),float(cdf[keys[3]][k])))
+            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,float(cdf[keys[1]][k]),float(cdf[keys[2]][k]),float(cdf[keys[3]][k]),int(cdf[keys[4]][k])]
         elif ((context == 'pls') & (craft == 'dscovr')):
             SPEED = np.sqrt(np.sum(cdf['V_GSE'][...]**2,axis=1))
-            for k,j in enumerate(cdf[keys[0]][...]): out_fil.write(out_fmt.format(j,int(cdf[keys[4]][k]),SPEED[k],float(cdf[keys[2]][k]),float(cdf[keys[3]][k])))
+            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(cdf[keys[3]][k]),int(cdf[keys[4]][k])]
         elif ((context == 'pls') & (craft == 'ace')):
             SPEED = np.sqrt(np.sum(cdf['V_GSE'][...]**2,axis=1))
             Vth   = 1.E-3*np.sqrt(2.*kb/mp*cdf[keys[3]][...]) #convert Thermal Temp to Speed
-            for k,j in enumerate(cdf[keys[0]][...]): out_fil.write(out_fmt.format(j,int(cdf[keys[4]][k]),SPEED[k],float(cdf[keys[2]][k]),float(Vth[k])))
+            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(Vth[k]),0]
         elif ((context == 'mag') & (craft == 'wind')):
             #decrease the wind cadence 10 s in magfield
             loopers = range(0,len(cdf[keys[0]][...]),90) 
-            for k in loopers: out_fil.write(out_fmt.format(cdf[keys[0]][k][0],int(cdf[keys[2]][k]),(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]))
+            for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k][0],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
         elif ((context == 'mag') & (craft == 'dscovr')):
             #decrease the wind cadence 10 s in magfield
             loopers = range(0,len(cdf[keys[0]][...]),10) 
-            for k in loopers: out_fil.write(out_fmt.format(cdf[keys[0]][k],int(cdf[keys[2]][k]),(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]))
+            for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
         elif ((context == 'mag') & (craft == 'ace')):
-            #for k,j in enumerate(cdf[keys[0]][...]): out_fil.write(out_fmt.format(j,int(cdf[keys[2]][k]),(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]))
+            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
             #Hacked for k1 observations
-            for k,j in enumerate(cdf[keys[0]][...]): out_fil.write(out_fmt.format(j,int(0),(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]))
+            #Undone 2018/01/26 (J. prchlik)
+            #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,int(0),(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
+
 
 
 
@@ -112,7 +163,12 @@ def cdf_to_text(f_list,keys,craft,context):
  
 
     #close output file
-    out_fil.close()
+    ####SWITCH TO PANDAS Tabling 2018/01/26 (J. Prchlik)
+    #out_fil.close()
+    tab.fillna(-9999.9,inplace=True)
+    tab['Time'] = pd.to_datetime(tab['Time'])
+    tab.sort_values('Time',inplace=True)
+    tab.to_csv(out_fil,index=None,sep=' ')
 
 
 #loop over spacecraft
@@ -122,6 +178,7 @@ def cdf_to_text(f_list,keys,craft,context):
 ids = [0,1,2]
 
 #Do in parallel
+#Now should check to see if day alreay exists before editing file
 #pool = Pool(processes=3)
 #out  = pool.map(looper,ids)
 #pool.close()
