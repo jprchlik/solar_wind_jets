@@ -93,6 +93,9 @@ def cdf_to_text(f_list,keys,craft,context):
     #day text 
     day_txt = tab.Time.dt.strftime('%Y%m%d')
 
+    #Wether or not to write out a new file at the end
+    write_out = False
+
     #loop over all files and write text file
     for i in f_list:
 
@@ -104,6 +107,9 @@ def cdf_to_text(f_list,keys,craft,context):
    
         #if day already exists continue in loop
         if day_chk: continue
+
+        #If you get this far write out a new file because it means there is a new cdf
+        write_out = True
      
         #read cdffile
         cdf = pycdf.CDF(i)
@@ -164,11 +170,13 @@ def cdf_to_text(f_list,keys,craft,context):
 
     #close output file
     ####SWITCH TO PANDAS Tabling 2018/01/26 (J. Prchlik)
+    #Only do if there is a reason to write out a given file (2018/01/29) J. Prchlik
     #out_fil.close()
-    tab.fillna(-9999.9,inplace=True)
-    tab['Time'] = pd.to_datetime(tab['Time'])
-    tab.sort_values('Time',inplace=True)
-    tab.to_csv(out_fil,index=None,sep=' ')
+    if write_out:
+        tab.fillna(-9999.9,inplace=True)
+        tab['Time'] = pd.to_datetime(tab['Time'])
+        tab.sort_values('Time',inplace=True)
+        tab.to_csv(out_fil,index=None,sep=' ')
 
 
 #loop over spacecraft
@@ -179,13 +187,13 @@ ids = [0,1,2]
 
 #Do in parallel
 #Now should check to see if day alreay exists before editing file
-#pool = Pool(processes=3)
-#out  = pool.map(looper,ids)
-#pool.close()
+pool = Pool(processes=3)
+out  = pool.map(looper,ids)
+pool.close()
 #pool.join()
 
 #just ace to fix wrong thermal speed
 #just ace currupted magnetic field observations
-looper(1)
+#looper(1)
 
 #for s_idx in range(3): looper(s_idx)
