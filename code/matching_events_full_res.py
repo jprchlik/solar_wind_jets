@@ -1141,6 +1141,13 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     Function which finds solar wind events in a specific spacecraft. Then the program does a Chi^2 minimization to find the event
     in the other spacecraft. In doing so it creates a series of plots and a html table to summarize the results.
 
+    Usage
+    ----------
+    Example:
+    python> import matching_events_full_res as fr
+    python> import pandas as pd
+    python> fr.main(nproc=1,p_val=0.950,use_chisq=False,use_discon=False,use_dtw=True ,rgh_chi_t=pd.to_timedelta('50 minutes'),refine=False,start_t='2016/06/04',end_t='2017/09/14',plot=True ,center=True)
+
     Parameters
     -----------
     craft: list, optional
