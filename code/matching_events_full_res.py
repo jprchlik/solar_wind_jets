@@ -29,14 +29,15 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag
     arch: string, optional
         The archive location for the text file to read in (Default = '../cdf/cdftotxt/')
     mag_fmt: string, optional
-        The file format for the magnetic field observations (Default = '{0}_mag_formatted.txt',
+        The file format for the magnetic field observations (Default = '{0}_mag_2015_2017_formatted.txt',
         where 0 is the formatted k).
     pls_fmt: string, optional
-        The file format for the plasma observations (Default = '{0}_pls_formatted.txt',
+        The file format for the plasma observations (Default = '{0}_pls_2015_2017_formatted.txt',
         where 0 is the formatted k).
     center = boolean, optional
         Whether the analyzed point to be center focused (center = True) or right focus (Default = False).
-        Using a right focused model I find better agreement with event found by eye.
+        Center focus gives you a better localized point, however, the model is trained with a right focus
+        in order to reject spikes and increase S/N.
     start_t: string, optional
         Date in YYYY/MM/DD format to start looking for events (Default = '2016/06/04')
     start_t: string, optional
