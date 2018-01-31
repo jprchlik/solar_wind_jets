@@ -30,23 +30,29 @@ def looper(s_idx):
     if sc1 == 'wind':
         mag_key = ['Epoch','BGSE','SPC_MODE']
         pls_key = ['Epoch','Proton_V_nonlin','Proton_Np_nonlin','Proton_W_nonlin','fit_flag']
+        orb_key = ['Epoch','GSE_POS']
     if sc1 == 'ace':
         mag_key = ['Epoch','BGSEc','Q_FLAG']
         pls_key = ['Epoch','SPEED','Np','Tpr','alpha_ratio']
+        orb_key = ['Epoch','XYZ_GSE']
     if sc1 == 'dscovr':
         mag_key = ['Epoch1','B1GSE','FLAG1']
         pls_key = ['Epoch','SPEED','Np','THERMAL_SPD','DQF']
+        orb_key = ['Epoch','GSE_POS']
 
     #Get magnetic and plasma cdf files
-    fpls = glob(archive+'**cdf')
+    fpls = glob(archive+'*cdf')
     fmag = glob(mrchive+'*h0*cdf')
+    forb = glob(orchive+'*or*cdf')
     
     #convert to textfile
     #Commented to fix time error J. Prchlik 2017/11/14
     #just ace currupted magnetic field observations
     cdf_to_text(fpls,pls_key,sc1,'pls')
-    #commented out J. Prchlik 2017/11/14 to fix wrong Vth in ACE
+    ##commented out J. Prchlik 2017/11/14 to fix wrong Vth in ACE
     cdf_to_text(fmag,mag_key,sc1,'mag')
+    #Add orbital files 2018/01/31 J. Prchlik
+    cdf_to_text(fmag,mag_key,sc1,'orb')
 
 #function to create pandas dataframe
 def cdf_to_text(f_list,keys,craft,context):
@@ -61,6 +67,8 @@ def cdf_to_text(f_list,keys,craft,context):
         header = ['Time','SPEED','Np','Vth','DQF']
     elif context == 'mag':
         header = ['Time','Bx','By','Bz','DQF']
+    elif context == 'orb':
+        header = ['Time','GSEx','GSEy','GSEz']
 
 
     #output header
@@ -80,18 +88,19 @@ def cdf_to_text(f_list,keys,craft,context):
         #create datetime objects from time
         tab['Time'] = pd.to_datetime(tab['Time'])
         #setup index
+        #day text 
+        day_txt = tab.Time.dt.strftime('%Y%m%d')
+
         #tab.set_index(tab.time_dt,inplace=True)
 
     #create new table
     else:
         tab = pd.DataFrame(columns=header)
+        day_txt = np.array(['17760704','19580102'])
     #out_fil = open('{0}_{1}_2017_2017_formatted.txt'.format(craft,context),'w')
 
     ###write header
     #out_fil.write(out_hdr.format(*header))
-
-    #day text 
-    day_txt = tab.Time.dt.strftime('%Y%m%d')
 
     #Wether or not to write out a new file at the end
     write_out = False
@@ -160,7 +169,13 @@ def cdf_to_text(f_list,keys,craft,context):
             #Hacked for k1 observations
             #Undone 2018/01/26 (J. prchlik)
             #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,int(0),(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
-
+        #Added orbital files 2018/01/31 J. Prchlik
+        elif ((context == 'orb') & (craft == 'wind')):
+            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
+        elif ((context == 'orb') & (craft == 'dscovr')):
+            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
+        elif ((context == 'orb') & (craft == 'ace')):
+            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
 
 
 
@@ -190,7 +205,7 @@ ids = [0,1,2]
 pool = Pool(processes=3)
 out  = pool.map(looper,ids)
 pool.close()
-#pool.join()
+pool.join()
 
 #just ace to fix wrong thermal speed
 #just ace currupted magnetic field observations
