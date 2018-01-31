@@ -10,7 +10,8 @@ def set_directory(craft,param):
 
     #ACE directories
     if ((craft == 'ace') & (param == 'orb')):
-        a_dir = 'ace/orbit/level_2_cdaweb/def_at/'
+        #Updated to orbit rather than atitude 2018/01/31 J. Prchlik
+        a_dir = 'ace/orbit/level_2_cdaweb/or_ssc/'
     elif ((craft == 'ace') & (param == 'mag')):
         a_dir = 'ace/mag/level_2_cdaweb/mfi_h0/'
     elif ((craft == 'ace') & (param == 'plsm')):
@@ -18,7 +19,8 @@ def set_directory(craft,param):
 
     #DSCOVR directories
     elif ((craft == 'dscovr') & (param == 'orb')):
-        a_dir = 'dscovr/orbit/def_at/'
+        #Updated to orbit rather than atitude 2018/01/31 J. Prchlik
+        a_dir = 'dscovr/orbit/pre_or/'
     elif ((craft == 'dscovr') & (param == 'mag')):
         a_dir = 'dscovr/h0/mag/'
     elif ((craft == 'dscovr') & (param == 'plsm')):
@@ -26,7 +28,8 @@ def set_directory(craft,param):
 
    #Wind directories
     elif ((craft == 'wind') & (param == 'orb')):
-        a_dir = 'wind/orbit/pre_at/'
+        #Updated to orbit rather than atitude 2018/01/31 J. Prchlik
+        a_dir = 'wind/orbit/pre_or/'
     elif ((craft == 'wind') & (param == 'mag')):
         a_dir = 'wind/mfi/mfi_h2/'
     elif ((craft == 'wind') & (param == 'plsm')):
