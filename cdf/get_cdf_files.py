@@ -59,7 +59,11 @@ def grab_files(craft,param,year,start,end,ftp):
     #loop over all years and look for files
     for i in year:
         #get list of files in directory
-        f_list = ftp.nlst('{0:4d}/*cdf'.format(i))
+        #Ace orbital files are not in year subdirectories so just search given directory
+        if ((craft != 'ace') & (param != 'orb')):
+            f_list = ftp.nlst('{0:4d}/*cdf'.format(i))
+        else:
+            f_list = ftp.nlst('*cdf'.format(i))
         #get just file names and check if they exist locally
         for f_name in f_list:
             #get local name for file
@@ -88,10 +92,10 @@ def download_files(craft,param,archive,years,start,end):
 
     #change to base directory
     ftp.cwd(sep.join(archive.split('/')[3:]))
-    try:
-        grab_files(craft,param,years,start,end,ftp)
-    except:
-        print('FTP connection failed unexpectly. Closing connection',sys.exc_info()[0])
+    #try:
+    grab_files(craft,param,years,start,end,ftp)
+   # except:
+    #    print('FTP connection failed unexpectly. Closing connection',sys.exc_info()[0],craft,param)
     #close ftp connection
     ftp.close()
 
