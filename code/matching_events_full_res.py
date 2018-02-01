@@ -70,6 +70,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
         #setup index
         pls.set_index(pls.time_dt_pls,inplace=True)
         mag.set_index(mag.time_dt_mag,inplace=True)
+        orb.set_index(orb.time_dt_orb,inplace=True)
 
         #cut for testing reasons
         pls = pls[start_t:end_t]
@@ -104,7 +105,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
         plsm[cols] = plsm[cols].apply(pd.to_numeric, errors='coerce')
 
         #add Time string
-        plsm['Time'] = com_df.index.to_datetime().strftime('%Y/%m/%dT%H:%M:%S')
+        plsm['Time'] = plsm.index.to_datetime().strftime('%Y/%m/%dT%H:%M:%S')
 
         #fill undersampled orbit
         for cor in ['x','y','z']: plsm['GSE'+cor].interpolate(inplace=True)
@@ -128,6 +129,8 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
         #chane column name from X, Y, Z to GSEx, GSEy, GSEz 
         plsm.rename(columns={'X':'GSEx', 'Y':'GSEy', 'Z':'GSEz'},inplace=True)
 
+    #force index to sort
+    plsm.sort_index(inplace=True)
     #for rekeying later
     plsm['craft'] = k
 
@@ -1342,6 +1345,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     pool.terminate()
     pool.close()
     pool.join()
+    #for k in craft: par_read_in(k)
     
     
     #create global plasma key
@@ -1507,6 +1511,15 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                       <td>
                       &delta;Bz [nT]
                       </td>
+                      <td>
+                      &delta;GSE_X [km/s]
+                      </td>
+                      <td>
+                      &delta;GSE_Y [km/s]
+                      </td>
+                      <td>
+                      &delta;GSE_Z [km/s]
+                      </td>
                   </tr>
                       '''
     
@@ -1553,6 +1566,14 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                       </td>
                       <td>
                       {15:4.3f}
+                      <td>
+                      {16:8.1f}
+                      </td>
+                      <td>
+                      {17:8.1f}
+                      </td>
+                      <td>
+                      {18:8.1f}
                       </td>
                   </tr>'''
     footer = '''</table>
@@ -1571,6 +1592,13 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     #Additional output parameters
     par_out = ['diff_med_speed', 'diff_med_Np', 'diff_med_Vth', 'diff_med_Bx', 'diff_med_By', 'diff_med_Bz']
     
+
+    #Add columns to tr_events dataframe
+    output_col = ['_time','_unc','_GSE_X','_GSE_Y','_GSE_Z']
+    for i in output_col:
+        for k in craft:
+            tr_events[k+i] = np.nan
+   
     
     # write header for html page
     out_f = open('../html_files/{0}_level_{1:4.0f}_full_res.html'.format(trainer.lower(),p_val*1000.).replace(' ','0'),'w')
@@ -1592,13 +1620,14 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
         out_f.write(r'''<b><a href="../plots/spacecraft_events/full_res_event_{0:%Y%m%d_%H%M%S}_zoom.png"> Event on {0:%Y/%m/%d %H:%M:%S} UT (50 Min.)</a> </b>'''.format(i))
         out_f.write(tab_hdr)
         #write trainer spacecraft event
-        out_f.write(new_row.format(trainer,i,0.00,0.00,0.00,tr_events.loc[i,p_var],tr_events.loc[i-a_w:i+a_w,p_var.replace('predict','predict_sigma')].max(),'X',i,trainer.lower(),*plsm[trainer].loc[i-a_w:i+a_w,par_out].max()))
+        out_f.write(new_row.format(trainer,i,0.00,0.00,0.00,tr_events.loc[i,p_var],tr_events.loc[i-a_w:i+a_w,p_var.replace('predict','predict_sigma')].max(),'X',i,trainer.lower(),*(plsm[trainer].loc[i-a_w:i+a_w,par_out].max().values.tolist()+[0,0,0])))
     
     
         #create figure showing 
         bfig, fax = plt.subplots(nrows=3,ncols=2,sharex=True,figsize=(18,18))
         bfig.subplots_adjust(hspace=0.001)
         bfig.suptitle('Event on {0:%Y/%m/%d %H:%M:%S} UT'.format(i),fontsize=24)
+
     
     
         #loop over all other space craft
@@ -1694,11 +1723,13 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                 
 
                 #temporary plasma array to use for X^2 matching
+                #smaller pandas dataframe chunks allows for more efficient event finding and time offsets.
                 t_plsm = {}
                 half_day = pd.to_timedelta('9 hours')
                 for ll in plsm.keys(): t_plsm[ll] = plsm[ll].loc[i-half_day:i+half_day]
     
-    
+
+                #when to use plasma parameters for matching    
                 if (((p_mat_t.size > 0) & (p_mat_t[p_var].max() > mag_tol)) | ((k.lower() == 'soho') & (p_mat_t.size > 0.))):
                 #if ((k.lower() == 'soho') & (p_mat_t.size > 0.)):
     
@@ -1717,13 +1748,19 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
      
                         if k.lower() == 'soho':
                             #print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min))
-                            out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds(),(i_low-i_min).total_seconds(),p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),0.000,'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
+                            out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds(),(i_low-i_min).total_seconds(),
+                                        p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),0.000,'X',
+                                        i,k.lower(),*(p_mat.loc[i_min-a_w:i_min+a_w,par_out].max().values.tolist()+
+                                        (p_mat.loc[i_min,['GSEx','GSEy','GSEz']]-tr_events.loc[i,['GSEx','GSEy','GSEz']]).values.tolist())))
     
                         else: 
                             #print('{2:%Y/%m/%d %H:%M:%S},{0:5.2f} min., p_max (plsm) ={1:4.3f}, p_max (mag) = {3:4.3f}'.format((i_min-i).total_seconds()/60.,p_mat.loc[i_min][p_var],i_min,p_mat.loc[i_min][p_var.replace('predict','predict_sigma')]))
-                            out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds(),(i_low-i_min).total_seconds(),p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'X',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
+                            out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds(),(i_low-i_min).total_seconds(),p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),
+                                        p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'X',
+                                        i,k.lower(),*(p_mat.loc[i_min-a_w:i_min+a_w,par_out].max().values.tolist()+
+                                        (p_mat.loc[i_min,['GSEx','GSEy','GSEz']]-tr_events.loc[i,['GSEx','GSEy','GSEz']]).values.tolist())))
     
-                    except ((KeyError) | (IndexError)):
+                    except IndexError:
                         print('Missing Index')
     
     
@@ -1750,13 +1787,18 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                         out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds(),(i_low-i_min).total_seconds(),p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
     
     
-                    except ((KeyError) | (IndexError)):
+                    except IndexError:
                         print('Missing Index')
            
                 else:
                    print('No Plasma or Mag. Observations')
+                   #Insert fill values for event if event fails
+                   tr_events.loc[i,k] = [np.nan,np.nan]
                    continue
 
+            #Add Times and +/- 40 Minute into event Pandas data frame
+            tr_events.loc[i,[k+'_time',k+'_unc',k+'_GSE_X',k+'_GSE_Y',k+'_GSE_Z']] = [i_min,(i_upp-i_min),p_mat.loc[i_min,'GSEx'],p_mat.loc[i_min,'GSEy'],p_mat.loc[i_min,'GSEz']]
+            
 
             #get a region around one of the best fit times
             plt_slice = [i_min-plt_windw,i_min+plt_windw]
@@ -1888,6 +1930,9 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     out_f.write(ful_ftr)
     out_f.close()
 
+
+    #Write out tr_events dataframe
+    tr_events.to_csv('../output_data/space_craft_events_{0:%Y%m%d_%H%M}.txt'.format(datetime.utcnow(),sep=' '))
 
 
 
