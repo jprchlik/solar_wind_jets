@@ -17,7 +17,9 @@ from scipy.stats.mstats import theilslopes
 #os.system("taskset -p 0xff %d" % os.getpid())
 
 #Function to read in spacecraft
-def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_2015_2017_formatted.txt',pls_fmt='{0}_pls_2015_2017_formatted.txt',
+def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
+            mag_fmt='{0}_mag_2015_2017_formatted.txt',pls_fmt='{0}_pls_2015_2017_formatted.txt',
+            orb_fmt='{0}_orb_2015_2017_formatted.txt',
             start_t='2016/12/01',end_t='2017/09/24',center=False):
     """
     A function to read in text files for a given spacecraft
@@ -51,6 +53,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag
     """
     #Read in plasma and magnetic field data from full res
     pls = pd.read_table(arch+pls_fmt.format(k.lower()),delim_whitespace=True)
+    orb = pd.read_table(arch+orb_fmt.format(k.lower()),delim_whitespace=True)
 
     #no magnetic field data from SOHO
     if k.lower() != 'soho':
@@ -59,6 +62,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag
         #create datetime objects from time
         pls['time_dt_pls'] = pd.to_datetime(pls['Time'])
         mag['time_dt_mag'] = pd.to_datetime(mag['Time'])
+        orb['time_dt_orb'] = pd.to_datetime(orb['Time'])
 
         #setup index
         pls.set_index(pls.time_dt_pls,inplace=True)
@@ -87,6 +91,19 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag
         
         #get degault formating for pandas dataframe
         plsm = format_df(com_df,p_var,center=False) 
+
+        #add orbital data
+        plsm  = pd.merge(plsm,orb,how='outer',left_index=True,right_index=True,suffixes=('','_orb'),sort=True)
+        #make sure data columns are numeric
+        cols = ['SPEED','Np','Vth','Bx','By','Bz','GSEx','GSEy','GSEz']
+        plsm[cols] = plsm[cols].apply(pd.to_numeric, errors='coerce')
+
+        #add Time string
+        plsm['Time'] = com_df.index.to_datetime().strftime('%Y/%m/%dT%H:%M:%S')
+
+        #fill undersampled orbit
+        for cor in ['x','y','z']: plsm['GSE'+cor] = plsm['GSE'+cor].interpolate()
+
     else:
         #work around for no Mag data in SOHO
         pls.loc[:,['Bx','By','Bz']] = 0.0
@@ -95,6 +112,9 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',mag_fmt='{0}_mag
         pls.set_index(pls.time_dt_pls,inplace=True)
         plsm = format_df(pls,p_var,center=center)
         plsm.loc[:,['Bx','By','Bz']] = -9999.0
+
+        #chane column name from X, Y, Z to GSEx, GSEy, GSEz 
+        plsm.rename(columns={'X':'GSEx', 'Y':'GSEy', 'Z':'GSEz'},inplace=True)
 
     #for rekeying later
     plsm['craft'] = k
