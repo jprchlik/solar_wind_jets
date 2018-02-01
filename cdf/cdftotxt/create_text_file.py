@@ -52,7 +52,7 @@ def looper(s_idx):
     ##commented out J. Prchlik 2017/11/14 to fix wrong Vth in ACE
     cdf_to_text(fmag,mag_key,sc1,'mag')
     #Add orbital files 2018/01/31 J. Prchlik
-    cdf_to_text(fmag,mag_key,sc1,'orb')
+    cdf_to_text(forb,orb_key,sc1,'orb')
 
 #function to create pandas dataframe
 def cdf_to_text(f_list,keys,craft,context):
@@ -209,6 +209,6 @@ pool.join()
 
 #just ace to fix wrong thermal speed
 #just ace currupted magnetic field observations
-#looper(1)
+#looper(0)
 
 #for s_idx in range(3): looper(s_idx)
