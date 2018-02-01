@@ -56,11 +56,11 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
     """
     #Read in plasma and magnetic field data from full res
     pls = pd.read_table(arch+pls_fmt.format(k.lower()),delim_whitespace=True)
-    orb = pd.read_table(arch+orb_fmt.format(k.lower()),delim_whitespace=True)
 
     #no magnetic field data from SOHO
     if k.lower() != 'soho':
         mag = pd.read_table(arch+mag_fmt.format(k.lower()),delim_whitespace=True)
+        orb = pd.read_table(arch+orb_fmt.format(k.lower()),delim_whitespace=True)
 
         #create datetime objects from time
         pls['time_dt_pls'] = pd.to_datetime(pls['Time'])
@@ -74,6 +74,8 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
         #cut for testing reasons
         pls = pls[start_t:end_t]
         mag = mag[start_t:end_t]
+        orb = orb[start_t:end_t]
+
         #pls = pls['2016/07/18':'2016/07/21']
         #mag = mag['2016/07/18':'2016/07/21']
         #pls = pls['2017/01/25':'2017/01/27']
