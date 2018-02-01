@@ -1623,10 +1623,19 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
         out_f.write(new_row.format(trainer,i,0.00,0.00,0.00,tr_events.loc[i,p_var],tr_events.loc[i-a_w:i+a_w,p_var.replace('predict','predict_sigma')].max(),'X',i,trainer.lower(),*(plsm[trainer].loc[i-a_w:i+a_w,par_out].max().values.tolist()+[0,0,0])))
     
     
-        #create figure showing 
+        #create figure showing  solar wind
         bfig, fax = plt.subplots(nrows=3,ncols=2,sharex=True,figsize=(18,18))
         bfig.subplots_adjust(hspace=0.001)
         bfig.suptitle('Event on {0:%Y/%m/%d %H:%M:%S} UT'.format(i),fontsize=24)
+
+        #Create figure showing space craft orientation
+        ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(18,18))
+        #turn off bottom right axis
+        #coax[1,1].axis('off')
+ 
+        #set color max for timing differences
+        v_max =  40.
+        v_min = -40.
 
     
     
@@ -1798,6 +1807,13 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
 
             #Add Times and +/- 40 Minute into event Pandas data frame
             tr_events.loc[i,[k+'_time',k+'_unc',k+'_GSE_X',k+'_GSE_Y',k+'_GSE_Z']] = [i_min,(i_upp-i_min),p_mat.loc[i_min,'GSEx'],p_mat.loc[i_min,'GSEy'],p_mat.loc[i_min,'GSEz']]
+
+
+            #Plot GSE cooridinates
+            oax[0,0].scatter(p_mat.loc[i_min,'GSEx'],p_mat.loc[i_min,'GSEz'],c=(i_min-i).total_seconds()/60.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[k],edgecolor=color[k],label=k)
+            oax[1,0].scatter(p_mat.loc[i_min,'GSEx'],p_mat.loc[i_min,'GSEy'],c=(i_min-i).total_seconds()/60.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[k],edgecolor=color[k],label=None)
+            oax[0,1].scatter(p_mat.loc[i_min,'GSEy'],p_mat.loc[i_min,'GSEz'],c=(i_min-i).total_seconds()/60.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[k],edgecolor=color[k],label=None)
+
             
 
             #get a region around one of the best fit times
@@ -1855,6 +1871,15 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
         plt_slice = [i-plt_windw,i+plt_windw]
         t_mat = t_plsm[trainer].loc[plt_slice[0]:plt_slice[1]]
     
+        #Plot GSE cooridinates for trainer spacecraft
+        plotc = oax[0,0].scatter(tr_events.loc[i,'GSEx'],tr_events.loc[i,'GSEz'],c=0.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[trainer],edgecolor=color[trainer],label=trainer)
+        oax[1,0].scatter(tr_events.loc[i,'GSEx'],tr_events.loc[i,'GSEy'],c=0.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[trainer],edgecolor=color[trainer],label=None)
+        oax[0,1].scatter(tr_events.loc[i,'GSEy'],tr_events.loc[i,'GSEz'],c=0.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[trainer],edgecolor=color[trainer],label=None)
+
+
+        #add colorbar
+        cbar = ofig.colorbar(plotc,cax=oax[1,1])
+        cbar.set_label('Time Offset [min]',fontsize=18)
     
     
         #plot plasma parameters
@@ -1895,6 +1920,9 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
            
         #plot best time for each spacecraft
         fax[1,0].legend(loc='best',frameon=False,scatterpoints=1)
+
+        #put legend on X,Z plot
+        oax[0,0].legend(loc='best',frameon=False,scatterpoints=1)
     
         #plot an hour around observation
         fax[0,0].set_xlim([i-pd.to_timedelta('25 minutes'),i+pd.to_timedelta('25 minutes')])
@@ -1909,19 +1937,32 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
         fax[2,1].set_ylabel('Bz [nT]',fontsize=20)
         fax[2,1].set_xlabel('Time [UTC]',fontsize=20)
     
+        #set orientation lables
+        oax[0,0].set_xlabel('X(GSE) [km]',fontsize=20)
+        oax[0,0].set_ylabel('Z(GSE) [km]',fontsize=20)
+        oax[0,1].set_xlabel('Y(GSE) [km]',fontsize=20)
+        oax[0,1].set_ylabel('Z(GSE) [km]',fontsize=20)
+        oax[1,0].set_xlabel('X(GSE) [km]',fontsize=20)
+        oax[1,0].set_ylabel('Y(GSE) [km]',fontsize=20)
+
         #make fancy plot
         for pax in fax.ravel(): fancy_plot(pax)
+        for pax in oax.ravel(): fancy_plot(pax)
         #ax.set_ylim([300,1000.])
         bfig.savefig('../plots/spacecraft_events/full_res_event_{0:%Y%m%d_%H%M%S}_zoom.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
     
         fax[0,0].set_xlim([i-plt_windw,i+plt_windw])
         bfig.savefig('../plots/spacecraft_events/full_res_event_{0:%Y%m%d_%H%M%S}_bigg.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
+
+        #Save spacecraft orientation plots
+        ofig.savefig('../plots/spacecraft_events/event_orientation_{0:%Y%m%d_%H%M%S}_bigg.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
     
         #close output file
         out_f.write(footer)
 
         #close opened plots
         plt.close(bfig)
+        plt.close(ofig)
         plt.clf()
         plt.close()
     
