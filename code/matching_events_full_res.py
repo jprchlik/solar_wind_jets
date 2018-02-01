@@ -102,7 +102,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
         plsm['Time'] = com_df.index.to_datetime().strftime('%Y/%m/%dT%H:%M:%S')
 
         #fill undersampled orbit
-        for cor in ['x','y','z']: plsm['GSE'+cor] = plsm['GSE'+cor].interpolate()
+        for cor in ['x','y','z']: plsm['GSE'+cor].interpolate(inplace=True)
 
     else:
         #work around for no Mag data in SOHO
