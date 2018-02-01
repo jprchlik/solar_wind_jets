@@ -63,7 +63,7 @@ def grab_files(craft,param,year,start,end,ftp):
         if ((craft != 'ace') & (param != 'orb')):
             f_list = ftp.nlst('{0:4d}/*cdf'.format(i))
         else:
-            f_list = ftp.nlst('*cdf'.format(i))
+            f_list = ftp.nlst('*_{0:4d}*cdf'.format(i))
         #get just file names and check if they exist locally
         for f_name in f_list:
             #get local name for file
