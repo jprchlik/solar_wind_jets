@@ -113,6 +113,13 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
         plsm = format_df(pls,p_var,center=center)
         plsm.loc[:,['Bx','By','Bz']] = -9999.0
 
+        Re = 6371.0 # Earth radius
+
+        #multiply each component by Earth Radius
+        plsm.loc[:,'X'] *= Re
+        plsm.loc[:,'Y'] *= Re
+        plsm.loc[:,'Z'] *= Re
+
         #chane column name from X, Y, Z to GSEx, GSEy, GSEz 
         plsm.rename(columns={'X':'GSEx', 'Y':'GSEy', 'Z':'GSEz'},inplace=True)
 
