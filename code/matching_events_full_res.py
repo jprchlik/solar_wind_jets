@@ -36,6 +36,9 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
     pls_fmt: string, optional
         The file format for the plasma observations (Default = '{0}_pls_2015_2017_formatted.txt',
         where 0 is the formatted k).
+    orb_fmt: string, optional
+        The file format for the orbital data (Default = '{0}_orb_2015_2017_formatted.txt',
+        where 0 is the formatted k).
     center = boolean, optional
         Whether the analyzed point to be center focused (center = True) or right focus (Default = False).
         Center focus gives you a better localized point, however, the model is trained with a right focus
@@ -1162,7 +1165,7 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
 def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],mar=['D','o','s','<'],
          use_craft=False,use_chisq=True,use_discon=False,use_dtw=False,plot=True,refine=True ,verbose=True,nproc=1,p_val=0.999,
          ref_chi_t = pd.to_timedelta('30 minutes'),rgh_chi_t = pd.to_timedelta('90 minutes'),
-         arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_2015_2017_formatted.txt',pls_fmt='{0}_pls_2015_2017_formatted.txt',
+         arch='../cdf/cdftotxt/',mag_fmt='{0}_mag_2015_2017_formatted.txt',pls_fmt='{0}_pls_2015_2017_formatted.txt',orb_fmt='{0}_orb_2015_2017_formatted.txt',
          start_t='2017/11/17',end_t='2017/07/31',center=False):
     '''
     Function which finds solar wind events in a specific spacecraft. Then the program does a Chi^2 minimization to find the event
@@ -1221,10 +1224,13 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
     arch: string, optional
         The archive location for the text file to read in (Default = '../cdf/cdftotxt/')
     mag_fmt: string, optional
-        The file format for the magnetic field observations (Default = '{0}_mag_formatted.txt',
+        The file format for the magnetic field observations (Default = '{0}_mag_2015_2017_formatted.txt',
         where 0 is the formatted k).
     pls_fmt: string, optional
-        The file format for the plasma observations (Default = '{0}_pls_formatted.txt',
+        The file format for the plasma observations (Default = '{0}_pls_2015_2017_formatted.txt',
+        where 0 is the formatted k).
+    orb_fmt: string, optional
+        The file format for the orbital data (Default = '{0}_orb_2015_2017_formatted.txt',
         where 0 is the formatted k).
     start_t: string, optional
         Date in YYYY/MM/DD format to start looking for events (Default = '2016/06/04')
