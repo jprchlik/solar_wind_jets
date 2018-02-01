@@ -1512,13 +1512,13 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                       &delta;Bz [nT]
                       </td>
                       <td>
-                      &delta;GSE_X [km/s]
+                      &delta;GSE_X [km]
                       </td>
                       <td>
-                      &delta;GSE_Y [km/s]
+                      &delta;GSE_Y [km]
                       </td>
                       <td>
-                      &delta;GSE_Z [km/s]
+                      &delta;GSE_Z [km]
                       </td>
                   </tr>
                       '''
