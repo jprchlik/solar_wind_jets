@@ -1618,6 +1618,8 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
         #create table to output html table and link to github png files (https://cdn.rawgit.com/jprchlik/solar_wind_jets/4cf1c6e7)
         out_f.write(r'''<b><a href="../plots/spacecraft_events/full_res_event_{0:%Y%m%d_%H%M%S}_bigg.png"> Event on {0:%Y/%m/%d %H:%M:%S} UT (6 Hour)</a> </b>     '''.format(i))
         out_f.write(r'''<b><a href="../plots/spacecraft_events/full_res_event_{0:%Y%m%d_%H%M%S}_zoom.png"> Event on {0:%Y/%m/%d %H:%M:%S} UT (50 Min.)</a> </b>'''.format(i))
+        out_f.write(r'''<b><a href="../plots/spacecraft_events/event_orientation_{0:%Y%m%d_%H%M%S}_bigg.png"> Orientation on {0:%Y/%m/%d %H:%M:%S} UT </a> </b>'''.format(i))
+
         out_f.write(tab_hdr)
         #write trainer spacecraft event
         out_f.write(new_row.format(trainer,i,0.00,0.00,0.00,tr_events.loc[i,p_var],tr_events.loc[i-a_w:i+a_w,p_var.replace('predict','predict_sigma')].max(),'X',i,trainer.lower(),*(plsm[trainer].loc[i-a_w:i+a_w,par_out].max().values.tolist()+[0,0,0])))
@@ -1810,9 +1812,13 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
 
 
             #Plot GSE cooridinates
-            oax[0,0].scatter(p_mat.loc[i_min,'GSEx'],p_mat.loc[i_min,'GSEz'],c=(i_min-i).total_seconds()/60.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[k],edgecolor=color[k],label=k)
-            oax[1,0].scatter(p_mat.loc[i_min,'GSEx'],p_mat.loc[i_min,'GSEy'],c=(i_min-i).total_seconds()/60.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[k],edgecolor=color[k],label=None)
-            oax[0,1].scatter(p_mat.loc[i_min,'GSEy'],p_mat.loc[i_min,'GSEz'],c=(i_min-i).total_seconds()/60.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[k],edgecolor=color[k],label=None)
+            oax[0,0].scatter(p_mat.loc[i_min,'GSEx'],p_mat.loc[i_min,'GSEz'],c=(i_min-i).total_seconds()/60.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[k],s=80,edgecolor=color[k],label=k)
+            oax[1,0].scatter(p_mat.loc[i_min,'GSEx'],p_mat.loc[i_min,'GSEy'],c=(i_min-i).total_seconds()/60.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[k],s=80,edgecolor=color[k],label=None)
+            oax[0,1].scatter(p_mat.loc[i_min,'GSEy'],p_mat.loc[i_min,'GSEz'],c=(i_min-i).total_seconds()/60.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[k],s=80,edgecolor=color[k],label=None)
+            #Out put minute offset to text
+            oax[0,0].text(p_mat.loc[i_min,'GSEx'],p_mat.loc[i_min,'GSEz'],'{0:3.1f}'.format((i_min-i).total_seconds()/60.),fontsize=25)
+            oax[1,0].text(p_mat.loc[i_min,'GSEx'],p_mat.loc[i_min,'GSEy'],'{0:3.1f}'.format((i_min-i).total_seconds()/60.),fontsize=25)
+            oax[0,1].text(p_mat.loc[i_min,'GSEy'],p_mat.loc[i_min,'GSEz'],'{0:3.1f}'.format((i_min-i).total_seconds()/60.),fontsize=25)
 
             
 
@@ -1872,10 +1878,10 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
         t_mat = t_plsm[trainer].loc[plt_slice[0]:plt_slice[1]]
     
         #Plot GSE cooridinates for trainer spacecraft
-        plotc = oax[0,0].scatter(tr_events.loc[i,'GSEx'],tr_events.loc[i,'GSEz'],c=0.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[trainer],edgecolor=color[trainer],label=trainer)
-        oax[1,0].scatter(tr_events.loc[i,'GSEx'],tr_events.loc[i,'GSEy'],c=0.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[trainer],edgecolor=color[trainer],label=None)
-        oax[0,1].scatter(tr_events.loc[i,'GSEy'],tr_events.loc[i,'GSEz'],c=0.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[trainer],edgecolor=color[trainer],label=None)
-
+        plotc = oax[0,0].scatter(tr_events.loc[i,'GSEx'],tr_events.loc[i,'GSEz'],c=0.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[trainer],s=80,edgecolor=color[trainer],label=trainer)
+        oax[1,0].scatter(tr_events.loc[i,'GSEx'],tr_events.loc[i,'GSEy'],c=0.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[trainer],s=80,edgecolor=color[trainer],label=None)
+        oax[0,1].scatter(tr_events.loc[i,'GSEy'],tr_events.loc[i,'GSEz'],c=0.,cmap=plt.cm.gray,vmin=v_min,vmax=v_max,marker=marker[trainer],s=80,edgecolor=color[trainer],label=None)
+                                                                                                                                           
 
         #add colorbar
         cbar = ofig.colorbar(plotc,cax=oax[1,1])
