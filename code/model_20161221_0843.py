@@ -1,4 +1,5 @@
 import pandas as pd
+from spacepy import pycdf
 import matplotlib.dates as mdates
 import numpy as np
 import matplotlib.pyplot as plt
@@ -306,6 +307,9 @@ for k in craft[1:]:
     print('###########################################')
 
 
+#set 0 offsets for training spacecraft
+t_mat['offsets'] = pd.to_timedelta(0) 
+plsm[trainer+'_offset'] = t_mat
 
 
 #plot plasma parameters for Wind
@@ -362,6 +366,15 @@ fax[1,0].set_ylim([0.,100.])
 #Find points with the largest speed differences in wind
 top_vs = t_mat.SPEED.dropna().diff().abs().nlargest(6)
 
+#turn into data frame 
+frm_vs = pd.DataFrame(top_vs)
+#add columns
+col_add = ['X','Y','Z','Vx','Vy','Vz']
+for i in col_add: frm_vs[i] = -9999.9
+
+#big list of velocities
+big_lis = []
+
 #Plot the top shock values
 #fax[2,0].scatter(t_mat.loc[top_vs.index,:].index,t_mat.loc[top_vs.index,:].SPEED,color='purple',marker='X',s=150)
 for j,i in enumerate(top_vs.index):
@@ -369,7 +382,104 @@ for j,i in enumerate(top_vs.index):
     xval = mdates.date2num(i)
     fax[2,0].annotate('Dis. {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
                       arrowprops=dict(facecolor='purple',shrink=0.005))
+    #computer surface for events
+    tvals = np.array([np.mean(plsm[c+'_offset'].loc[i,'offsets']).total_seconds() for c in craft])
+    xvals = np.array([np.mean(plsm[c+'_offset'].loc[i,'GSEx']) for c in craft])
+    yvals = np.array([np.mean(plsm[c+'_offset'].loc[i,'GSEy']) for c in craft])
+    zvals = np.array([np.mean(plsm[c+'_offset'].loc[i,'GSEz']) for c in craft])
+
+    #get the velocity components with respect to the shock front at wind
+    vx = -plsm[trainer+'_offset'].loc[i,'SPEED']
+    vy = 0.0
+    vz = 0.0
+
+    #get the 4 point location of the front when at wind
+    px = vx*tvals+xvals
+    py = vy*tvals+yvals
+    pz = vz*tvals+zvals
+
+    #parameters to add
+    add_lis = [px,py,pz,vx,vy,vz,tvals]
+    big_lis.append(add_lis)
+    #put values in new dataframe
+    #for l in range(len(col_add)):
+    #    frm_vs.loc[i,col_add[l]] = add_lis[l] 
+
+#turn big lis into numpy array
+big_lis = np.array(big_lis)
 
 fig.autofmt_xdate()
                 
 fig.savefig('../plots/bou_20161221_084312.png',bbox_pad=.1,bbox_inches='tight')
+
+
+andir = '../plots/boutique_ana/'
+
+
+
+
+for i in pd.date_range(start=start_t,end=end_t,freq='600S'):
+    #Create figure showing space craft orientation
+    ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(18,18))
+    #set orientation lables
+    oax[1,1].axis('off')
+    oax[0,0].set_xlabel('X(GSE) [km]',fontsize=20)
+    oax[0,0].set_ylabel('Z(GSE) [km]',fontsize=20)
+    oax[0,1].set_xlabel('Y(GSE) [km]',fontsize=20)
+    oax[0,1].set_ylabel('Z(GSE) [km]',fontsize=20)
+    oax[1,0].set_xlabel('X(GSE) [km]',fontsize=20)
+    oax[1,0].set_ylabel('Y(GSE) [km]',fontsize=20)
+    for pax in oax.ravel(): fancy_plot(pax)
+
+    #Add radially propogating CME shock front    
+    for p,l in enumerate(top_vs.index):
+        px = big_lis[p][0]
+        py = big_lis[p][1]
+        pz = big_lis[p][2]
+        vx = big_lis[p][3]
+        vy = big_lis[p][4]
+        vz = big_lis[p][5]
+
+        dt = (i-l.to_pydatetime()).total_seconds()
+
+        #set up arrays of values
+        xvals = vx*dt+px
+        yvals = vy*dt+py
+        zvals = vz*dt+pz
+
+        #get sorted value array
+        xsort = np.argsort(xvals)
+        ysort = np.argsort(yvals)
+        zsort = np.argsort(zvals)
+
+        oax[0,0].plot(xvals[zsort],zvals[zsort],color='red',marker=p)
+        oax[1,0].plot(xvals[ysort],yvals[ysort],color='red',marker=p)
+        oax[0,1].plot(yvals[zsort],zvals[zsort],color='red',marker=p)
+        #oax[0,0].text((vx*dt+px)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
+        #oax[1,0].text((vx*dt+px)[0],(vy*dt+py)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
+        #oax[0,1].text((vy*dt+py)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
+
+    #spacraft positions
+    for k in craft:
+        oax[0,0].scatter(plsm[k+'_offset'].loc[i,'GSEx'],plsm[k+'_offset'].loc[i,'GSEz'],marker=marker[k],s=80,color=color[k],label=k)
+        oax[1,0].scatter(plsm[k+'_offset'].loc[i,'GSEx'],plsm[k+'_offset'].loc[i,'GSEy'],marker=marker[k],s=80,color=color[k],label=None)
+        oax[0,1].scatter(plsm[k+'_offset'].loc[i,'GSEy'],plsm[k+'_offset'].loc[i,'GSEz'],marker=marker[k],s=80,color=color[k],label=None)
+
+
+    #set static limits
+    #z limits
+    oax[0,0].set_ylim([-90000,160000])
+    oax[0,1].set_ylim([-90000,160000])
+    #xlimits
+    oax[0,0].set_xlim([1200000,1900000])
+    oax[1,0].set_xlim([1200000,1900000])
+    #y limits
+    oax[0,1].set_xlim([-600000,300000])
+    oax[1,0].set_ylim([-600000,300000])
+    
+    oax[0,0].legend(loc='upper right',frameon=False,scatterpoints=1)
+
+    #Save spacecraft orientation plots
+    ofig.savefig(andir+'event_orientation_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
+    ofig.clf()
+    plt.close()
