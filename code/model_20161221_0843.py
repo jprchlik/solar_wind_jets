@@ -1,4 +1,5 @@
 import pandas as pd
+from mpl_toolkits.mplot3d import Axes3D
 from itertools import cycle
 from spacepy import pycdf
 import matplotlib.dates as mdates
@@ -394,7 +395,7 @@ big_lis = []
 for j,i in enumerate(top_vs.index):
     yval = t_mat.loc[i,:].SPEED
     xval = mdates.date2num(i)
-    fax[2,0].annotate('Dis. {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
+    fax[2,0].annotate('Shock {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
                       arrowprops=dict(facecolor='purple',shrink=0.005))
     #computer surface for events
     tvals = -np.array([np.mean(plsm[c+'_offset'].loc[i,'offsets']).total_seconds() for c in craft])
@@ -442,15 +443,26 @@ for i in sim_date:
 
     #Create figure showing space craft orientation
     ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(18,18))
+    tfig =  plt.figure()
+    tax = fig.add_subplot(111, projection='3d')
+    
     #set orientation lables
     oax[1,1].axis('off')
+    oax[0,0].set_title('{0:%Y/%m%d %H:%M:%S}'.format(i),fontsize=20)
     oax[0,0].set_xlabel('X(GSE) [km]',fontsize=20)
     oax[0,0].set_ylabel('Z(GSE) [km]',fontsize=20)
     oax[0,1].set_xlabel('Y(GSE) [km]',fontsize=20)
     oax[0,1].set_ylabel('Z(GSE) [km]',fontsize=20)
     oax[1,0].set_xlabel('X(GSE) [km]',fontsize=20)
     oax[1,0].set_ylabel('Y(GSE) [km]',fontsize=20)
+
+
+
     for pax in oax.ravel(): fancy_plot(pax)
+
+    #set labels for 3D plot
+    tax.set_title('{0:%Y/%m%d %H:%M:%S}'.format(i),fontsize=20)
+
 
     #Add radially propogating CME shock front    
     for p,l in enumerate(top_vs.index):
@@ -476,41 +488,53 @@ for i in sim_date:
         zsort = np.argsort(zvals)
 
         #get shock Np value (use bfill to get values from the next good Np value) 
-        np_df = plsm['DSCOVR_offset'].Np.dropna()
+        np_df = plsm[trainer+'_offset'].Np.dropna()
         np_vl = np_df.index.get_loc(l,method='bfill')
         np_op = np_df.iloc[np_vl]
         
 
-        oax[0,0].plot(xvals[zsort],zvals[zsort],color=cin,label='Shock {0:1d}, Np = {1:3.2f}, t={2:%H:%S}'.format(p+1,np_op,l))
+        #plot 2d plot
+        oax[0,0].plot(xvals[zsort],zvals[zsort],color=cin,label='Shock {0:1d}, Np = {1:3.2f}, t_wind={2:%H:%S}'.format(p+1,np_op,l))
         oax[1,0].plot(xvals[ysort],yvals[ysort],color=cin,label=None)
         oax[0,1].plot(yvals[zsort],zvals[zsort],color=cin,label=None)
         #oax[0,0].text((vx*dt+px)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
         #oax[1,0].text((vx*dt+px)[0],(vy*dt+py)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
         #oax[0,1].text((vy*dt+py)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
+        #plot 3d plot
+        #create mesh grid
+        tax.plot_trisurf(xvals,yvals,zvals,color='grey')
 
     #spacraft positions
     for k in craft:
         oax[0,0].scatter(plsm[k+'_offset'].loc[i,'GSEx'],plsm[k+'_offset'].loc[i,'GSEz'],marker=marker[k],s=80,color=color[k],label=k)
         oax[1,0].scatter(plsm[k+'_offset'].loc[i,'GSEx'],plsm[k+'_offset'].loc[i,'GSEy'],marker=marker[k],s=80,color=color[k],label=None)
         oax[0,1].scatter(plsm[k+'_offset'].loc[i,'GSEy'],plsm[k+'_offset'].loc[i,'GSEz'],marker=marker[k],s=80,color=color[k],label=None)
+        tax.scatter(plsm[k+'_offset'].loc[i,'GSEx'],plsm[k+'_offset'].loc[i,'GSEy'],plsm[k+'_offset'].loc[i,'GSEz'],
+                    marker=marker[k],s=80,color=color[k],label=None)
 
 
     #set static limits
     #z limits
     oax[0,0].set_ylim([-90000,160000])
     oax[0,1].set_ylim([-90000,160000])
+    tax.set_zlim([-90000,160000])
     #xlimits
     oax[0,0].set_xlim([1200000,1900000])
     oax[1,0].set_xlim([1200000,1900000])
+    tax.set_xlim([1200000,1900000])
     #y limits
     oax[0,1].set_xlim([-600000,300000])
     oax[1,0].set_ylim([-600000,300000])
+    tax.set_ylim([-600000,300000])
     
     oax[0,0].legend(loc='upper right',frameon=False,scatterpoints=1)
 
     #Save spacecraft orientation plots
     ofig.savefig(andir+'event_orientation_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
     ofig.clf()
+    #save 3d spacecraft positions
+    tfig.savefig(andir+'d3/event_orientation_3d_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
+    tfig.clf()
     plt.close()
 
 
