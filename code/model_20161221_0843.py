@@ -1,4 +1,5 @@
 import pandas as pd
+from itertools import cycle
 from spacepy import pycdf
 import matplotlib.dates as mdates
 import numpy as np
@@ -372,6 +373,19 @@ frm_vs = pd.DataFrame(top_vs)
 col_add = ['X','Y','Z','Vx','Vy','Vz']
 for i in col_add: frm_vs[i] = -9999.9
 
+#Use wind CDF to get velocity comps
+cdf = pycdf.CDF('/Volumes/Pegasus/jprchlik/dscovr/solar_wind_events/cdf/wind/plsm/wi_h1_swe_20161221_v01.cdf')
+
+wind_vx = cdf['Proton_VX_nonlin'][...]
+wind_vy = cdf['Proton_VY_nonlin'][...]
+wind_vz = cdf['Proton_VZ_nonlin'][...]
+wind_t0 = cdf['Epoch'][...]
+
+cdf.close()
+
+#create pandas dataframe with wind components
+wind_v = pd.DataFrame(np.array([wind_t0,wind_vx,wind_vy,wind_vz]).T,columns=['time_dt','Vx','Vy','Vz'])
+wind_v.set_index(wind_v.time_dt,inplace=True)
 #big list of velocities
 big_lis = []
 
@@ -383,15 +397,16 @@ for j,i in enumerate(top_vs.index):
     fax[2,0].annotate('Dis. {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
                       arrowprops=dict(facecolor='purple',shrink=0.005))
     #computer surface for events
-    tvals = np.array([np.mean(plsm[c+'_offset'].loc[i,'offsets']).total_seconds() for c in craft])
+    tvals = -np.array([np.mean(plsm[c+'_offset'].loc[i,'offsets']).total_seconds() for c in craft])
     xvals = np.array([np.mean(plsm[c+'_offset'].loc[i,'GSEx']) for c in craft])
     yvals = np.array([np.mean(plsm[c+'_offset'].loc[i,'GSEy']) for c in craft])
     zvals = np.array([np.mean(plsm[c+'_offset'].loc[i,'GSEz']) for c in craft])
 
     #get the velocity components with respect to the shock front at wind
-    vx = -plsm[trainer+'_offset'].loc[i,'SPEED']
-    vy = 0.0
-    vz = 0.0
+    i_val = wind_v.index.get_loc(i,method='nearest')
+    vx = wind_v.iloc[i_val].Vx
+    vy = wind_v.iloc[i_val].Vy
+    vz = wind_v.iloc[i_val].Vz
 
     #get the 4 point location of the front when at wind
     px = vx*tvals+xvals
@@ -418,7 +433,13 @@ andir = '../plots/boutique_ana/'
 
 
 
-for i in pd.date_range(start=start_t,end=end_t,freq='600S'):
+
+sim_date =  pd.date_range(start=start_t,end=end_t,freq='600S')
+
+for i in sim_date:
+    #list of colors
+    cycol = cycle('bgrcmk')
+
     #Create figure showing space craft orientation
     ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(18,18))
     #set orientation lables
@@ -433,6 +454,8 @@ for i in pd.date_range(start=start_t,end=end_t,freq='600S'):
 
     #Add radially propogating CME shock front    
     for p,l in enumerate(top_vs.index):
+        #color to use
+        cin = next(cycol)
         px = big_lis[p][0]
         py = big_lis[p][1]
         pz = big_lis[p][2]
@@ -452,9 +475,15 @@ for i in pd.date_range(start=start_t,end=end_t,freq='600S'):
         ysort = np.argsort(yvals)
         zsort = np.argsort(zvals)
 
-        oax[0,0].plot(xvals[zsort],zvals[zsort],color='red',marker=p)
-        oax[1,0].plot(xvals[ysort],yvals[ysort],color='red',marker=p)
-        oax[0,1].plot(yvals[zsort],zvals[zsort],color='red',marker=p)
+        #get shock Np value (use bfill to get values from the next good Np value) 
+        np_df = plsm['DSCOVR_offset'].Np.dropna()
+        np_vl = np_df.index.get_loc(l,method='bfill')
+        np_op = np_df.iloc[np_vl]
+        
+
+        oax[0,0].plot(xvals[zsort],zvals[zsort],color=cin,label='Shock {0:1d}, Np = {1:3.2f}, t={2:%H:%S}'.format(p+1,np_op,l))
+        oax[1,0].plot(xvals[ysort],yvals[ysort],color=cin,label=None)
+        oax[0,1].plot(yvals[zsort],zvals[zsort],color=cin,label=None)
         #oax[0,0].text((vx*dt+px)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
         #oax[1,0].text((vx*dt+px)[0],(vy*dt+py)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
         #oax[0,1].text((vy*dt+py)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
@@ -483,3 +512,10 @@ for i in pd.date_range(start=start_t,end=end_t,freq='600S'):
     ofig.savefig(andir+'event_orientation_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
     ofig.clf()
     plt.close()
+
+
+
+#pool1 = Pool(processes=6)
+#pool1.map(make_plot,sim_date)
+#poo11.close()
+#pool1.join()
