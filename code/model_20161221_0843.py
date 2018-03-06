@@ -16,6 +16,8 @@ import time
 import mlpy #for dynamic time warping 
 
 from scipy.stats.mstats import theilslopes
+import scipy.optimize
+
 
 
 
@@ -384,6 +386,19 @@ wind_t0 = cdf['Epoch'][...]
 
 cdf.close()
 
+#Fit Least Squared plane
+def fitPlaneLTSQ(X,Y,Z):
+    rows = X.size
+    G = np.ones((rows, 3))
+    G[:, 0] = X  
+    G[:, 1] = Y  
+    (a, b, c),resid,rank,s = np.linalg.lstsq(G, Z)
+    normal = (a, b, -1)
+    nn = np.linalg.norm(normal)
+    normal = normal / nn
+    return (c, normal)
+
+
 #create pandas dataframe with wind components
 wind_v = pd.DataFrame(np.array([wind_t0,wind_vx,wind_vy,wind_vz]).T,columns=['time_dt','Vx','Vy','Vz'])
 wind_v.set_index(wind_v.time_dt,inplace=True)
@@ -410,6 +425,7 @@ for j,i in enumerate(top_vs.index):
     vz = wind_v.iloc[i_val].Vz
 
     #get the 4 point location of the front when at wind
+    #p_x(t0)1 = p_x(t1)-V_x*dt where dt = t1-t0  
     px = vx*tvals+xvals
     py = vy*tvals+yvals
     pz = vz*tvals+zvals
@@ -444,11 +460,11 @@ for i in sim_date:
     #Create figure showing space craft orientation
     ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(18,18))
     tfig =  plt.figure()
-    tax = fig.add_subplot(111, projection='3d')
+    tax = tfig.add_subplot(111, projection='3d')
     
     #set orientation lables
     oax[1,1].axis('off')
-    oax[0,0].set_title('{0:%Y/%m%d %H:%M:%S}'.format(i),fontsize=20)
+    oax[0,0].set_title('{0:%Y/%m/%d %H:%M:%S}'.format(i),fontsize=20)
     oax[0,0].set_xlabel('X(GSE) [km]',fontsize=20)
     oax[0,0].set_ylabel('Z(GSE) [km]',fontsize=20)
     oax[0,1].set_xlabel('Y(GSE) [km]',fontsize=20)
@@ -458,10 +474,11 @@ for i in sim_date:
 
 
 
+    #add fancy_plot to 2D plots
     for pax in oax.ravel(): fancy_plot(pax)
 
     #set labels for 3D plot
-    tax.set_title('{0:%Y/%m%d %H:%M:%S}'.format(i),fontsize=20)
+    tax.set_title('{0:%Y/%m/%d %H:%M:%S}'.format(i),fontsize=20)
 
 
     #Add radially propogating CME shock front    
@@ -493,17 +510,53 @@ for i in sim_date:
         np_op = np_df.iloc[np_vl]
         
 
-        #plot 2d plot
-        oax[0,0].plot(xvals[zsort],zvals[zsort],color=cin,label='Shock {0:1d}, Np = {1:3.2f}, t_wind={2:%H:%S}'.format(p+1,np_op,l))
-        oax[1,0].plot(xvals[ysort],yvals[ysort],color=cin,label=None)
-        oax[0,1].plot(yvals[zsort],zvals[zsort],color=cin,label=None)
         #oax[0,0].text((vx*dt+px)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
         #oax[1,0].text((vx*dt+px)[0],(vy*dt+py)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
         #oax[0,1].text((vy*dt+py)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
         #plot 3d plot
+        #fit plane
+        #c, normal = fitPlaneLTSQ(xvals,yvals,zvals)
+        #try different way to fit plane
+        A = np.c_[xvals,yvals,np.ones(xvals.size)]
+        #get cooefficience
+        C,_,_,_ = scipy.linalg.lstsq(A,zvals)
+        #create center point (use Wind)
+        #point = np.array([xvals[0], yvals[0], zvals[0]])
+        ##solve for d in a*x+b*y+c*z+d = 0
+        #d = -point.dot(normal) #create normal surface
         #create mesh grid
-        tax.plot_trisurf(xvals,yvals,zvals,color='grey')
+        #Get max and min values
+        maxx = np.max(xvals)
+        maxy = np.max(xvals)
+        minx = np.min(yvals)
+        miny = np.min(yvals)
 
+        #make x and y grids
+        xg = np.array([minx,maxx])
+        yg = np.array([miny,maxy])
+
+        # compute needed points for plane plotting
+        xt, yt = np.meshgrid(xg, yg)
+        #zt = (-normal[0]*xt - normal[1]*yt - d)*1. / normal[2]
+        #create z surface
+        zt = C[0]*xt+C[1]*yt+C[2]
+
+        #plot surface
+        tax.plot_surface(xt,yt,zt,color=cin,alpha=.5)
+
+        #get sorted value array
+        #xvals = xt.ravel()
+        #yvals = yt.ravel()
+        #zvals = zt.ravel()
+        zvals = xvals*C[0]+yvals*C[1]+C[2]
+        xsort = np.argsort(xvals)
+        ysort = np.argsort(yvals)
+        zsort = np.argsort(zvals)
+
+        #plot 2d plot
+        oax[0,0].plot(xvals[zsort],zvals[zsort],color=cin,label='Shock {0:1d}, Np = {1:3.2f}, t_wind={2:%H:%S}'.format(p+1,np_op,l))
+        oax[1,0].plot(xvals[ysort],yvals[ysort],color=cin,label=None)
+        oax[0,1].plot(yvals[zsort],zvals[zsort],color=cin,label=None)
     #spacraft positions
     for k in craft:
         oax[0,0].scatter(plsm[k+'_offset'].loc[i,'GSEx'],plsm[k+'_offset'].loc[i,'GSEz'],marker=marker[k],s=80,color=color[k],label=k)
@@ -535,6 +588,7 @@ for i in sim_date:
     #save 3d spacecraft positions
     tfig.savefig(andir+'d3/event_orientation_3d_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
     tfig.clf()
+    plt.close()
     plt.close()
 
 
