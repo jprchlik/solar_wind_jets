@@ -414,9 +414,9 @@ for j,i in enumerate(top_vs.index):
                       arrowprops=dict(facecolor='purple',shrink=0.005))
     #computer surface for events
     tvals = -np.array([np.mean(plsm[c+'_offset'].loc[i,'offsets']).total_seconds() for c in craft])
-    xvals = np.array([np.mean(plsm[c+'_offset'].loc[i,'GSEx']) for c in craft])
-    yvals = np.array([np.mean(plsm[c+'_offset'].loc[i,'GSEy']) for c in craft])
-    zvals = np.array([np.mean(plsm[c+'_offset'].loc[i,'GSEz']) for c in craft])
+    xvals = np.array([np.mean(plsm[c].loc[i,'GSEx']) for c in craft])
+    yvals = np.array([np.mean(plsm[c].loc[i,'GSEy']) for c in craft])
+    zvals = np.array([np.mean(plsm[c].loc[i,'GSEz']) for c in craft])
 
     #get the velocity components with respect to the shock front at wind
     i_val = wind_v.index.get_loc(i,method='nearest')
@@ -451,7 +451,7 @@ andir = '../plots/boutique_ana/'
 
 
 
-sim_date =  pd.date_range(start=start_t,end=end_t,freq='600S')
+sim_date =  pd.date_range(start=start_t,end=end_t,freq='60S')
 
 for i in sim_date:
     #list of colors
@@ -548,7 +548,7 @@ for i in sim_date:
         #xvals = xt.ravel()
         #yvals = yt.ravel()
         #zvals = zt.ravel()
-        zvals = xvals*C[0]+yvals*C[1]+C[2]
+        #zvals = xvals*C[0]+yvals*C[1]+C[2]
         xsort = np.argsort(xvals)
         ysort = np.argsort(yvals)
         zsort = np.argsort(zvals)
@@ -559,10 +559,15 @@ for i in sim_date:
         oax[0,1].plot(yvals[zsort],zvals[zsort],color=cin,label=None)
     #spacraft positions
     for k in craft:
-        oax[0,0].scatter(plsm[k+'_offset'].loc[i,'GSEx'],plsm[k+'_offset'].loc[i,'GSEz'],marker=marker[k],s=80,color=color[k],label=k)
-        oax[1,0].scatter(plsm[k+'_offset'].loc[i,'GSEx'],plsm[k+'_offset'].loc[i,'GSEy'],marker=marker[k],s=80,color=color[k],label=None)
-        oax[0,1].scatter(plsm[k+'_offset'].loc[i,'GSEy'],plsm[k+'_offset'].loc[i,'GSEz'],marker=marker[k],s=80,color=color[k],label=None)
-        tax.scatter(plsm[k+'_offset'].loc[i,'GSEx'],plsm[k+'_offset'].loc[i,'GSEy'],plsm[k+'_offset'].loc[i,'GSEz'],
+        #Get closest index value location
+        ii = plsm[k].GSEx.dropna().index.get_loc(i,method='nearest')
+        #convert index location back to time index
+        it = plsm[k].GSEx.dropna().index[ii]
+
+        oax[0,0].scatter(plsm[k+'_offset'].loc[it,'GSEx'],plsm[k+'_offset'].loc[it,'GSEz'],marker=marker[k],s=80,color=color[k],label=k)
+        oax[1,0].scatter(plsm[k+'_offset'].loc[it,'GSEx'],plsm[k+'_offset'].loc[it,'GSEy'],marker=marker[k],s=80,color=color[k],label=None)
+        oax[0,1].scatter(plsm[k+'_offset'].loc[it,'GSEy'],plsm[k+'_offset'].loc[it,'GSEz'],marker=marker[k],s=80,color=color[k],label=None)
+        tax.scatter(plsm[k+'_offset'].loc[it,'GSEx'],plsm[k+'_offset'].loc[it,'GSEy'],plsm[k+'_offset'].loc[it,'GSEz'],
                     marker=marker[k],s=80,color=color[k],label=None)
 
 
