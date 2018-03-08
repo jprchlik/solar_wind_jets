@@ -439,22 +439,31 @@ for j,i in enumerate(top_vs.index):
         zvals.append(np.mean(plsm[c].loc[it,'GSEz']))
 
     #Covert arrays into numpy arrays and flip sign of offset
-    tvals = -np.array(tvals) 
+    tvals = np.array(tvals) 
     xvals = np.array(xvals) 
     yvals = np.array(yvals) 
     zvals = np.array(zvals) 
 
     #get the velocity components with respect to the shock front at wind
-    i_val = wind_v.index.get_loc(i,method='nearest')
-    vx = wind_v.iloc[i_val].Vx
-    vy = wind_v.iloc[i_val].Vy
-    vz = wind_v.iloc[i_val].Vz
+    #i_val = wind_v.index.get_loc(i,method='nearest')
+    #vx = wind_v.iloc[i_val].Vx
+    #vy = wind_v.iloc[i_val].Vy
+    #vz = wind_v.iloc[i_val].Vz
+    #use positions and vectors to get a solution for plane velocity
+    pm = np.matrix([xvals[1:]-xvals[0],yvals[1:]-yvals[0],zvals[1:]-zvals[0]]).T #coordinate of craft 1 in top row
+    tm = np.matrix(tvals[1:]).T # 1x3 matrix of time
+    vna = np.linalg.solve(pm,tm) #solve for the velocity vectors normal
+    vn = vna/np.linalg.norm(vna)
+    vm = 1./np.linalg.norm(vna) #get velocity magnitude
+    
+    #store vx,vy,vz values
+    vx,vy,vz = vm*np.array(vn).ravel()
 
     #get the 4 point location of the front when at wind
     #p_x(t0)1 = p_x(t1)-V_x*dt where dt = t1-t0  
-    px = vx*tvals+xvals
-    py = vy*tvals+yvals
-    pz = vz*tvals+zvals
+    px = -vx*tvals+xvals
+    py = -vy*tvals+yvals
+    pz = -vz*tvals+zvals
 
     #parameters to add
     add_lis = [px,py,pz,vx,vy,vz,tvals]
@@ -477,7 +486,7 @@ andir = '../plots/boutique_ana/'
 
 
 
-sim_date =  pd.date_range(start=start_t,end=end_t,freq='60S')
+sim_date =  pd.date_range(start=start_t,end=end_t,freq='600S')
 
 for i in sim_date:
     #list of colors
@@ -485,8 +494,8 @@ for i in sim_date:
 
     #Create figure showing space craft orientation
     ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(18,18))
-    tfig =  plt.figure()
-    tax = tfig.add_subplot(111, projection='3d')
+    #tfig =  plt.figure()
+    #tax = tfig.add_subplot(111, projection='3d')
     
     #set orientation lables
     oax[1,1].axis('off')
@@ -504,7 +513,7 @@ for i in sim_date:
     for pax in oax.ravel(): fancy_plot(pax)
 
     #set labels for 3D plot
-    tax.set_title('{0:%Y/%m/%d %H:%M:%S}'.format(i),fontsize=20)
+    #tax.set_title('{0:%Y/%m/%d %H:%M:%S}'.format(i),fontsize=20)
 
 
     #Add radially propogating CME shock front    
@@ -568,7 +577,7 @@ for i in sim_date:
         zt = C[0]*xt+C[1]*yt+C[2]
 
         #plot surface
-        tax.plot_surface(xt,yt,zt,color=cin,alpha=.5)
+        #tax.plot_surface(xt,yt,zt,color=cin,alpha=.5)
 
         #get sorted value array
         #xvals = xt.ravel()
@@ -593,23 +602,23 @@ for i in sim_date:
         oax[0,0].scatter(plsm[k].loc[it,'GSEx'],plsm[k].loc[it,'GSEz'],marker=marker[k],s=80,color=color[k],label=k)
         oax[1,0].scatter(plsm[k].loc[it,'GSEx'],plsm[k].loc[it,'GSEy'],marker=marker[k],s=80,color=color[k],label=None)
         oax[0,1].scatter(plsm[k].loc[it,'GSEy'],plsm[k].loc[it,'GSEz'],marker=marker[k],s=80,color=color[k],label=None)
-        tax.scatter(plsm[k].loc[it,'GSEx'],plsm[k].loc[it,'GSEy'],plsm[k].loc[it,'GSEz'],
-                    marker=marker[k],s=80,color=color[k],label=None)
+        #tax.scatter(plsm[k].loc[it,'GSEx'],plsm[k].loc[it,'GSEy'],plsm[k].loc[it,'GSEz'],
+        #            marker=marker[k],s=80,color=color[k],label=None)
 
 
     #set static limits
     #z limits
     oax[0,0].set_ylim([-90000,160000])
     oax[0,1].set_ylim([-90000,160000])
-    tax.set_zlim([-90000,160000])
+    #tax.set_zlim([-90000,160000])
     #xlimits
     oax[0,0].set_xlim([1200000,1900000])
     oax[1,0].set_xlim([1200000,1900000])
-    tax.set_xlim([1200000,1900000])
+    #tax.set_xlim([1200000,1900000])
     #y limits
     oax[0,1].set_xlim([-600000,300000])
     oax[1,0].set_ylim([-600000,300000])
-    tax.set_ylim([-600000,300000])
+    #tax.set_ylim([-600000,300000])
     
     oax[0,0].legend(loc='upper right',frameon=False,scatterpoints=1)
 
@@ -617,9 +626,9 @@ for i in sim_date:
     ofig.savefig(andir+'event_orientation_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
     ofig.clf()
     #save 3d spacecraft positions
-    tfig.savefig(andir+'d3/event_orientation_3d_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
-    tfig.clf()
-    plt.close()
+    #tfig.savefig(andir+'d3/event_orientation_3d_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
+    #tfig.clf()
+    #plt.close()
     plt.close()
 
 
