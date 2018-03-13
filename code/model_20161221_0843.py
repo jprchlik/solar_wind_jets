@@ -431,15 +431,19 @@ for j,i in enumerate(top_vs.index):
         ii = plsm[c].GSEx.dropna().index.get_loc(i,method='nearest')
         #convert index location back to time index
         it = plsm[c].GSEx.dropna().index[ii]
-
         #append craft values onto time and position arrays
-        tvals.append(np.mean(plsm[c+'_offset'].loc[i,'offsets']).total_seconds())
+        #changed to min values 2018/03/12 J. Prchlik
+        itval = plsm[c+'_offset'].loc[i,'offsets']
+        if isinstance(itval,pd._libs.tslib.Timedelta):
+            tvals.append(itval.total_seconds())
+        elif isinstance(itval,pd.Series):
+            tvals.append(min(itval,key=abs).total_seconds())
         xvals.append(np.mean(plsm[c].loc[it,'GSEx']))
         yvals.append(np.mean(plsm[c].loc[it,'GSEy']))
         zvals.append(np.mean(plsm[c].loc[it,'GSEz']))
 
     #Covert arrays into numpy arrays and flip sign of offset
-    tvals = np.array(tvals) 
+    tvals = np.array(tvals)
     xvals = np.array(xvals) 
     yvals = np.array(yvals) 
     zvals = np.array(zvals) 
@@ -466,7 +470,7 @@ for j,i in enumerate(top_vs.index):
     pz = -vz*tvals+zvals
 
     #parameters to add
-    add_lis = [px,py,pz,vx,vy,vz,tvals]
+    add_lis = [px,py,pz,vx,vy,vz,tvals,vm]
     big_lis.append(add_lis)
     #put values in new dataframe
     #for l in range(len(col_add)):
@@ -494,8 +498,8 @@ for i in sim_date:
 
     #Create figure showing space craft orientation
     ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(18,18))
-    #tfig =  plt.figure()
-    #tax = tfig.add_subplot(111, projection='3d')
+    tfig =  plt.figure()
+    tax = tfig.add_subplot(111, projection='3d')
     
     #set orientation lables
     oax[1,1].axis('off')
@@ -513,7 +517,7 @@ for i in sim_date:
     for pax in oax.ravel(): fancy_plot(pax)
 
     #set labels for 3D plot
-    #tax.set_title('{0:%Y/%m/%d %H:%M:%S}'.format(i),fontsize=20)
+    tax.set_title('{0:%Y/%m/%d %H:%M:%S}'.format(i),fontsize=20)
 
 
     #Add radially propogating CME shock front    
@@ -526,8 +530,12 @@ for i in sim_date:
         vx = big_lis[p][3]
         vy = big_lis[p][4]
         vz = big_lis[p][5]
+        vm = big_lis[p][7]
 
         dt = (i-l.to_pydatetime()).total_seconds()
+
+        #leave loop if shock is not within an hour therefore do not plot
+        if np.abs(dt) > 60.*60: continue
 
         #set up arrays of values
         xvals = vx*dt+px
@@ -577,7 +585,7 @@ for i in sim_date:
         zt = C[0]*xt+C[1]*yt+C[2]
 
         #plot surface
-        #tax.plot_surface(xt,yt,zt,color=cin,alpha=.5)
+        tax.plot_surface(xt,yt,zt,color=cin,alpha=.5)
 
         #get sorted value array
         #xvals = xt.ravel()
@@ -589,7 +597,7 @@ for i in sim_date:
         zsort = np.argsort(zvals)
 
         #plot 2d plot
-        oax[0,0].plot(xvals[zsort],zvals[zsort],color=cin,label='Shock {0:1d}, Np = {1:3.2f}, t_wind={2:%H:%S}'.format(p+1,np_op,l))
+        oax[0,0].plot(xvals[zsort],zvals[zsort],color=cin,label='Shock {0:1d}, Np = {1:3.2f}, t$_W$={2:%H:%S}, $|$V$|$={3:4.2f} km/s'.format(p+1,np_op,l,vm))
         oax[1,0].plot(xvals[ysort],yvals[ysort],color=cin,label=None)
         oax[0,1].plot(yvals[zsort],zvals[zsort],color=cin,label=None)
     #spacraft positions
@@ -602,23 +610,23 @@ for i in sim_date:
         oax[0,0].scatter(plsm[k].loc[it,'GSEx'],plsm[k].loc[it,'GSEz'],marker=marker[k],s=80,color=color[k],label=k)
         oax[1,0].scatter(plsm[k].loc[it,'GSEx'],plsm[k].loc[it,'GSEy'],marker=marker[k],s=80,color=color[k],label=None)
         oax[0,1].scatter(plsm[k].loc[it,'GSEy'],plsm[k].loc[it,'GSEz'],marker=marker[k],s=80,color=color[k],label=None)
-        #tax.scatter(plsm[k].loc[it,'GSEx'],plsm[k].loc[it,'GSEy'],plsm[k].loc[it,'GSEz'],
-        #            marker=marker[k],s=80,color=color[k],label=None)
+        tax.scatter(plsm[k].loc[it,'GSEx'],plsm[k].loc[it,'GSEy'],plsm[k].loc[it,'GSEz'],
+                    marker=marker[k],s=80,color=color[k],label=None)
 
 
     #set static limits
     #z limits
     oax[0,0].set_ylim([-90000,160000])
     oax[0,1].set_ylim([-90000,160000])
-    #tax.set_zlim([-90000,160000])
+    tax.set_zlim([-90000,160000])
     #xlimits
     oax[0,0].set_xlim([1200000,1900000])
     oax[1,0].set_xlim([1200000,1900000])
-    #tax.set_xlim([1200000,1900000])
+    tax.set_xlim([1200000,1900000])
     #y limits
     oax[0,1].set_xlim([-600000,300000])
     oax[1,0].set_ylim([-600000,300000])
-    #tax.set_ylim([-600000,300000])
+    tax.set_ylim([-600000,300000])
     
     oax[0,0].legend(loc='upper right',frameon=False,scatterpoints=1)
 
@@ -626,9 +634,9 @@ for i in sim_date:
     ofig.savefig(andir+'event_orientation_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
     ofig.clf()
     #save 3d spacecraft positions
-    #tfig.savefig(andir+'d3/event_orientation_3d_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
-    #tfig.clf()
-    #plt.close()
+    tfig.savefig(andir+'d3/event_orientation_3d_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
+    tfig.clf()
+    plt.close()
     plt.close()
 
 
