@@ -444,11 +444,11 @@ for j,i in enumerate(top_vs.index):
     #vy = wind_v.iloc[i_val].Vy
     #vz = wind_v.iloc[i_val].Vz
     #use positions and vectors to get a solution for plane velocity
-    pm = np.matrix([xvals[1:]-xvals[0],yvals[1:]-yvals[0],zvals[1:]-zvals[0]]).T #coordinate of craft 1 in top row
-    tm = np.matrix(tvals[1:]).T # 1x3 matrix of time
+    pm  = np.matrix([xvals[1:]-xvals[0],yvals[1:]-yvals[0],zvals[1:]-zvals[0]]).T #coordinate of craft 1 in top row
+    tm  = np.matrix(tvals[1:]).T # 1x3 matrix of time (wind-spacecraft)
     vna = np.linalg.solve(pm,tm) #solve for the velocity vectors normal
-    vn = vna/np.linalg.norm(vna)
-    vm = 1./np.linalg.norm(vna) #get velocity magnitude
+    vn  = vna/np.linalg.norm(vna)
+    vm  = 1./np.linalg.norm(vna) #get velocity magnitude
     
     #store vx,vy,vz values
     vx,vy,vz = vm*np.array(vn).ravel()
@@ -548,16 +548,20 @@ for i in sim_date:
         #first get the points
         ps = np.matrix([[vx],[vy],[vz]])*dt+np.matrix([[px],[py],[pz]])
 
+        #get the magentiude of the position
+        pm  = float(np.linalg.norm(ps))
+        
+
         #solve the plane equation for d
         d = float(vn.T.dot(ps))
         #print('###################################################')
         #print('NEW solution')
         #scale the coefficiecnts of the normal matrix for distance
-        coeff = vn*np.sqrt(px**2.+py**2.+pz**2.)
+        coeff = vn*pm
         a = float(coeff[0])
         b = float(coeff[1])
         c = float(coeff[2])
-        d = d*np.sqrt(px**2.+py**2.+pz**2.)
+        d = float(coeff.T.dot(ps))
         #print(a,b,c,d)
         #print('###################################################')
 
@@ -574,6 +578,7 @@ for i in sim_date:
 
         #get the plane values for given x, y, or z
         counter = np.linspace(-1e10,1e10,5)
+        windloc = np.zeros(counter.size)
 
         #set off axis values to 0
         zvalsx = -(a*counter-d)/c
