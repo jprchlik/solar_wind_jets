@@ -371,7 +371,7 @@ fax[2,1].set_xlabel('Time [UTC]',fontsize=20)
 fax[1,0].set_ylim([0.,100.])
 
 #Find points with the largest speed differences in wind
-top_vs = t_mat.SPEED.dropna().diff().abs().nlargest(1)
+top_vs = t_mat.SPEED.dropna().diff().abs().nlargest(7)
 
 #turn into data frame 
 frm_vs = pd.DataFrame(top_vs)
@@ -488,11 +488,11 @@ andir = '../plots/boutique_ana/'
 
 
 
-sim_date =  pd.date_range(start=start_t,end=end_t,freq='6000S')
+sim_date =  pd.date_range(start=start_t,end=end_t,freq='60S')
 
 for i in sim_date:
     #list of colors
-    cycol = cycle('bgrcmk')
+    cycol = cycle(['blue','green','red','cyan','magenta','black','teal','orange'])
 
     #Create figure showing space craft orientation
     ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(18,18))
@@ -550,16 +550,16 @@ for i in sim_date:
 
         #solve the plane equation for d
         d = float(vn.T.dot(ps))
-        print('###################################################')
-        print('NEW solution')
+        #print('###################################################')
+        #print('NEW solution')
         #scale the coefficiecnts of the normal matrix for distance
         coeff = vn*np.sqrt(px**2.+py**2.+pz**2.)
         a = float(coeff[0])
         b = float(coeff[1])
         c = float(coeff[2])
         d = d*np.sqrt(px**2.+py**2.+pz**2.)
-        print(a,b,c,d)
-        print('###################################################')
+        #print(a,b,c,d)
+        #print('###################################################')
 
         #Switch to line 2018/03/15 J. Prchlik
         ##set up arrays of values
@@ -604,10 +604,10 @@ for i in sim_date:
         #d = -point.dot(normal) #create normal surface
         #create mesh grid
         #Get max and min values
-        maxx = np.max(xvals)
-        maxy = np.max(xvals)
-        minx = np.min(yvals)
-        miny = np.min(yvals)
+        maxx = 1900000.
+        maxy = 300000.
+        minx = 1200000.
+        miny = -600000.
 
         #make x and y grids
         xg = np.array([minx,maxx])
@@ -637,6 +637,9 @@ for i in sim_date:
                       label='Shock {0:1d}, N$_p$ = {1:3.2f} cc, t$_W$={2:%H:%S}, $|$V$|$={3:4.2f} km/s'.format(p+1,np_op,l,vm).replace('cc','cm$^{-3}$'))
         oax[1,0].plot(counter,yvalsx,color=cin,label=None)
         oax[0,1].plot(counter,zvalsy,color=cin,label=None)
+
+
+    #get array of x,y,z spacecraft positions
     #spacraft positions
     for k in craft:
         #Get closest index value location
