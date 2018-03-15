@@ -19,6 +19,9 @@ from scipy.stats.mstats import theilslopes
 import scipy.optimize
 
 
+#Defination of a plane
+def plane_func(a,b,c,d,x,y,z):
+    return a*x+b*y+c*z+d
 
 
 
@@ -368,7 +371,7 @@ fax[2,1].set_xlabel('Time [UTC]',fontsize=20)
 fax[1,0].set_ylim([0.,100.])
 
 #Find points with the largest speed differences in wind
-top_vs = t_mat.SPEED.dropna().diff().abs().nlargest(6)
+top_vs = t_mat.SPEED.dropna().diff().abs().nlargest(1)
 
 #turn into data frame 
 frm_vs = pd.DataFrame(top_vs)
@@ -385,19 +388,6 @@ wind_vz = cdf['Proton_VZ_nonlin'][...]
 wind_t0 = cdf['Epoch'][...]
 
 cdf.close()
-
-#Fit Least Squared plane
-def fitPlaneLTSQ(X,Y,Z):
-    rows = X.size
-    G = np.ones((rows, 3))
-    G[:, 0] = X  
-    G[:, 1] = Y  
-    (a, b, c),resid,rank,s = np.linalg.lstsq(G, Z)
-    normal = (a, b, -1)
-    nn = np.linalg.norm(normal)
-    normal = normal / nn
-    return (c, normal)
-
 
 #create pandas dataframe with wind components
 wind_v = pd.DataFrame(np.array([wind_t0,wind_vx,wind_vy,wind_vz]).T,columns=['time_dt','Vx','Vy','Vz'])
@@ -465,19 +455,27 @@ for j,i in enumerate(top_vs.index):
 
     #get the 4 point location of the front when at wind
     #p_x(t0)1 = p_x(t1)-V_x*dt where dt = t1-t0  
-    px = -vx*tvals+xvals
-    py = -vy*tvals+yvals
-    pz = -vz*tvals+zvals
+    #solving exactly
+    #use the velocity matrix solution to get the solution for the plane analytically
+    #2018/03/15 J. Prchlik
+    #px = -vx*tvals+xvals
+    #py = -vy*tvals+yvals
+    #pz = -vz*tvals+zvals
+    px = xvals[0]
+    py = yvals[0]
+    pz = zvals[0]
+   
 
     #parameters to add
-    add_lis = [px,py,pz,vx,vy,vz,tvals,vm]
+    add_lis = [vx,vy,vz,tvals,vm,vn,px,py,pz]
     big_lis.append(add_lis)
     #put values in new dataframe
     #for l in range(len(col_add)):
     #    frm_vs.loc[i,col_add[l]] = add_lis[l] 
 
 #turn big lis into numpy array
-big_lis = np.array(big_lis)
+#I don't need to do this 2018/03/15 J. Prchlik
+#big_lis = np.array(big_lis)
 
 fig.autofmt_xdate()
                 
@@ -490,7 +488,7 @@ andir = '../plots/boutique_ana/'
 
 
 
-sim_date =  pd.date_range(start=start_t,end=end_t,freq='600S')
+sim_date =  pd.date_range(start=start_t,end=end_t,freq='6000S')
 
 for i in sim_date:
     #list of colors
@@ -498,7 +496,7 @@ for i in sim_date:
 
     #Create figure showing space craft orientation
     ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(18,18))
-    tfig =  plt.figure()
+    tfig =  plt.figure(figsize=(18,18))
     tax = tfig.add_subplot(111, projection='3d')
     
     #set orientation lables
@@ -510,6 +508,12 @@ for i in sim_date:
     oax[0,1].set_ylabel('Z(GSE) [km]',fontsize=20)
     oax[1,0].set_xlabel('X(GSE) [km]',fontsize=20)
     oax[1,0].set_ylabel('Y(GSE) [km]',fontsize=20)
+
+    #set 3d axis label 2018/03/13
+    tax.set_xlabel('X(GSE) [km]',fontsize=20)
+    tax.set_ylabel('Y(GSE) [km]',fontsize=20)
+    tax.set_zlabel('Z(GSE) [km]',fontsize=20)
+   
 
 
 
@@ -524,28 +528,58 @@ for i in sim_date:
     for p,l in enumerate(top_vs.index):
         #color to use
         cin = next(cycol)
-        px = big_lis[p][0]
-        py = big_lis[p][1]
-        pz = big_lis[p][2]
-        vx = big_lis[p][3]
-        vy = big_lis[p][4]
-        vz = big_lis[p][5]
-        vm = big_lis[p][7]
+        vx = big_lis[p][0]
+        vy = big_lis[p][1]
+        vz = big_lis[p][2]
+        vm = big_lis[p][4]
+        vn = big_lis[p][5]
+        #Wind coordinates
+        px = big_lis[p][6]
+        py = big_lis[p][7]
+        pz = big_lis[p][8]
 
         dt = (i-l.to_pydatetime()).total_seconds()
 
-        #leave loop if shock is not within an hour therefore do not plot
-        if np.abs(dt) > 60.*60: continue
+        #leave loop if shock is not within 2 hours therefore do not plot
+        if np.abs(dt) > 2.*60.*60: continue
 
-        #set up arrays of values
-        xvals = vx*dt+px
-        yvals = vy*dt+py
-        zvals = vz*dt+pz
 
-        #get sorted value array
-        xsort = np.argsort(xvals)
-        ysort = np.argsort(yvals)
-        zsort = np.argsort(zvals)
+        #solve for the plane at time l
+        #first get the points
+        ps = np.matrix([[vx],[vy],[vz]])*dt+np.matrix([[px],[py],[pz]])
+
+        #solve the plane equation for d
+        d = float(vn.T.dot(ps))
+        print('###################################################')
+        print('NEW solution')
+        #scale the coefficiecnts of the normal matrix for distance
+        coeff = vn*np.sqrt(px**2.+py**2.+pz**2.)
+        a = float(coeff[0])
+        b = float(coeff[1])
+        c = float(coeff[2])
+        d = d*np.sqrt(px**2.+py**2.+pz**2.)
+        print(a,b,c,d)
+        print('###################################################')
+
+        #Switch to line 2018/03/15 J. Prchlik
+        ##set up arrays of values
+        ##xvals = vx*dt+px
+        ##yvals = vy*dt+py
+        ##zvals = vz*dt+pz
+
+        ##get sorted value array
+        ##xsort = np.argsort(xvals)
+        ##ysort = np.argsort(yvals)
+        ##zsort = np.argsort(zvals)
+
+        #get the plane values for given x, y, or z
+        counter = np.linspace(-1e10,1e10,5)
+
+        #set off axis values to 0
+        zvalsx = -(a*counter-d)/c
+        zvalsy = -(b*counter-d)/c
+        yvalsx = -(a*counter-d)/b
+
 
         #get shock Np value (use bfill to get values from the next good Np value) 
         np_df = plsm[trainer+'_offset'].Np.dropna()
@@ -556,13 +590,14 @@ for i in sim_date:
         #oax[0,0].text((vx*dt+px)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
         #oax[1,0].text((vx*dt+px)[0],(vy*dt+py)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
         #oax[0,1].text((vy*dt+py)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
-        #plot 3d plot
-        #fit plane
-        #c, normal = fitPlaneLTSQ(xvals,yvals,zvals)
-        #try different way to fit plane
-        A = np.c_[xvals,yvals,np.ones(xvals.size)]
-        #get cooefficience
-        C,_,_,_ = scipy.linalg.lstsq(A,zvals)
+        #No need to solve for plane because I have values from the normal vector 2018/03/15 J. Prchlik
+        #####plot 3d plot
+        #####fit plane
+        #####c, normal = fitPlaneLTSQ(xvals,yvals,zvals)
+        #####try different way to fit plane
+        ####A = np.c_[xvals,yvals,np.ones(xvals.size)]
+        #####get cooefficience
+        ####C,_,_,_ = scipy.linalg.lstsq(A,zvals)
         #create center point (use Wind)
         #point = np.array([xvals[0], yvals[0], zvals[0]])
         ##solve for d in a*x+b*y+c*z+d = 0
@@ -582,7 +617,8 @@ for i in sim_date:
         xt, yt = np.meshgrid(xg, yg)
         #zt = (-normal[0]*xt - normal[1]*yt - d)*1. / normal[2]
         #create z surface
-        zt = C[0]*xt+C[1]*yt+C[2]
+        #switched to exact a,b,c from above 2018/03/15
+        zt = -(a*xt+d*yt-d)/c
 
         #plot surface
         tax.plot_surface(xt,yt,zt,color=cin,alpha=.5)
@@ -597,9 +633,10 @@ for i in sim_date:
         zsort = np.argsort(zvals)
 
         #plot 2d plot
-        oax[0,0].plot(xvals[zsort],zvals[zsort],color=cin,label='Shock {0:1d}, Np = {1:3.2f}, t$_W$={2:%H:%S}, $|$V$|$={3:4.2f} km/s'.format(p+1,np_op,l,vm))
-        oax[1,0].plot(xvals[ysort],yvals[ysort],color=cin,label=None)
-        oax[0,1].plot(yvals[zsort],zvals[zsort],color=cin,label=None)
+        oax[0,0].plot(counter,zvalsx,color=cin,
+                      label='Shock {0:1d}, N$_p$ = {1:3.2f} cc, t$_W$={2:%H:%S}, $|$V$|$={3:4.2f} km/s'.format(p+1,np_op,l,vm).replace('cc','cm$^{-3}$'))
+        oax[1,0].plot(counter,yvalsx,color=cin,label=None)
+        oax[0,1].plot(counter,zvalsy,color=cin,label=None)
     #spacraft positions
     for k in craft:
         #Get closest index value location
@@ -629,6 +666,11 @@ for i in sim_date:
     tax.set_ylim([-600000,300000])
     
     oax[0,0].legend(loc='upper right',frameon=False,scatterpoints=1)
+
+
+    #rotate y,z y axis tick labels
+    for tick in oax[0,1].get_xticklabels():
+        tick.set_rotation(45)
 
     #Save spacecraft orientation plots
     ofig.savefig(andir+'event_orientation_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
