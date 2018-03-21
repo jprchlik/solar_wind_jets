@@ -513,17 +513,17 @@ def main(start_t,end_t,center=True,events=1,par=None):
         #set orientation lables
         oax[1,1].axis('off')
         oax[0,0].set_title('{0:%Y/%m/%d %H:%M:%S}'.format(i),fontsize=20)
-        oax[0,0].set_xlabel('X(GSE) [km]',fontsize=20)
-        oax[0,0].set_ylabel('Z(GSE) [km]',fontsize=20)
-        oax[0,1].set_xlabel('Y(GSE) [km]',fontsize=20)
-        oax[0,1].set_ylabel('Z(GSE) [km]',fontsize=20)
-        oax[1,0].set_xlabel('X(GSE) [km]',fontsize=20)
-        oax[1,0].set_ylabel('Y(GSE) [km]',fontsize=20)
+        oax[0,0].set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
+        oax[0,0].set_ylabel('Z(GSE) [R$_\oplus$]',fontsize=20)
+        oax[0,1].set_xlabel('Y(GSE) [R$_\oplus$]',fontsize=20)
+        oax[0,1].set_ylabel('Z(GSE) [R$_\oplus$]',fontsize=20)
+        oax[1,0].set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
+        oax[1,0].set_ylabel('Y(GSE) [R$_\oplus$]',fontsize=20)
     
         #set 3d axis label 2018/03/13
-        tax.set_xlabel('X(GSE) [km]',fontsize=20)
-        tax.set_ylabel('Y(GSE) [km]',fontsize=20)
-        tax.set_zlabel('Z(GSE) [km]',fontsize=20)
+        tax.set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
+        tax.set_ylabel('Y(GSE) [R$_\oplus$]',fontsize=20)
+        tax.set_zlabel('Z(GSE) [R$_\oplus$]',fontsize=20)
        
     
         ###########################################################
@@ -603,9 +603,9 @@ def main(start_t,end_t,center=True,events=1,par=None):
         zvalsy = -(a*(px+rng)+b*(py+rng)-d)/c
         yvalsx = -(a*(px+rng)+c*(pz+rng)-d)/b
         #plot 2d plot
-        oax[0,0].plot(px+rng,zvalsx,color='gray',label="Current")
-        oax[1,0].plot(px+rng,yvalsx,color='gray',label=None)
-        oax[0,1].plot(py+rng,zvalsy,color='gray',label=None)
+        oax[0,0].plot((px+rng)/Re,zvalsx/Re,color='gray',label="Current")
+        oax[1,0].plot((px+rng)/Re,yvalsx/Re,color='gray',label=None)
+        oax[0,1].plot((py+rng)/Re,zvalsy/Re,color='gray',label=None)
     
     
         ###########################################################
@@ -720,7 +720,7 @@ def main(start_t,end_t,center=True,events=1,par=None):
             zt = -(a*xt+d*yt-d)/c
     
             #plot surface
-            tax.plot_surface(xt,yt,zt,color=cin,alpha=.5)
+            tax.plot_surface(xt/Re,yt/Re,zt/Re,color=cin,alpha=.5)
     
             #get sorted value array
             #xvals = xt.ravel()
@@ -732,10 +732,10 @@ def main(start_t,end_t,center=True,events=1,par=None):
             zsort = np.argsort(zvals)
     
             #plot 2d plot
-            oax[0,0].plot(counter,zvalsx,color=cin,
+            oax[0,0].plot(counter/Re,zvalsx/Re,color=cin,
                           label='Shock {0:1d}, N$_p$ = {1:3.2f} cc, t$_W$={2:%H:%S}, $|$V$|$={3:4.2f} km/s'.format(p+1,np_op,l,vm).replace('cc','cm$^{-3}$'))
-            oax[1,0].plot(counter,yvalsx,color=cin,label=None)
-            oax[0,1].plot(counter,zvalsy,color=cin,label=None)
+            oax[1,0].plot(counter/Re,yvalsx/Re,color=cin,label=None)
+            oax[0,1].plot(counter/Re,zvalsy/Re,color=cin,label=None)
     
     
         #get array of x,y,z spacecraft positions
@@ -746,26 +746,29 @@ def main(start_t,end_t,center=True,events=1,par=None):
             #convert index location back to time index
             it = plsm[k].GSEx.dropna().index[ii]
     
-            oax[0,0].scatter(plsm[k].loc[it,'GSEx'],plsm[k].loc[it,'GSEz'],marker=marker[k],s=80,color=color[k],label=k)
-            oax[1,0].scatter(plsm[k].loc[it,'GSEx'],plsm[k].loc[it,'GSEy'],marker=marker[k],s=80,color=color[k],label=None)
-            oax[0,1].scatter(plsm[k].loc[it,'GSEy'],plsm[k].loc[it,'GSEz'],marker=marker[k],s=80,color=color[k],label=None)
-            tax.scatter(plsm[k].loc[it,'GSEx'],plsm[k].loc[it,'GSEy'],plsm[k].loc[it,'GSEz'],
+            oax[0,0].scatter(plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEz']/Re,marker=marker[k],s=80,color=color[k],label=k)
+            oax[1,0].scatter(plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEy']/Re,marker=marker[k],s=80,color=color[k],label=None)
+            oax[0,1].scatter(plsm[k].loc[it,'GSEy']/Re,plsm[k].loc[it,'GSEz']/Re,marker=marker[k],s=80,color=color[k],label=None)
+            tax.scatter(plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEy']/Re,plsm[k].loc[it,'GSEz']/Re,
                         marker=marker[k],s=80,color=color[k],label=None)
     
     
-        #set static limits
+        #set static limits from orbit maximum from SOHO file in Re
         #z limits
-        oax[0,0].set_ylim([-90000,160000])
-        oax[0,1].set_ylim([-90000,160000])
-        tax.set_zlim([-90000,160000])
+        z_lim = np.array([-1.,1])*240.
+        oax[0,0].set_ylim(z_lim)
+        oax[0,1].set_ylim(z_lim)
+        tax.set_zlim(z_lim)
         #xlimits
-        oax[0,0].set_xlim([1200000,1900000])
-        oax[1,0].set_xlim([1200000,1900000])
-        tax.set_xlim([1200000,1900000])
+        x_lim = np.array([-1.,1])*240.0+225.
+        oax[0,0].set_xlim(x_lim)
+        oax[1,0].set_xlim(x_lim)
+        tax.set_xlim(x_lim)
         #y limits
-        oax[0,1].set_xlim([-600000,300000])
-        oax[1,0].set_ylim([-600000,300000])
-        tax.set_ylim([-600000,300000])
+        y_lim = np.array([-1.,1])*120.0
+        oax[0,1].set_xlim(y_lim)
+        oax[1,0].set_ylim(y_lim)
+        tax.set_ylim(y_lim)
         
         oax[0,0].legend(loc='upper right',frameon=False,scatterpoints=1)
     
