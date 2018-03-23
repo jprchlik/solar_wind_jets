@@ -177,7 +177,7 @@ class dtw_plane:
 
     def init_read(self):
         #Parameters for file read in and parsing
-        par_read_in = partial(read_in,center=self.center)
+        par_read_in = partial(read_in,start_t=self.start_t,end_t=self.end_t,center=self.center)
         #read in and format spacecraft in parallel
         #Switched to single loop solution 2018/03/24 J. Prchlik 
         if self.first: #only do read in on the first pass
