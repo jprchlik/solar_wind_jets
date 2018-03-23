@@ -236,7 +236,10 @@ class dtw_plane:
         
         #create new plasma dictory which is a subset of the entire file readin
         plsm = {}
-        for i in craft: plsm[i] = self.plsm[i][start_t:end_t]
+        for i in craft:
+             plsm[i] = self.plsm[i][start_t:end_t]
+             #remove duplicates
+             plsm[i] = plsm[i][~plsm[i].index.duplicated(keep='first')]
 
         #get all values at full resolution for dynamic time warping
         t_mat  = plsm[trainer] #.loc[trainer_t-t_rgh_wid:trainer_t+t_rgh_wid]
@@ -303,7 +306,6 @@ class dtw_plane:
          
             #get dynamic time warping value   
             print('WARPING TIME')
-            print(par)
             dist, cost, path = mlpy.dtw_std(t_mat[par[0]].ffill().bfill().values,p_mat[par[0]].ffill().bfill().values,dist_only=False)
             print('STOP WARPING TIME')
         
