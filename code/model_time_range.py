@@ -225,6 +225,8 @@ class dtw_plane:
         color  = {}
         trainer = 'Wind'
         
+        #range to find the best maximum value
+        maxrang = pd.to_timedelta('3 minutes')
         
         #create dictionaries for labels
         for j,i in enumerate(craft):
@@ -238,6 +240,9 @@ class dtw_plane:
 
         #get all values at full resolution for dynamic time warping
         t_mat  = plsm[trainer] #.loc[trainer_t-t_rgh_wid:trainer_t+t_rgh_wid]
+
+        #Find points with the largest speed differences in wind
+        top_vs = t_mat.SPEED.dropna().diff().abs().nlargest(self.events)
         
         #plot with the best timing solution
         fig, fax = plt.subplots(ncols=2,nrows=3,sharex=True,figsize=(18,18))
@@ -258,7 +263,9 @@ class dtw_plane:
             #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
             #Try using the parameter with the largest difference  in B values preceding and including the event (2017/12/11 J. Prchlik)
             if len(par) > 1:
-               par_chi = np.array([(t_mat[par_i].max()-t_mat[par_i].min()).max() for par_i in par])
+               print(top_vs.index)
+               check_min,check_max = top_vs.index[0]-maxrang,top_vs.index[0]+maxrang
+               par_chi = np.array([(t_mat.loc[check_min:check_max,par_i].max()-t_mat.loc[check_min:check_max,par_i].min()).max() for par_i in par])
                use_par, = np.where(par_chi == np.max(par_chi))
                par      = list(np.array(par)[use_par])
         
@@ -308,7 +315,7 @@ class dtw_plane:
             b_mat = p_mat.copy()
         
             #update the time index of the match array for comparision with training spacecraft (i=training spacecraft time)
-            b_mat = b_mat.reindex(b_mat.iloc[path[1],:].index).interpolate('time')
+            b_mat = b_mat.reindex(b_mat.iloc[path[1],:].index) #.interpolate('time')
             b_mat.index = b_mat.index-off_sol
             b_mat['offsets'] = off_sol
         
@@ -403,8 +410,6 @@ class dtw_plane:
         
         fax[1,0].set_ylim([0.,100.])
         
-        #Find points with the largest speed differences in wind
-        top_vs = t_mat.SPEED.dropna().diff().abs().nlargest(self.events)
         
         #turn into data frame 
         frm_vs = pd.DataFrame(top_vs)
