@@ -158,6 +158,7 @@ class dtw_plane:
         self.justparm = justparm
         self.nproc = nproc
         self.Re = 6371.0
+        self.events = events
 
         self.first = True
 
@@ -403,7 +404,7 @@ class dtw_plane:
         fax[1,0].set_ylim([0.,100.])
         
         #Find points with the largest speed differences in wind
-        top_vs = t_mat.SPEED.dropna().diff().abs().nlargest(events)
+        top_vs = t_mat.SPEED.dropna().diff().abs().nlargest(self.events)
         
         #turn into data frame 
         frm_vs = pd.DataFrame(top_vs)
