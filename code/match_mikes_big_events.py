@@ -36,6 +36,19 @@ dfmt = '{0:%Y/%m/%d %H:%M:%S}'
 #array of wind times
 bwnd = []
 
+#array to switch to mike's spacecraft order
+mike_order = np.array([0,1,3,2])
+
+
+#Big array of differences
+big_diff = []
+
+#My stored parameters
+store_parm = []
+
+#get mike's speed
+mike_vel = []
+
 #loop over all events and compare with my plane solution
 for event in mike_event:
 
@@ -47,6 +60,8 @@ for event in mike_event:
     #Wind shock time in JD and convert to datetime object
     twind= pd.to_datetime(np.sum(mdat['state']['TRANGE'][0])/2.,origin='julian',unit='D')
 
+    #get mike's velocity and wind time
+    mike_vel.append(mdat['wisad_speed'])
     bwnd.append(twind)
     
     #stored values
@@ -68,10 +83,13 @@ for event in mike_event:
     my_dtw.init_read()  
 
     big_arr = my_dtw.main()
+    store_parm.append(big_arr)
     #big_arr = mtr.main(str(twind-window),str(twind+window))
 
     vn = np.array(big_arr[0][5]).T #The normal vectory for my solution
-    tvals = big_arr[0][3]
+ 
+    #Get my tvals and switch to mike's order (Wind,DSCOVR,SOHO,ACE)
+    tvals = big_arr[0][3][mike_order]
 
     print('#######################################################')
     print('Wind EVENT AT',twind)
@@ -80,6 +98,7 @@ for event in mike_event:
     print('Difference in Time offsets')
     print(tvals,toff)
     print(tvals-toff)
+    big_diff.append([tvals,toff,tvals-toff])
     print('#######################################################')
     #loop over all spacecraft
 ####    for k,j in enumerate(skey):
@@ -149,7 +168,9 @@ for event in mike_event:
     #my_dtw.init_read()  
 
 
-
+    
+    
+for j,i in enumerate(store_parm): print(bwnd[j],i[0][4],mike_vel[j])
 
 #create class which contains information on all spacecraft
 #my_dtw = mtr.dtw_plane('2016/07/10 00:00:00','2017/09/15 00:00:00',nproc=4)
