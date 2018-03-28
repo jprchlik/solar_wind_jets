@@ -35,6 +35,24 @@ def set_directory(craft,param):
     elif ((craft == 'wind') & (param == 'plsm')):
         a_dir = 'wind/swe/swe_h1/'
 
+    #Themis A directories
+    elif ((craft == 'themis_a') & (param == 'orb')):
+        a_dir = 'themis/tha/ssc/'
+    elif ((craft == 'themis_a') & (param == 'mag')):
+        a_dir = 'themis/tha/l2/scm/'
+    elif ((craft == 'themis_a') & (param == 'plsm')):
+        a_dir = 'themis/tha/l2/esa/'
+
+    #Thanos B directories
+    elif ((craft == 'themis_b') & (param == 'orb')):
+        a_dir = 'themis/thb/ssc/'
+    elif ((craft == 'themis_b') & (param == 'mag')):
+        a_dir = 'themis/thb/l2/scm/'
+    elif ((craft == 'themis_b') & (param == 'plsm')):
+        a_dir = 'themis/thb/l2/esa/'
+
+
+
     #return specific directory
     return a_dir
 
@@ -62,7 +80,10 @@ def grab_files(craft,param,year,start,end,ftp):
         #Ace orbital files are not in year subdirectories so just search given directory
         if ((craft != 'ace') & (param != 'orb')):
             f_list = ftp.nlst('{0:4d}/*cdf'.format(i))
+        elif (('themis' in craft) & (param == 'orb')):
+            f_list = ftp.nlst('{0:4d}/*cdf'.format(i))
         else:
+            if param == 'orb': print('HERE')
             f_list = ftp.nlst('*_{0:4d}*cdf'.format(i))
         #get just file names and check if they exist locally
         for f_name in f_list:
@@ -74,8 +95,15 @@ def grab_files(craft,param,year,start,end,ftp):
 
             #check if local file exists
             l_chck = os.path.isfile(o_file) == False
-            #if file does not exist or there is only 1 cdf in directory, download 
-            if ((l_chck) | (len(f_list) == 1)): 
+
+
+            #check file is in daterange
+            file_date = datetime.strptime(l_name.split('_')[-2],'%Y%m%d')
+            good_date = ((file_date >= start) & (file_date <= end) | (param == 'orb'))
+           
+           
+            #if file does not exist or there is only 1 cdf in directory, and is in daterange download 
+            if (((l_chck) | (len(f_list) == 1)) & (good_date)): 
                 fhandle = open(o_file,'wb')
                 ftp.retrbinary('RETR {0}'.format(f_name),fhandle.write)
                 fhandle.close()
@@ -100,7 +128,7 @@ def download_files(craft,param,archive,years,start,end):
     ftp.close()
 
 #Main function to run
-def main(f_types=['mag','plsm','orb'],space_c=['ace','dscovr','wind'],
+def main(f_types=['mag','plsm','orb'],space_c=['ace','dscovr','wind'], #,'themis_a','themis_b'],
          archive='ftp://cdaweb.gsfc.nasa.gov/pub/data/',start=datetime(2015,6,1),end=None,
          nproc=1):
     '''
@@ -112,7 +140,7 @@ def main(f_types=['mag','plsm','orb'],space_c=['ace','dscovr','wind'],
         List of parameters to download for ftp archive (default = ['mag','plsm','orb').
         Currently only accepts 'mag', 'plsm', and/or 'orb'.
     space_c: list, optional 
-        List of spacecraft to download data for (default = ['ace','dscovr','wind']). 
+        List of spacecraft to download data for (default = ['ace','dscovr','wind'] but may also take 'themis_a' and 'themis_b]). 
         Currently only accepts 'ace', 'dscovr', and/or 'wind'.
     archive: string, optional
         String containing the base location of the ftp archive (default = 'ftp://cdaweb.gsfc.nasa.gov/pub/data/').
