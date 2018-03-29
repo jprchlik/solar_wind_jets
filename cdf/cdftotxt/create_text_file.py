@@ -10,7 +10,7 @@ from multiprocessing import Pool
 
 def looper(s_idx):
     #List of possible spacecraft
-    scrf = ['wind','ace','dscovr','soho']
+    scrf = ['wind','ace','dscovr','soho','themis_a','themis_b']
     #current space craft
     sc1 = scrf[s_idx]
 
@@ -39,20 +39,29 @@ def looper(s_idx):
         mag_key = ['Epoch1','B1GSE','FLAG1']
         pls_key = ['Epoch','SPEED','Np','THERMAL_SPD','DQF']
         orb_key = ['Epoch','GSE_POS']
+    if sc1 == 'themis_b':
+        mag_key = ['thb_scf_time','thb_scf_gse']
+        pls_key = ['thb_peef_time','thb_peef_velocity_gse','thb_peef_density','thb_peef_vthermal','thb_peef_data_quality']
+        orb_key = ['Epoch','XYZ_GSE']
+    if sc1 == 'themis_a':
+        mag_key = ['tha_scf_time','tha_scf_gse']
+        pls_key = ['tha_peef_time','tha_peef_velocity_gse','tha_peef_density','tha_peef_vthermal','tha_peef_data_quality']
+        orb_key = ['Epoch','XYZ_GSE']
 
     #Get magnetic and plasma cdf files
     fpls = glob(archive+'*cdf')
     fmag = glob(mrchive+'*h0*cdf')
     forb = glob(orchive+'*or*cdf')
+    if 'themis' in sc1: fmag = glob(mrchive+'*scm*cdf')
     
     #convert to textfile
     #Commented to fix time error J. Prchlik 2017/11/14
     #just ace currupted magnetic field observations
-    cdf_to_text(fpls,pls_key,sc1,'pls')
+    #cdf_to_text(fpls,pls_key,sc1,'pls')
     ##commented out J. Prchlik 2017/11/14 to fix wrong Vth in ACE
     cdf_to_text(fmag,mag_key,sc1,'mag')
     #Add orbital files 2018/01/31 J. Prchlik
-    cdf_to_text(forb,orb_key,sc1,'orb')
+    #cdf_to_text(forb,orb_key,sc1,'orb')
 
 #function to create pandas dataframe
 def cdf_to_text(f_list,keys,craft,context):
@@ -156,6 +165,10 @@ def cdf_to_text(f_list,keys,craft,context):
             SPEED = np.sqrt(np.sum(cdf['V_GSE'][...]**2,axis=1))
             Vth   = 1.E-3*np.sqrt(2.*kb/mp*cdf[keys[3]][...]) #convert Thermal Temp to Speed
             for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(Vth[k]),0]
+        elif ((context == 'pls') & ('themis' in craft)):
+            SPEED = np.sqrt(np.sum(cdf[keys[1]][...]**2,axis=1))
+            epoch = pd.to_timedelta(cdf[keys[0]][...],unit='s')+pd.to_datetime('1970/01/01 00:00:00' )
+            for k,j in enumerate(epoch): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(cdf[keys[3]][k]),int(cdf[keys[4]][k])]
         elif ((context == 'mag') & (craft == 'wind')):
             #decrease the wind cadence 10 s in magfield
             loopers = range(0,len(cdf[keys[0]][...]),90) 
@@ -166,6 +179,11 @@ def cdf_to_text(f_list,keys,craft,context):
             for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
         elif ((context == 'mag') & (craft == 'ace')):
             for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
+        elif ((context == 'mag') & ('themis' in craft)):
+            epoch = pd.to_timedelta(cdf[keys[0]][...]-11.79,unit='s')+pd.to_datetime('1970/01/01 00:00:00' ) #Not corrected for leap seconds
+            #Cut to ~10s
+            loopers = range(0,len(cdf[keys[0]][...]),80) 
+            for k in loopers: tab.loc[len(tab)] = [epoch[k],cdf[keys[1]][k][0],cdf[keys[1]][k][1],cdf[keys[1]][k][2],0]
             #Hacked for k1 observations
             #Undone 2018/01/26 (J. prchlik)
             #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,int(0),(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
@@ -173,14 +191,19 @@ def cdf_to_text(f_list,keys,craft,context):
         elif ((context == 'orb') & (craft == 'wind')):
             for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
         elif ((context == 'orb') & (craft == 'dscovr')):
-            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
+            #only get orbit every 10 minutes
+            loopers = range(0,len(cdf[keys[0]][...]),10) 
+            for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
         elif ((context == 'orb') & (craft == 'ace')):
+            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
+        elif ((context == 'orb') & ('themis' in craft)):
             for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
 
 
 
         #close cdf file
         cdf.close()
+        print('Completed {0}'.format(i))
  
 
     #close output file
@@ -191,6 +214,8 @@ def cdf_to_text(f_list,keys,craft,context):
         tab.fillna(-9999.9,inplace=True)
         tab['Time'] = pd.to_datetime(tab['Time'])
         tab.sort_values('Time',inplace=True)
+        #drop if we some how get duplicates
+        tab.drop_duplicates(subset='Time',keep='last',inplace=True)
         tab.to_csv(out_fil,index=None,sep=' ')
 
 
@@ -199,16 +224,17 @@ def cdf_to_text(f_list,keys,craft,context):
 #fix index error in DSCOVR and Wind Mag. Field
 #Run 2015-2017 observations
 ids = [0,1,2]
+ids = [4,5]
 
 #Do in parallel
 #Now should check to see if day alreay exists before editing file
-pool = Pool(processes=3)
+pool = Pool(processes=2)
 out  = pool.map(looper,ids)
 pool.close()
 pool.join()
 
 #just ace to fix wrong thermal speed
 #just ace currupted magnetic field observations
-#looper(0)
+looper(5)
 
 #for s_idx in range(3): looper(s_idx)
