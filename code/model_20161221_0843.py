@@ -150,8 +150,8 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
 
 #set use to use all spacecraft
 craft = ['Wind','DSCOVR','ACE','SOHO','THEMIS_A','THEMIS_B']
-col   = ['blue','black','red','teal','orange','cyan']
-mar   = ['D','o','s','<','1','2']
+col   = ['blue','black','red','teal','purple','orange']
+mar   = ['D','o','s','<','<','^']
 marker = {}
 color  = {}
 trainer = 'Wind'
@@ -426,7 +426,7 @@ big_lis = []
 for j,i in enumerate(top_vs.index):
     yval = t_mat.loc[i,:].SPEED
     xval = mdates.date2num(i)
-    fax[2,0].annotate('Shock {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
+    fax[2,0].annotate('Event {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
                       arrowprops=dict(facecolor='purple',shrink=0.005))
     #computer surface for events
     #tvals = -np.array([np.mean(plsm[c+'_offset'].loc[i,'offsets']).total_seconds() for c in craft])
@@ -513,6 +513,8 @@ for j,i in enumerate(top_vs.index):
     itval = plsm['THEMIS_B_offset'].loc[i,'offsets']
     #Get time of observation in THEMIS B
     itind = pd.to_datetime(plsm['THEMIS_B_offset'].loc[i,'Time_pls'])
+    #Get first match if DTW produces more than one
+    if isinstance(itind,pd.Series): itind = itind.dropna()[0]
     if isinstance(itval,pd._libs.tslib.Timedelta):
         atval = itval.total_seconds()
     elif isinstance(itval,pd.Series):
@@ -531,22 +533,22 @@ for j,i in enumerate(top_vs.index):
     d = float(vn.T.dot(ps))
     print('###################################################')
     print('NEW solution')
-    print('EVENT {0:1d} @ {1:%Y/%m/%d %H:%M:%S}'.format(j,i))
+    print('EVENT {0:1d} @ {1:%Y/%m/%d %H:%M:%S}, V = {2:3.1f}km/s'.format(j+1,i,vm))
     #scale the coefficiecnts of the normal matrix for distance
-    coeff = vn.T*pm
+    coeff = vn*pm
     a = float(coeff[0])
     b = float(coeff[1])
     c = float(coeff[2])
     d = float(coeff.T.dot(ps))
 
-    #Wind Themis B distance
-    themis_d = np.matrix([axval,ayval,azval])-np.matrix([xval[0],yval[0],zval[0]]).dot(vn)
+    #Wind Themis B distance difference from plane at wind
+    themis_d = np.linalg.norm(np.matrix([axval,ayval,azval])-np.matrix([px,py,pz]).dot(vn))
     themis_dt = float(themis_d)/vm
     themis_pr = i+pd.to_timedelta(themis_dt,unit='s')
 
 
-    print('Predicted Arrival Time at THEMIS B {0:%Y/%m/%d %H:%M:%S}'.format(themis_pr))
-    print('Actual Arrival Time at THEMIS B {0:%Y/%m/%d %H:%M:%S}'.format(itind))
+    print('Predicted Arrival Time at THEMIS B {0:%Y/%m/%d %H:%M:%S}, Distance = {1:4.1f}km'.format(themis_pr,themis_d))
+    print('Actual Arrival Time at THEMIS B {0:%Y/%m/%d %H:%M:%S}, Offset (Pred.-Act.) = {1:4.2f}s'.format(itind,themis_dt-atval))
     #print(a,b,c,d)
     print('###################################################')
 
@@ -554,6 +556,7 @@ for j,i in enumerate(top_vs.index):
 #I don't need to do this 2018/03/15 J. Prchlik
 #big_lis = np.array(big_lis)
 
+fax[0,0].legend(loc='upper right',frameon=False,scatterpoints=1)
 fig.autofmt_xdate()
                 
 fig.savefig('../plots/bou_20161221_084312.png',bbox_pad=.1,bbox_inches='tight')
