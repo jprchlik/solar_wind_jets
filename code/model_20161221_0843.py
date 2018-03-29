@@ -149,7 +149,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
 
 
 #set use to use all spacecraft
-craft = ['Wind','DSCOVR','ACE','SOHO','THEMIS A','THEMIS B']
+craft = ['Wind','DSCOVR','ACE','SOHO','THEMIS_A','THEMIS_B']
 col   = ['blue','black','red','teal','orange','cyan']
 mar   = ['D','o','s','<','1','2']
 marker = {}
@@ -186,7 +186,8 @@ par_read_in = partial(read_in,start_t=start_t,end_t=end_t,center=center)
 
 
 #remove themis a and b from initial spacecraft readin
-craft.remove('THEMIS A').remove('THEMIS B')
+craft.remove('THEMIS_A')
+craft.remove('THEMIS_B')
 
 #plot window 
 plt_windw = pd.to_timedelta('180 minutes')
@@ -212,9 +213,9 @@ for i in outp:
 #Parameters for file read in and parsing
 #Assumine initially 1.7e6 km (L1) to earth and the wave moves at 200 km/s so 142 minute travel time
 themis_s = '2016/12/21 09:22:00'
-themis_s = '2016/12/21 15:22:00'
+themis_e = '2016/12/21 15:22:00'
 par_read_in = partial(read_in,start_t=themis_s,end_t=themis_e,center=center)
-earth = ['themis_a','themis_b']
+earth = ['THEMIS_A','THEMIS_B']
 #read in and format themis spacecraft in parallel
 pool = Pool(processes=2)
 outp = pool.map(par_read_in,earth)
@@ -223,7 +224,8 @@ pool.close()
 pool.join()
 
 #Add themis_a and themis_b back into craft to find DTW solution
-craft.append('THEMIS A').append('THEMIS B')
+#craft.append('THEMIS_A') #Skip Themis A for bad plasma data
+craft.append('THEMIS_B')
 
 #Add Themis to plasma dictionary
 for i in outp:
@@ -245,7 +247,7 @@ for k in craft[1:]:
     p_mat  = plsm[k] #.loc[i_min-t_rgh_wid:i_min+t_rgh_wid]
 
     #use speed for rough esimation if possible
-    if  (k.lower() == 'soho'): par = ['SPEED']
+    if  ((k.lower() == 'soho') | ('themis' in k.lower())): par = ['SPEED']
     else: par = ['Bx','By','Bz']
 
     #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
@@ -373,14 +375,12 @@ if len(t_mat[t_mat['Bz']    > -9990.0]) > 0:
     fax[2,1].plot(t_mat[t_mat['Bz'   ] > -9990.0].index,t_mat[t_mat['Bz']    > -9990.0].Bz,color=color[trainer],linewidth=2)
 
 
-print('HERE')
 fancy_plot(fax[0,0])
 fancy_plot(fax[1,0])
 fancy_plot(fax[2,0])
 fancy_plot(fax[0,1])
 fancy_plot(fax[1,1])
 fancy_plot(fax[2,1])
-print('HERE')
 i = pd.to_datetime("2016/12/21 08:43:12") 
 fax[0,0].set_xlim([i-pd.to_timedelta('100 minutes'),i+pd.to_timedelta('180 minutes')])
 
@@ -442,7 +442,7 @@ for j,i in enumerate(top_vs.index):
    
 
     #loop over all craft and populate time and position arrays
-    for c in craft[:-2]:
+    for c in craft[:4]:
         #Get closest index value location
         ii = plsm[c].GSEx.dropna().index.get_loc(i,method='nearest')
         #convert index location back to time index
@@ -470,9 +470,9 @@ for j,i in enumerate(top_vs.index):
     #vy = wind_v.iloc[i_val].Vy
     #vz = wind_v.iloc[i_val].Vz
     #use positions and vectors to get a solution for plane velocity
-    pm  = np.matrix([xvals[1:]-xvals[0],yvals[1:]-yvals[0],zvals[1:]-zvals[0]]).T #coordinate of craft 1 in top row
+    pc  = np.matrix([xvals[1:]-xvals[0],yvals[1:]-yvals[0],zvals[1:]-zvals[0]]).T #coordinate of craft 1 in top row
     tm  = np.matrix(tvals[1:]).T # 1x3 matrix of time (wind-spacecraft)
-    vna = np.linalg.solve(pm,tm) #solve for the velocity vectors normal
+    vna = np.linalg.solve(pc,tm) #solve for the velocity vectors normal
     vn  = vna/np.linalg.norm(vna)
     vm  = 1./np.linalg.norm(vna) #get velocity magnitude
     
@@ -491,6 +491,7 @@ for j,i in enumerate(top_vs.index):
     py = yvals[0]
     pz = zvals[0]
    
+    ps = np.matrix([[px],[py],[pz]])
 
     #parameters to add
     add_lis = [vx,vy,vz,tvals,vm,vn,px,py,pz]
@@ -498,6 +499,56 @@ for j,i in enumerate(top_vs.index):
     #put values in new dataframe
     #for l in range(len(col_add)):
     #    frm_vs.loc[i,col_add[l]] = add_lis[l] 
+    ################################################################
+    #Get THEMIS B location and compare arrival times
+    ################################################################
+    #Get closest index value location
+    ii = plsm['THEMIS_B'].GSEx.dropna().index.get_loc(i,method='nearest')
+
+    #convert index location back to time index
+    it = plsm['THEMIS_B'].GSEx.dropna().index[ii]
+
+    #append craft values onto time and position arrays
+    #changed to min values 2018/03/12 J. Prchlik
+    itval = plsm['THEMIS_B_offset'].loc[i,'offsets']
+    #Get time of observation in THEMIS B
+    itind = pd.to_datetime(plsm['THEMIS_B_offset'].loc[i,'Time_pls'])
+    if isinstance(itval,pd._libs.tslib.Timedelta):
+        atval = itval.total_seconds()
+    elif isinstance(itval,pd.Series):
+        atval = min(itval,key=abs).total_seconds()
+    axval = np.mean(plsm['THEMIS_B'].loc[it,'GSEx'])
+    ayval = np.mean(plsm['THEMIS_B'].loc[it,'GSEy'])
+    azval = np.mean(plsm['THEMIS_B'].loc[it,'GSEz'])
+
+    ################################################################
+    ################################################################
+
+    #get the magentiude of the position
+    pm  = float(np.linalg.norm(ps))
+
+    #solve the plane equation for d
+    d = float(vn.T.dot(ps))
+    print('###################################################')
+    print('NEW solution')
+    print('EVENT {0:1d} @ {1:%Y/%m/%d %H:%M:%S}'.format(j,i))
+    #scale the coefficiecnts of the normal matrix for distance
+    coeff = vn.T*pm
+    a = float(coeff[0])
+    b = float(coeff[1])
+    c = float(coeff[2])
+    d = float(coeff.T.dot(ps))
+
+    #Wind Themis B distance
+    themis_d = np.matrix([axval,ayval,azval])-np.matrix([xval[0],yval[0],zval[0]]).dot(vn)
+    themis_dt = float(themis_d)/vm
+    themis_pr = i+pd.to_timedelta(themis_dt,unit='s')
+
+
+    print('Predicted Arrival Time at THEMIS B {0:%Y/%m/%d %H:%M:%S}'.format(themis_pr))
+    print('Actual Arrival Time at THEMIS B {0:%Y/%m/%d %H:%M:%S}'.format(itind))
+    #print(a,b,c,d)
+    print('###################################################')
 
 #turn big lis into numpy array
 #I don't need to do this 2018/03/15 J. Prchlik
@@ -552,7 +603,7 @@ for i in sim_date:
     zvals = [] 
 
     #loop over all craft and populate time and position arrays
-    for c in craft[:-2]:
+    for c in craft[:4]:
         #Get closest index value location
         ii = plsm[c].GSEx.dropna().index.get_loc(i,method='nearest')
 
@@ -577,9 +628,9 @@ for i in sim_date:
     zvals = np.array(zvals) 
 
     #use positions and vectors to get a solution for plane velocity
-    pm  = np.matrix([xvals[1:]-xvals[0],yvals[1:]-yvals[0],zvals[1:]-zvals[0]]).T #coordinate of craft 1 in top row
+    pc  = np.matrix([xvals[1:]-xvals[0],yvals[1:]-yvals[0],zvals[1:]-zvals[0]]).T #coordinate of craft 1 in top row
     tm  = np.matrix(tvals[1:]).T # 1x3 matrix of time (wind-spacecraft)
-    vna = np.linalg.solve(pm,tm) #solve for the velocity vectors normal
+    vna = np.linalg.solve(pc,tm) #solve for the velocity vectors normal
     vn  = vna/np.linalg.norm(vna)
     vm  = 1./np.linalg.norm(vna) #get velocity magnitude
     
@@ -588,6 +639,7 @@ for i in sim_date:
 
     px = xvals[0]
     py = yvals[0]
+    pz = zvals[0]
     #solve for the plane at time l
     #first get the points
     ps = np.matrix([[px],[py],[pz]])
@@ -663,18 +715,6 @@ for i in sim_date:
         pm  = float(np.linalg.norm(ps))
         
 
-        #solve the plane equation for d
-        d = float(vn.T.dot(ps))
-        #print('###################################################')
-        #print('NEW solution')
-        #scale the coefficiecnts of the normal matrix for distance
-        coeff = vn*pm
-        a = float(coeff[0])
-        b = float(coeff[1])
-        c = float(coeff[2])
-        d = float(coeff.T.dot(ps))
-        #print(a,b,c,d)
-        #print('###################################################')
 
         #Switch to line 2018/03/15 J. Prchlik
         ##set up arrays of values
@@ -750,14 +790,14 @@ for i in sim_date:
 
         #plot 2d plot
         oax[0,0].plot(counter,zvalsx,color=cin,
-                      label='Shock {0:1d}, N$_p$ = {1:3.2f} cc, t$_W$={2:%H:%S}, $|$V$|$={3:4.2f} km/s'.format(p+1,np_op,l,vm).replace('cc','cm$^{-3}$'))
+                      label='Event {0:1d}, N$_p$ = {1:3.2f} cc, t$_W$={2:%H:%S}, $|$V$|$={3:4.2f} km/s'.format(p+1,np_op,l,vm).replace('cc','cm$^{-3}$'))
         oax[1,0].plot(counter,yvalsx,color=cin,label=None)
         oax[0,1].plot(counter,zvalsy,color=cin,label=None)
 
 
     #get array of x,y,z spacecraft positions
     #spacraft positions
-    for k in craft[:-2]:
+    for k in craft[:4]:
         #Get closest index value location
         ii = plsm[k].GSEx.dropna().index.get_loc(i,method='nearest')
         #convert index location back to time index
