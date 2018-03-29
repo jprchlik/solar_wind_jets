@@ -65,6 +65,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
     """
     #Read in plasma and magnetic field data from full res
     pls = pd.read_table(arch+pls_fmt.format(k.lower()),delim_whitespace=True)
+    Re = 6371.0 # Earth radius in km
 
     #no magnetic field data from SOHO
     if k.lower() != 'soho':
@@ -85,11 +86,12 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
         pls = pls[start_t:end_t]
         mag = mag[start_t:end_t]
         orb = orb[start_t:end_t]
+        #multiply each component by Earth Radius for Themis observations
+        if 'themis' in k.lower():
+            orb.loc[:,'GSEx'] *= Re
+            orb.loc[:,'GSEy'] *= Re
+            orb.loc[:,'GSEz'] *= Re
 
-        #pls = pls['2016/07/18':'2016/07/21']
-        #mag = mag['2016/07/18':'2016/07/21']
-        #pls = pls['2017/01/25':'2017/01/27']
-        #mag = mag['2017/01/25':'2017/01/27']
 
         #join magnetic field and plasma dataframes
         com_df  = pd.merge(mag,pls,how='outer',left_index=True,right_index=True,suffixes=('_mag','_pls'),sort=True)
@@ -127,7 +129,6 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
         plsm = pls[start_t:end_t]
         plsm.loc[:,['Bx','By','Bz']] = -9999.0
 
-        Re = 6371.0 # Earth radius
 
         #multiply each component by Earth Radius
         plsm.loc[:,'X'] *= Re
@@ -148,9 +149,9 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
 
 
 #set use to use all spacecraft
-craft = ['Wind','DSCOVR','ACE','SOHO']
-col   = ['blue','black','red','teal']
-mar   = ['D','o','s','<']
+craft = ['Wind','DSCOVR','ACE','SOHO','THEMIS A','THEMIS B']
+col   = ['blue','black','red','teal','orange','cyan']
+mar   = ['D','o','s','<','1','2']
 marker = {}
 color  = {}
 trainer = 'Wind'
@@ -184,6 +185,8 @@ ref_window['Wind'] = pd.to_timedelta('5 minutes')
 par_read_in = partial(read_in,start_t=start_t,end_t=end_t,center=center)
 
 
+#remove themis a and b from initial spacecraft readin
+craft.remove('THEMIS A').remove('THEMIS B')
 
 #plot window 
 plt_windw = pd.to_timedelta('180 minutes')
@@ -203,6 +206,29 @@ plsm = {}
 #create global plasma key
 for i in outp:
     plsm[i.craft.values[0]] = i
+
+
+#add themis spacecraft
+#Parameters for file read in and parsing
+#Assumine initially 1.7e6 km (L1) to earth and the wave moves at 200 km/s so 142 minute travel time
+themis_s = '2016/12/21 09:22:00'
+themis_s = '2016/12/21 15:22:00'
+par_read_in = partial(read_in,start_t=themis_s,end_t=themis_e,center=center)
+earth = ['themis_a','themis_b']
+#read in and format themis spacecraft in parallel
+pool = Pool(processes=2)
+outp = pool.map(par_read_in,earth)
+pool.terminate()
+pool.close()
+pool.join()
+
+#Add themis_a and themis_b back into craft to find DTW solution
+craft.append('THEMIS A').append('THEMIS B')
+
+#Add Themis to plasma dictionary
+for i in outp:
+    plsm[i.craft.values[0]] = i
+
 
 
 
@@ -416,7 +442,7 @@ for j,i in enumerate(top_vs.index):
    
 
     #loop over all craft and populate time and position arrays
-    for c in craft:
+    for c in craft[:-2]:
         #Get closest index value location
         ii = plsm[c].GSEx.dropna().index.get_loc(i,method='nearest')
         #convert index location back to time index
@@ -488,7 +514,9 @@ andir = '../plots/boutique_ana/'
 
 
 
-sim_date =  pd.date_range(start=start_t,end=end_t,freq='60S')
+#sim_date =  pd.date_range(start=start_t,end=end_t,freq='60S')
+#switched to Wind index for looping and creating figures 2018/03/15
+sim_date = plsm['Wind'][start_t:end_t].index[::10]
 
 for i in sim_date:
     #list of colors
@@ -515,7 +543,90 @@ for i in sim_date:
     tax.set_zlabel('Z(GSE) [km]',fontsize=20)
    
 
+    ###########################################################
+    ###########################################################
+    #Added to get current plane orientation for Wind 2018/03/05
+    tvals = [] 
+    xvals = [] 
+    yvals = [] 
+    zvals = [] 
 
+    #loop over all craft and populate time and position arrays
+    for c in craft[:-2]:
+        #Get closest index value location
+        ii = plsm[c].GSEx.dropna().index.get_loc(i,method='nearest')
+
+        #convert index location back to time index
+        it = plsm[c].GSEx.dropna().index[ii]
+
+        #append craft values onto time and position arrays
+        #changed to min values 2018/03/12 J. Prchlik
+        itval = plsm[c+'_offset'].loc[i,'offsets']
+        if isinstance(itval,pd._libs.tslib.Timedelta):
+            tvals.append(itval.total_seconds())
+        elif isinstance(itval,pd.Series):
+            tvals.append(min(itval,key=abs).total_seconds())
+        xvals.append(np.mean(plsm[c].loc[it,'GSEx']))
+        yvals.append(np.mean(plsm[c].loc[it,'GSEy']))
+        zvals.append(np.mean(plsm[c].loc[it,'GSEz']))
+
+    #Covert arrays into numpy arrays and flip sign of offset
+    tvals = np.array(tvals)
+    xvals = np.array(xvals) 
+    yvals = np.array(yvals) 
+    zvals = np.array(zvals) 
+
+    #use positions and vectors to get a solution for plane velocity
+    pm  = np.matrix([xvals[1:]-xvals[0],yvals[1:]-yvals[0],zvals[1:]-zvals[0]]).T #coordinate of craft 1 in top row
+    tm  = np.matrix(tvals[1:]).T # 1x3 matrix of time (wind-spacecraft)
+    vna = np.linalg.solve(pm,tm) #solve for the velocity vectors normal
+    vn  = vna/np.linalg.norm(vna)
+    vm  = 1./np.linalg.norm(vna) #get velocity magnitude
+    
+    #store vx,vy,vz values
+    vx,vy,vz = vm*np.array(vn).ravel()
+
+    px = xvals[0]
+    py = yvals[0]
+    #solve for the plane at time l
+    #first get the points
+    ps = np.matrix([[px],[py],[pz]])
+
+    #get the magentiude of the position
+    pm  = float(np.linalg.norm(ps))
+    
+
+    #solve the plane equation for d
+    d = float(vn.T.dot(ps))
+    #print('###################################################')
+    #print('NEW solution')
+    #scale the coefficiecnts of the normal matrix for distance
+    coeff = vn*pm
+    a = float(coeff[0])
+    b = float(coeff[1])
+    c = float(coeff[2])
+    d = float(coeff.T.dot(ps))
+    #print(a,b,c,d)
+    #print('###################################################')
+    #get the wind plane values for given x, y, or z
+    counter = np.linspace(-1e10,1e10,5)
+    windloc = np.zeros(counter.size)
+
+    #+/- range for plane
+    rng = np.linspace(-1.e6,1.e6,100)
+
+    #set off axis values to 0
+    zvalsx = -(a*(px+rng)+b*(py+rng)-d)/c
+    zvalsy = -(a*(px+rng)+b*(py+rng)-d)/c
+    yvalsx = -(a*(px+rng)+c*(pz+rng)-d)/b
+    #plot 2d plot
+    oax[0,0].plot(px+rng,zvalsx,color='gray',label="Current")
+    oax[1,0].plot(px+rng,yvalsx,color='gray',label=None)
+    oax[0,1].plot(py+rng,zvalsy,color='gray',label=None)
+
+
+    ###########################################################
+    ###########################################################
 
     #add fancy_plot to 2D plots
     for pax in oax.ravel(): fancy_plot(pax)
@@ -646,7 +757,7 @@ for i in sim_date:
 
     #get array of x,y,z spacecraft positions
     #spacraft positions
-    for k in craft:
+    for k in craft[:-2]:
         #Get closest index value location
         ii = plsm[k].GSEx.dropna().index.get_loc(i,method='nearest')
         #convert index location back to time index
