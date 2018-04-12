@@ -15,6 +15,8 @@ import sys
 import time
 import mlpy #for dynamic time warping 
 
+from dtaidistance import dtw #try new dynamic time warping function that creates penalty for compression
+
 from scipy.stats.mstats import theilslopes
 import scipy.optimize
 
@@ -292,7 +294,16 @@ for k in craft[1:]:
     #get dynamic time warping value   
     print('WARPING TIME')
     print(par)
-    dist, cost, path = mlpy.dtw_std(t_mat[par[0]].ffill().bfill().values,p_mat[par[0]].ffill().bfill().values,dist_only=False)
+    #dist, cost, path = mlpy.dtw_std(t_mat[par[0]].ffill().bfill().values,p_mat[par[0]].ffill().bfill().values,dist_only=False)
+    #changed to dtwp that allows penalty for compression (i.e. prevent long stretches of the same value 2018/04/12 J. Prchlik
+    #penalty = np.abs(p_mat[par[0]].median()-t_mat[par[0]].median())
+    penalty = 5.0
+    print('Penalty = {0:4.3f}'.format(penalty))
+    path = dtw.warping_path(t_mat[par[0]].ffill().bfill().values,
+                            p_mat[par[0]].ffill().bfill().values,
+                            penalty=penalty)
+    #put in previous path
+    path = np.array(path).T
     print('STOP WARPING TIME')
 
     #get full offsets for dynamic time warping
@@ -512,13 +523,13 @@ for j,i in enumerate(top_vs.index):
     #changed to min values 2018/03/12 J. Prchlik
     itval = plsm['THEMIS_B_offset'].loc[i,'offsets']
     #Get time of observation in THEMIS B
-    itind = pd.to_datetime(plsm['THEMIS_B_offset'].loc[i,'Time_pls'])
+    itind = pd.to_datetime(plsm['THEMIS_B'].loc[i+itval,'Time'])
     #Get first match if DTW produces more than one
-    if isinstance(itind,pd.Series): itind = itind.dropna()[0]
+    if isinstance(itind,pd.Series): itind = itind.dropna()[1]
     if isinstance(itval,pd._libs.tslib.Timedelta):
         atval = itval.total_seconds()
     elif isinstance(itval,pd.Series):
-        atval = min(itval,key=abs).total_seconds()
+        atval = np.mean(itval).total_seconds() #,key=abs).total_seconds()
     axval = np.mean(plsm['THEMIS_B'].loc[it,'GSEx'])
     ayval = np.mean(plsm['THEMIS_B'].loc[it,'GSEy'])
     azval = np.mean(plsm['THEMIS_B'].loc[it,'GSEz'])
@@ -567,7 +578,7 @@ andir = '../plots/boutique_ana/'
 
 
 
-
+raise
 #sim_date =  pd.date_range(start=start_t,end=end_t,freq='60S')
 #switched to Wind index for looping and creating figures 2018/03/15
 sim_date = plsm['Wind'][start_t:end_t].index[::10]
