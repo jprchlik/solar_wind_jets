@@ -410,6 +410,9 @@ fax[1,0].set_ylim([0.,100.])
 #Find points with the largest speed differences in wind
 top_vs = t_mat.SPEED.dropna().diff().abs().nlargest(7)
 
+#sort by time for event number
+top_vs.sort_index(inplace=True)
+
 #turn into data frame 
 frm_vs = pd.DataFrame(top_vs)
 #add columns
