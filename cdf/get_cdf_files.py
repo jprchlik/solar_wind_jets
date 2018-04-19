@@ -41,7 +41,7 @@ def set_directory(craft,param):
     elif ((craft == 'themis_a') & (param == 'mag')):
         a_dir = 'themis/tha/l2/scm/'
     elif ((craft == 'themis_a') & (param == 'plsm')):
-        a_dir = 'themis/tha/l2/esa/'
+        a_dir = 'themis/tha/l2/mom/'
 
     #Thanos B directories
     elif ((craft == 'themis_b') & (param == 'orb')):
@@ -49,7 +49,7 @@ def set_directory(craft,param):
     elif ((craft == 'themis_b') & (param == 'mag')):
         a_dir = 'themis/thb/l2/scm/'
     elif ((craft == 'themis_b') & (param == 'plsm')):
-        a_dir = 'themis/thb/l2/esa/'
+        a_dir = 'themis/thb/l2/mom/'
 
 
 
