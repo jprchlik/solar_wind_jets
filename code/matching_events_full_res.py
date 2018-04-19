@@ -1771,7 +1771,7 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                                         i,k.lower(),*(p_mat.loc[i_min-a_w:i_min+a_w,par_out].max().values.tolist()+
                                         (p_mat.loc[i_min,['GSEx','GSEy','GSEz']]-tr_events.loc[i,['GSEx','GSEy','GSEz']]).values.tolist())))
     
-                    except IndexError:
+                    except (IndexError,KeyError) as e:
                         print('Missing Index')
     
     
@@ -1798,17 +1798,19 @@ def main(craft=['Wind','DSCOVR','ACE','SOHO'],col=['blue','black','red','teal'],
                         out_f.write(new_row.format(k,i_min,(i_min-i).total_seconds()/60.,(i_upp-i_min).total_seconds(),(i_low-i_min).total_seconds(),p_mat.loc[i_min-a_w:i_min+a_w][p_var].max(),p_mat.loc[i_min-a_w:i_min+a_w][p_var.replace('predict','predict_sigma')].max(),'',i,k.lower(),*p_mat.loc[i_min-a_w:i_min+a_w,par_out].max()))
     
     
-                    except IndexError:
+                    except (IndexError,KeyError) as e:
                         print('Missing Index')
            
                 else:
                    print('No Plasma or Mag. Observations')
                    #Insert fill values for event if event fails
-                   tr_events.loc[i,k] = [np.nan,np.nan]
                    continue
 
             #Add Times and +/- 40 Minute into event Pandas data frame
-            tr_events.loc[i,[k+'_time',k+'_unc',k+'_GSE_X',k+'_GSE_Y',k+'_GSE_Z']] = [i_min,(i_upp-i_min),p_mat.loc[i_min,'GSEx'],p_mat.loc[i_min,'GSEy'],p_mat.loc[i_min,'GSEz']]
+            try:
+                tr_events.loc[i,[k+'_time',k+'_unc',k+'_GSE_X',k+'_GSE_Y',k+'_GSE_Z']] = [i_min,(i_upp-i_min),p_mat.loc[i_min,'GSEx'],p_mat.loc[i_min,'GSEy'],p_mat.loc[i_min,'GSEz']]
+            except (IndexError,KeyError) as e:
+               continue
 
 
             #Plot GSE cooridinates
