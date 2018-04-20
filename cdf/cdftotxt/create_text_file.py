@@ -39,27 +39,38 @@ def looper(s_idx):
         mag_key = ['Epoch1','B1GSE','FLAG1']
         pls_key = ['Epoch','SPEED','Np','THERMAL_SPD','DQF']
         orb_key = ['Epoch','GSE_POS']
+
+    #choose peir because it had the most data (~4s cadence for all parameters) 2018/04/19 J. Prchlik
+    #choose peem because moments because it is more complete 2018/04/19 J. Prchlik
+    #choose peem Removing thermal velocity for now 2018/04/19 J. Prchlik
+    #choose peim because that i stands for ion and e stands for electon 2018/04/20 J. Prchlik
+    if sc1 == 'themis_c':
+        mag_key = ['thc_peim_time','thc_peim_mag']
+        pls_key = ['thc_peim_time','thc_peim_velocity_gse','thc_peim_density','thc_peim_t3_mag','thc_peim_data_quality']
+        orb_key = ['Epoch','XYZ_GSE']
     if sc1 == 'themis_b':
-        mag_key = ['thb_scf_time','thb_scf_gse']
-        pls_key = ['thb_peef_time','thb_peef_velocity_gse','thb_peef_density','thb_peef_vthermal','thb_peef_data_quality']
+        mag_key = ['thb_peim_time','thb_peim_mag']
+        pls_key = ['thb_peim_time','thb_peim_velocity_gse','thb_peim_density','thb_peim_t3_mag','thb_peim_data_quality']
         orb_key = ['Epoch','XYZ_GSE']
     if sc1 == 'themis_a':
-        mag_key = ['tha_scf_time','tha_scf_gse']
-        pls_key = ['tha_peef_time','tha_peef_velocity_gse','tha_peef_density','tha_peef_vthermal','tha_peef_data_quality']
+        mag_key = ['tha_peim_time','tha_peim_mag']
+        pls_key = ['tha_peim_time','tha_peim_velocity_gse','tha_peim_density','tha_peim_t3_mag','tha_peim_data_quality']
         orb_key = ['Epoch','XYZ_GSE']
 
     #Get magnetic and plasma cdf files
     fpls = glob(archive+'*cdf')
     fmag = glob(mrchive+'*h0*cdf')
     forb = glob(orchive+'*or*cdf')
-    if 'themis' in sc1: fmag = glob(mrchive+'*scm*cdf')
+   
+    #Use combined moment data because 4 second cadence is good enough time resolution 2018/04/20 J. Prchlik
+    if 'themis' in sc1: fmag = glob(archive+'*mom*cdf')
     
     #convert to textfile
     #Commented to fix time error J. Prchlik 2017/11/14
     #just ace currupted magnetic field observations
-    #cdf_to_text(fpls,pls_key,sc1,'pls')
+    cdf_to_text(fpls,pls_key,sc1,'pls')
     ##commented out J. Prchlik 2017/11/14 to fix wrong Vth in ACE
-    cdf_to_text(fmag,mag_key,sc1,'mag')
+    #cdf_to_text(fmag,mag_key,sc1,'mag')
     #Add orbital files 2018/01/31 J. Prchlik
     #cdf_to_text(forb,orb_key,sc1,'orb')
 
@@ -181,9 +192,9 @@ def cdf_to_text(f_list,keys,craft,context):
             for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
         elif ((context == 'mag') & ('themis' in craft)):
             epoch = pd.to_timedelta(cdf[keys[0]][...]-11.79,unit='s')+pd.to_datetime('1970/01/01 00:00:00' ) #Not corrected for leap seconds
-            #Cut to ~10s
-            loopers = range(0,len(cdf[keys[0]][...]),80) 
-            for k in loopers: tab.loc[len(tab)] = [epoch[k],cdf[keys[1]][k][0],cdf[keys[1]][k][1],cdf[keys[1]][k][2],0]
+            #Cut to ~10s 
+            #Removed mag field cut because I am using a 4 s cadence combined file 2018/04/20 J. Prchlik
+            for k,j in enumerate(epoch): tab.loc[len(tab)] = [j,cdf[keys[1]][k][0],cdf[keys[1]][k][1],cdf[keys[1]][k][2],0]
             #Hacked for k1 observations
             #Undone 2018/01/26 (J. prchlik)
             #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,int(0),(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
