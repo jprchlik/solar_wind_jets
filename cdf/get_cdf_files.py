@@ -43,13 +43,21 @@ def set_directory(craft,param):
     elif ((craft == 'themis_a') & (param == 'plsm')):
         a_dir = 'themis/tha/l2/mom/'
 
-    #Thanos B directories
+    #Themis B directories
     elif ((craft == 'themis_b') & (param == 'orb')):
         a_dir = 'themis/thb/ssc/'
     elif ((craft == 'themis_b') & (param == 'mag')):
         a_dir = 'themis/thb/l2/scm/'
     elif ((craft == 'themis_b') & (param == 'plsm')):
         a_dir = 'themis/thb/l2/mom/'
+
+    #Themis C directories
+    elif ((craft == 'themis_c') & (param == 'orb')):
+        a_dir = 'themis/thc/ssc/'
+    elif ((craft == 'themis_c') & (param == 'mag')):
+        a_dir = 'themis/thc/l2/scm/'
+    elif ((craft == 'themis_c') & (param == 'plsm')):
+        a_dir = 'themis/thc/l2/mom/'
 
 
 
@@ -140,7 +148,7 @@ def main(f_types=['mag','plsm','orb'],space_c=['ace','dscovr','wind'], #,'themis
         List of parameters to download for ftp archive (default = ['mag','plsm','orb').
         Currently only accepts 'mag', 'plsm', and/or 'orb'.
     space_c: list, optional 
-        List of spacecraft to download data for (default = ['ace','dscovr','wind'] but may also take 'themis_a' and 'themis_b]). 
+        List of spacecraft to download data for (default = ['ace','dscovr','wind'] but may also take 'themis_a', 'themis_b', and 'themis_c']). 
         Currently only accepts 'ace', 'dscovr', and/or 'wind'.
     archive: string, optional
         String containing the base location of the ftp archive (default = 'ftp://cdaweb.gsfc.nasa.gov/pub/data/').
@@ -151,6 +159,16 @@ def main(f_types=['mag','plsm','orb'],space_c=['ace','dscovr','wind'], #,'themis
         If end = None then program will get the current UTC year.
     nproc: int, optional
         Number of processors to you to download files (Default = 1).
+
+
+    Example:
+    --------
+    import get_cdf_files as gcf
+    from datetime import datetime
+    stime = datetime(2016,12,20)
+    etime = datetime(2016,12,22)
+
+    gcf.main(space_c=['themis_c'],start=stime,end=etime)
    
 
     '''
