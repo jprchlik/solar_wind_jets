@@ -15,16 +15,32 @@ def wrap_looper(inp):
     """
     return looper(*inp)
 
-def looper(sc_1,pls,mag,orb):
+def looper(sc1,pls,mag,orb):
+    """
+    Function specifying which parameters to use when creating a formatted file
+  
+    Parameters:
+    -----------
+    sc1:  string
+        List of spacecraft to created formatted text files for
+    pls: boolean
+        Create formatted plasma parameter file.
+    mag: boolean
+        Create formatted magnetic field file.
+    orb: boolean
+        Create formatted orbit file.
+
+    """
+
     ##List of possible spacecraft
     scrf = ['wind','ace','dscovr','soho','themis_a','themis_b','themis_c']
 
     #exit cleanly if spacecraft is not in list of possible spacecraft
-    if sc_1 not in scrf: 
-        print('You input '+sc_1)
+    if sc1 not in scrf: 
+        print('You input '+sc1)
         print('Allowed inputs are:')
         print(scrf)
-        print('Skipping '+sc_1)
+        print('Skipping '+sc1)
         return
    
     ##current space craft
@@ -92,6 +108,21 @@ def looper(sc_1,pls,mag,orb):
 
 #function to create pandas dataframe
 def cdf_to_text(f_list,keys,craft,context):
+    """
+    Function which creates a formatted file for a given spacecraft and parameter (i.e. mag. field, plasma, or orbit location)
+   
+    Parameters:
+    ----------
+    flist: list
+        Full path list of cdf files
+    keys: list
+        Keys to retrieve from the CDF file 
+    craft:  string
+        Spacecraft to created formatted text files for
+    context: string
+        Whether the keys refer to magnetic field, plasma, or orbital parameters
+
+    """
 
     #boltzman constant and proton mass for conversion of temp to speed
     amu = 1.660538921e-27
@@ -254,9 +285,9 @@ def cdf_to_text(f_list,keys,craft,context):
 ids = [0,1,2]
 ids = [4,5]
 
-def main(scrf=['wind','ace','dscovr','soho','themis_a','themis_b','themis_c'],nproc=1,pls=True,mag=True,orb=True)
+def main(scrf=['wind','ace','dscovr','soho','themis_a','themis_b','themis_c'],nproc=1,pls=True,mag=True,orb=True):
     """
-    Python module for formatting cdf files downloaded via get_cdf_files (up one directory)
+    Python module for formatting cdf files downloaded via get_cdf_files (up one directory) into text files.
 
     Parameters
     ----------
