@@ -14,6 +14,8 @@ import threading
 import sys
 import time
 import mlpy #for dynamic time warping 
+from dtaidistance import dtw #try new dynamic time warping function that creates penalty for compression
+
 
 from scipy.stats.mstats import theilslopes
 import scipy.optimize
@@ -150,40 +152,97 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
 class dtw_plane:
 
 
-    def __init__(self,start_t,end_t,center=True,events=1,par=None,justparm=True,nproc=1):
+    def __init__(self,start_t,end_t,center=True,events=1,par=None,justparm=True,nproc=1,earth_craft=None,penalty=True):
+        """
+        Class to get planar DTW solutions for L1 spacecraft.      
+ 
+        Parameters:
+        ----------
+        start_t: string
+            Any string format recongized by pd.to_datetime indicating when to start looking for events
+        end_t: string
+            Any string format recongized by pd.to_datetime indicating when to stop looking for events
+        center: boolean, optional
+            Whether to use the center pixel for a running mean (Default = True). Otherwise running mean
+            is set by preceding pixels
+        events: int,optional
+            Number of Events to find planar solution for in given time period (Default = 1)
+        par: string or list, optional
+            Parameter to use when matching via DTW (Default = None). The default solution is to use 
+            flow speed for SOHO CELIAS and maximum difference in a 3 minute window for magnetic 
+            field component for every other spacecraft.
+        justparm: boolean, optional
+            Just do DTW solution but do not create animation of solution as a funciton of time
+            (Default = True)
+        nproc: integer, optional
+            Number of processors to use for matching (Default = 1). Currently, there is no reason
+            to change this value, but is a place holder incase someday it becomes useful
+        earth_craft: list, optional 
+            Show Themis/Artemis space craft and the best solutions (Default = None). Can be 
+            any combinateion of ['THEMIS_B','THEMIS_C','THEMIS_A'] 
+        penalty: boolean, optional
+            Include a penalty in the DTW solution for compression of time (Default = True)
+            
+        Example: 
+        ----------
+        import model_time_range as mtr
+        plane = mtr.dtw_plane('2016/07/19 21:00:00','2016/07/20 01:00:00',earth_craft=['THEMIS_B'],penalty=False)
+        plane.init_read()
+        plane.main()
+       
+
+        """
         self.start_t = start_t
         self.end_t = end_t
         self.center = center
         self.par = par
         self.justparm = justparm
         self.nproc = nproc
-        self.Re = 6371.0
+        self.Re = 6371.0 #km
         self.events = events
+        self.earth_craft = earth_craft
+        self.penalty = penalty
 
         self.first = True
 
 
         #set use to use all spacecraft
-        self.craft = ['Wind','DSCOVR','ACE','SOHO']
-        self.col   = ['blue','black','red','teal']
-        self.mar   = ['D','o','s','<']
+        self.craft = ['Wind','DSCOVR','ACE','SOHO','THEMIS_A','THEMIS_B','THEMIS_C']
+        self.col   = ['blue','black','red','teal','purple','orange','cyan']
+        self.mar   = ['D','o','s','<','>','^','8']
         self.marker = {}
         self.color  = {}
         self.trainer = 'Wind'
-        
+
+        #create dictionaries for labels
+        for j,i in enumerate(self.craft):
+            self.marker[i] = self.mar[j]
+            self.color[i]  = self.col[j]
+
+
+
+        #reset craft variable and add earth craft as requested
+        self.craft = ['Wind','DSCOVR','ACE','SOHO']
+        #Remove earth spacecraft no listed 
+        if earth_craft is not None:  
+            for i in earth_craft: self.craft.append(i)
+      
         
     
 
 
 
     def init_read(self):
+        """
+        Reads in text files containing information on solar wind parameters measured at different space craft
+        """
         #Parameters for file read in and parsing
         par_read_in = partial(read_in,start_t=self.start_t,end_t=self.end_t,center=self.center)
         #read in and format spacecraft in parallel
         #Switched to single loop solution 2018/03/24 J. Prchlik 
         if self.first: #only do read in on the first pass
             if self.nproc > 1.5:
-                pool = Pool(processes=4)
+                pool = Pool(processes=len(self.craft))
                 outp = pool.map(par_read_in,self.craft)
                 pool.terminate()
                 pool.close()
@@ -204,6 +263,9 @@ class dtw_plane:
             self.first = False
 
     def main(self):
+        """
+        Finds planar solution to 4 L1 spacecraft
+        """
         #Creating modular solution for DTW 2018/03/21 J. Prchlik
         ##set the Start and end time
         #start_t = "2016/12/21 07:00:00"
@@ -221,17 +283,10 @@ class dtw_plane:
         craft = self.craft #['Wind','DSCOVR','ACE','SOHO']
         col   = self.col   #['blue','black','red','teal']
         mar   = self.mar   #['D','o','s','<']
-        marker = {}
-        color  = {}
-        trainer = 'Wind'
+        trainer = self.trainer
         
         #range to find the best maximum value
         maxrang = pd.to_timedelta('3 minutes')
-        
-        #create dictionaries for labels
-        for j,i in enumerate(craft):
-            marker[i] = mar[j]
-            color[i]  = col[j]
         
         
         #create new plasma dictory which is a subset of the entire file readin
@@ -245,7 +300,13 @@ class dtw_plane:
         t_mat  = plsm[trainer] #.loc[trainer_t-t_rgh_wid:trainer_t+t_rgh_wid]
 
         #Find points with the largest speed differences in wind
-        top_vs = t_mat.SPEED.dropna().diff().abs().nlargest(self.events)
+        top_vs = (t_mat.SPEED.dropna().diff().abs()/t_mat.SPEED.dropna()).nlargest(7)
+        
+        #set range to include all top events (prevents window too large error
+        fax[0,0].set_xlim([top_vs.index.min()-offset,top_vs.index.max()+offset])
+        
+        #sort by time for event number
+        top_vs.sort_index(inplace=True)
         
         #plot with the best timing solution
         fig, fax = plt.subplots(ncols=2,nrows=3,sharex=True,figsize=(18,18))
@@ -306,7 +367,19 @@ class dtw_plane:
          
             #get dynamic time warping value   
             print('WARPING TIME')
-            dist, cost, path = mlpy.dtw_std(t_mat[par[0]].ffill().bfill().values,p_mat[par[0]].ffill().bfill().values,dist_only=False)
+            #use dtw solution that allows penalty for time compression
+            if self.penalty:
+                if 'SPEED' in par: penalty = 15.0
+                elif any('B' in s for s in par):  penalty = .2
+                print('Penalty = {0:4.3f}'.format(penalty))
+                path = dtw.warping_path(t_mat[par[0]].ffill().bfill().values,
+                                        p_mat[par[0]].ffill().bfill().values,
+                                        penalty=penalty)
+                #reformat in old format 2018/04/20 J. Prchlik
+                path = np.array(path).T
+            #Otherwise you quick DTW solution
+            else:
+                dist, cost, path = mlpy.dtw_std(t_mat[par[0]].ffill().bfill().values,p_mat[par[0]].ffill().bfill().values,dist_only=False)
             print('STOP WARPING TIME')
         
             #get full offsets for dynamic time warping
