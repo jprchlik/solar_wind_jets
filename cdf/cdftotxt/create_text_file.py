@@ -8,11 +8,27 @@ import pandas as pd
 from multiprocessing import Pool
 
 
-def looper(s_idx):
-    #List of possible spacecraft
-    scrf = ['wind','ace','dscovr','soho','themis_a','themis_b']
-    #current space craft
-    sc1 = scrf[s_idx]
+def wrap_looper(inp):
+    """
+    Wrapper for parrallel processing
+
+    """
+    return looper(*inp)
+
+def looper(sc_1,pls,mag,orb):
+    ##List of possible spacecraft
+    scrf = ['wind','ace','dscovr','soho','themis_a','themis_b','themis_c']
+
+    #exit cleanly if spacecraft is not in list of possible spacecraft
+    if sc_1 not in scrf: 
+        print('You input '+sc_1)
+        print('Allowed inputs are:')
+        print(scrf)
+        print('Skipping '+sc_1)
+        return
+   
+    ##current space craft
+    #sc1 = scrf[s_idx]
 
     
     
@@ -67,12 +83,12 @@ def looper(s_idx):
     
     #convert to textfile
     #Commented to fix time error J. Prchlik 2017/11/14
-    #just ace currupted magnetic field observations
-    cdf_to_text(fpls,pls_key,sc1,'pls')
+    #creating logic switches 
+    if pls: cdf_to_text(fpls,pls_key,sc1,'pls')
     ##commented out J. Prchlik 2017/11/14 to fix wrong Vth in ACE
-    #cdf_to_text(fmag,mag_key,sc1,'mag')
+    if mag: cdf_to_text(fmag,mag_key,sc1,'mag')
     #Add orbital files 2018/01/31 J. Prchlik
-    #cdf_to_text(forb,orb_key,sc1,'orb')
+    if orb: cdf_to_text(forb,orb_key,sc1,'orb')
 
 #function to create pandas dataframe
 def cdf_to_text(f_list,keys,craft,context):
@@ -238,15 +254,40 @@ def cdf_to_text(f_list,keys,craft,context):
 ids = [0,1,2]
 ids = [4,5]
 
-#Do in parallel
-#Now should check to see if day alreay exists before editing file
-pool = Pool(processes=2)
-out  = pool.map(looper,ids)
-pool.close()
-pool.join()
+def main(scrf=['wind','ace','dscovr','soho','themis_a','themis_b','themis_c'],nproc=1,pls=True,mag=True,orb=True)
+    """
+    Python module for formatting cdf files downloaded via get_cdf_files (up one directory)
 
-#just ace to fix wrong thermal speed
-#just ace currupted magnetic field observations
-looper(5)
+    Parameters
+    ----------
+    scrf:  list,optional
+        List of spacecraft to created formatted text files for (default= ['wind','ace','dscovr','soho','themis_a','themis_b','themis_c'])
+    nproc: int, optional
+        Number of processors used to format files. Can be up to 1 processor per spacecraft in scrf (default = 1).
+    pls: boolean, optional
+        Create formatted plasma parameter file (Default = True).
+    mag: boolean, optional
+        Create formatted magnetic field file (Default = True).
+    orb: boolean, optional
+        Create formatted orbit file (Default = True).
 
-#for s_idx in range(3): looper(s_idx)
+    Example:
+    -------
+    import create_text_file as ctf
+    cft.main(scrf=['themis_b'],pls=True,mag=True,orb=False) 
+
+    """
+
+    #Do in parallel per spacecraft
+    if nproc > 1:
+        #Add arguments to spacecraft name        
+        arg_scrf =[]
+        for i in scrf: arg_scrf.append([i,pls,mag,orb])
+
+        pool = Pool(processes=nproc)
+        out  = pool.map(wrap_looper,arg_scrf)
+        pool.close()
+        pool.join()
+    else:
+        for i in scrf: looper(i,pls,mag,orb)
+    
