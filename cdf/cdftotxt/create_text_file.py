@@ -278,12 +278,6 @@ def cdf_to_text(f_list,keys,craft,context):
         tab.to_csv(out_fil,index=None,sep=' ')
 
 
-#loop over spacecraft
-#s_idx = 0
-#fix index error in DSCOVR and Wind Mag. Field
-#Run 2015-2017 observations
-ids = [0,1,2]
-ids = [4,5]
 
 def main(scrf=['wind','ace','dscovr','soho','themis_a','themis_b','themis_c'],nproc=1,pls=True,mag=True,orb=True):
     """
@@ -305,7 +299,7 @@ def main(scrf=['wind','ace','dscovr','soho','themis_a','themis_b','themis_c'],np
     Example:
     -------
     import create_text_file as ctf
-    cft.main(scrf=['themis_b'],pls=True,mag=True,orb=False) 
+    ctf.main(scrf=['themis_b'],pls=True,mag=True,orb=False) 
 
     """
 
