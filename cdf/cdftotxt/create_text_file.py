@@ -179,7 +179,8 @@ def cdf_to_text(f_list,keys,craft,context):
         elif ((context == 'pls') & ('themis' in craft)):
             SPEED = np.sqrt(np.sum(cdf[keys[1]][...]**2,axis=1))
             epoch = pd.to_timedelta(cdf[keys[0]][...],unit='s')+pd.to_datetime('1970/01/01 00:00:00' )
-            for k,j in enumerate(epoch): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(cdf[keys[3]][k]),int(cdf[keys[4]][k])]
+            #Added radial thermal velocity measurement
+            for k,j in enumerate(epoch): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(cdf[keys[3]][k][0]),int(cdf[keys[4]][k])]
         elif ((context == 'mag') & (craft == 'wind')):
             #decrease the wind cadence 10 s in magfield
             loopers = range(0,len(cdf[keys[0]][...]),90) 
