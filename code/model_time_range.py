@@ -34,6 +34,9 @@ def solve_plane(p,t):
     ---------
     p: np.array or np.matrix
         Position vectors in x,y,z for three spacecraft with respect to wind
+        The First row is the X,Y,Z values for spacecraft 1
+        The Second row is the X,Y,Z values for spacecraft 2
+        The Thrid row is the X,Y,Z values for spacecraft 3
     t: np.array or np.matrix
         Time offset array from Wind for three spacecraft
     """
@@ -42,14 +45,12 @@ def solve_plane(p,t):
     vm  = 1./np.linalg.norm(vna) #get velocity magnitude
     return vna,vn,vm
 
-def solve_coeff(pm,ps,vn):
+def solve_coeff(ps,vn):
     """
     Plane coeffiences for given time and position of spacecraft
     
     Parameters:
     ----------
-    pm: np.array or np.matrix
-        Magnitude distance from spacecraft with respect to observation at Wind
     ps: np.array or np.matrix
         Position of earth spacecraft in GSE
     vn: np.array or np.matrix
@@ -65,6 +66,7 @@ def solve_coeff(pm,ps,vn):
     #print('###################################################')
     #print('NEW solution')
     #scale the coefficiecnts of the normal matrix for distance
+    pm  = float(np.linalg.norm(ps))
     coeff = vn*pm
     a = float(coeff[0])
     b = float(coeff[1])
@@ -758,16 +760,18 @@ class dtw_plane:
             pm  = float(np.linalg.norm(ps))
             
         
+            #switched to solve_coeff function 2018/04/24 J. Prchlik
             #solve the plane equation for d
-            d = float(vn.T.dot(ps))
+            #d = float(vn.T.dot(ps))
             #print('###################################################')
             #print('NEW solution')
             #scale the coefficiecnts of the normal matrix for distance
-            coeff = vn*pm
-            a = float(coeff[0])
-            b = float(coeff[1])
-            c = float(coeff[2])
-            d = float(coeff.T.dot(ps))
+            a,b,c,d = solve_coeff(pm,ps,vn)
+            #coeff = vn*pm
+            #a = float(coeff[0])
+            #b = float(coeff[1])
+            #c = float(coeff[2])
+            #d = float(coeff.T.dot(ps))
             #print(a,b,c,d)
             #print('###################################################')
             #get the wind plane values for given x, y, or z
@@ -830,16 +834,18 @@ class dtw_plane:
                 pm  = float(np.linalg.norm(ps))
                 
         
+                #Switched to solve_coeff function 2018/04/24 J. Prchlik
+                a,b,c,d = solve_coeff(pm,ps,vn)
                 #solve the plane equation for d
-                d = float(vn.T.dot(ps))
-                #print('###################################################')
-                #print('NEW solution')
-                #scale the coefficiecnts of the normal matrix for distance
-                coeff = vn*pm
-                a = float(coeff[0])
-                b = float(coeff[1])
-                c = float(coeff[2])
-                d = float(coeff.T.dot(ps))
+                #d = float(vn.T.dot(ps))
+                ##print('###################################################')
+                ##print('NEW solution')
+                ##scale the coefficiecnts of the normal matrix for distance
+                #coeff = vn*pm
+                #a = float(coeff[0])
+                #b = float(coeff[1])
+                #c = float(coeff[2])
+                #d = float(coeff.T.dot(ps))
                 #print(a,b,c,d)
                 #print('###################################################')
         
