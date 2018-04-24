@@ -235,6 +235,11 @@ class dtw_plane:
     def init_read(self):
         """
         Reads in text files containing information on solar wind parameters measured at different space craft
+
+        Parameters
+        ----------
+        self: class
+            Variables contained in self variable
         """
         #Parameters for file read in and parsing
         par_read_in = partial(read_in,start_t=self.start_t,end_t=self.end_t,center=self.center)
@@ -507,14 +512,18 @@ class dtw_plane:
         ####wind_v = pd.DataFrame(np.array([wind_t0,wind_vx,wind_vy,wind_vz]).T,columns=['time_dt','Vx','Vy','Vz'])
         ####wind_v.set_index(wind_v.time_dt,inplace=True)
         #big list of velocities
-        big_lis = []
+        #big_lis = []
+
+
+        #create dictionary of values for each event 2018/04/24 J. Prchlik
+        self.event_dict = {}
         
         #Plot the top shock values
         #fax[2,0].scatter(t_mat.loc[top_vs.index,:].index,t_mat.loc[top_vs.index,:].SPEED,color='purple',marker='X',s=150)
         for j,i in enumerate(top_vs.index):
             yval = t_mat.loc[i,:].SPEED
             xval = mdates.date2num(i)
-            fax[2,0].annotate('Shock {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
+            fax[2,0].annotate('Event {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
                               arrowprops=dict(facecolor='purple',shrink=0.005))
             #computer surface for events
             #tvals = -np.array([np.mean(plsm[c+'_offset'].loc[i,'offsets']).total_seconds() for c in craft])
@@ -527,6 +536,9 @@ class dtw_plane:
             yvals = [] #np.array([np.mean(plsm[c].loc[i,'GSEy']) for c in craft])
             zvals = [] #np.array([np.mean(plsm[c].loc[i,'GSEz']) for c in craft])
          
+            #create master event dictionary for given event to store parameters
+            cur = 'event_{0:1d}'.format(j+1)
+            self.event_dict['cur'] = {}
            
         
             #loop over all craft and populate time and position arrays
@@ -547,10 +559,10 @@ class dtw_plane:
                 zvals.append(np.mean(plsm[c].loc[it,'GSEz']))
         
             #Covert arrays into numpy arrays and flip sign of offset
-            tvals = np.array(tvals)
-            xvals = np.array(xvals) 
-            yvals = np.array(yvals) 
-            zvals = np.array(zvals) 
+            self.event_dict[cur]['tvals'] = np.array(tvals)
+            self.event_dict[cur]['xvals'] = np.array(xvals) 
+            self.event_dict[cur]['yvals'] = np.array(yvals) 
+            self.event_dict[cur]['zvals'] = np.array(zvals) 
             #Print position values and time values
         
             #get the velocity components with respect to the shock front at wind
@@ -566,7 +578,10 @@ class dtw_plane:
             vm  = 1./np.linalg.norm(vna) #get velocity magnitude
             
             #store vx,vy,vz values
-            vx,vy,vz = vm*np.array(vn).ravel()
+            self.event_dict[cur]['vx'],self.event_dict[cur]['vy'],self.event_dict[cur]['vz'] = vm*np.array(vn).ravel()
+            #store normal vector 2018/04/24 J. prchlik
+            self.event_dict[cur]['norm'] = vn
+            self.event_dict[cur]['mag'] = vm
         
             #get the 4 point location of the front when at wind
             #p_x(t0)1 = p_x(t1)-V_x*dt where dt = t1-t0  
@@ -576,14 +591,17 @@ class dtw_plane:
             #px = -vx*tvals+xvals
             #py = -vy*tvals+yvals
             #pz = -vz*tvals+zvals
-            px = xvals[0]
-            py = yvals[0]
-            pz = zvals[0]
+            self.event_dict[cur]['wind_px' = xvals[0]
+            self.event_dict[cur]['wind_py' = yvals[0]
+            self.event_dict[cur]['wind_pz' = zvals[0]
            
         
             #parameters to add
-            add_lis = [vx,vy,vz,tvals,vm,vn,px,py,pz]
-            big_lis.append(add_lis)
+            #Switched to dictionary 2018/04/24 J. Prchlik
+            #add_lis = [vx,vy,vz,tvals,vm,vn,px,py,pz]
+            #big_lis.append(add_lis)
+
+
             #put values in new dataframe
             #for l in range(len(col_add)):
             #    frm_vs.loc[i,col_add[l]] = add_lis[l] 
@@ -606,7 +624,8 @@ class dtw_plane:
 
         #Do not run animation sequence if asked to stop and return with just parameters
         #Returns vx,vy,vz,tvals,Vmag,Vnoraml,X,Y,Z
-        if justparm: return big_lis
+        #Switched to self.event_dict dictionary 2018/04/24 J. Prchlik
+        if justparm: return 
         
         
         #sim_date =  pd.date_range(start=start_t,end=end_t,freq='60S')
@@ -734,17 +753,17 @@ class dtw_plane:
             for p,l in enumerate(top_vs.index):
                 #color to use
                 cin = next(cycol)
-                vx = big_lis[p][0]
-                vy = big_lis[p][1]
-                vz = big_lis[p][2]
-                vm = big_lis[p][4]
-                vn = big_lis[p][5]
+                cur = 'event_{0:1d}'.format(p+1)
+                vx = self.event_dict[cur]['vx']
+                vy = self.event_dict[cur]['vy']
+                vz = self.event_dict[cur]['vz']
+                vm = self.event_dict[cur]['vm']
+                vn = self.event_dict[cur]['vn']
                 #Wind coordinates
-                px = big_lis[p][6]
-                py = big_lis[p][7]
-                pz = big_lis[p][8]
-        
-                #time difference between now and event
+                px = self.event_dict[cur]['wind_px']
+                py = self.event_dict[cur]['wind_py']
+                pz = self.event_dict[cur]['wind_pz']
+                #timeself.event_dict difference between now and event
                 dt = (i-l.to_pydatetime()).total_seconds()
 
 
