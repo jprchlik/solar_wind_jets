@@ -26,6 +26,52 @@ def plane_func(a,b,c,d,x,y,z):
     return a*x+b*y+c*z+d
 
 
+def solve_plane(p,t):
+    """
+    Velocity plane for given time and position of spacecraft
+    
+    Parameters:
+    ---------
+    p: np.array or np.matrix
+        Position vectors in x,y,z for three spacecraft with respect to wind
+    t: np.array or np.matrix
+        Time offset array from Wind for three spacecraft
+    """
+    vna = np.linalg.solve(p,t) #solve for the velocity vectors normal
+    vn  = vna/np.linalg.norm(vna)
+    vm  = 1./np.linalg.norm(vna) #get velocity magnitude
+    return vna,vn,vm
+
+def solve_coeff(pm,ps,vn):
+    """
+    Plane coeffiences for given time and position of spacecraft
+    
+    Parameters:
+    ----------
+    pm: np.array or np.matrix
+        Magnitude distance from spacecraft with respect to observation at Wind
+    ps: np.array or np.matrix
+        Position of earth spacecraft in GSE
+    vn: np.array or np.matrix
+        Normal vector of plane front
+  
+    Returns:
+    ----------
+    a,b,c,d: float
+        Solution for a plane at time t where plane has the solution 0=a*x+b*y+c*z+d
+        
+    """
+    #solve the plane equation for d
+    #print('###################################################')
+    #print('NEW solution')
+    #scale the coefficiecnts of the normal matrix for distance
+    coeff = vn*pm
+    a = float(coeff[0])
+    b = float(coeff[1])
+    c = float(coeff[2])
+    d = float(coeff.T.dot(ps))
+    
+    return [a,b,c,d]
 
 #Function to read in spacecraft
 def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
@@ -571,17 +617,18 @@ class dtw_plane:
             #vy = wind_v.iloc[i_val].Vy
             #vz = wind_v.iloc[i_val].Vz
             #use positions and vectors to get a solution for plane velocity
-            pm  = np.matrix([xvals[1:]-xvals[0],yvals[1:]-yvals[0],zvals[1:]-zvals[0]]).T #coordinate of craft 1 in top row
-            tm  = np.matrix(tvals[1:]).T # 1x3 matrix of time (wind-spacecraft)
-            vna = np.linalg.solve(pm,tm) #solve for the velocity vectors normal
-            vn  = vna/np.linalg.norm(vna)
-            vm  = 1./np.linalg.norm(vna) #get velocity magnitude
+            pm  = np.matrix([xvals[1:4]-xvals[0],yvals[1:4]-yvals[0],zvals[1:4]-zvals[0]]).T #coordinate of craft 1 in top row
+            tm  = np.matrix(tvals[1:4]).T # 1x3 matrix of time (wind-spacecraft)
+            vna,vn,vm = solve_plane(pm,tm)
+            #vna = np.linalg.solve(pm,tm) #solve for the velocity vectors normal
+            #vn  = vna/np.linalg.norm(vna)
+            #vm  = 1./np.linalg.norm(vna) #get velocity magnitude
             
             #store vx,vy,vz values
             self.event_dict[cur]['vx'],self.event_dict[cur]['vy'],self.event_dict[cur]['vz'] = vm*np.array(vn).ravel()
             #store normal vector 2018/04/24 J. prchlik
-            self.event_dict[cur]['norm'] = vn
-            self.event_dict[cur]['mag'] = vm
+            self.event_dict[cur]['vn'] = vn
+            self.event_dict[cur]['vm'] = vm
         
             #get the 4 point location of the front when at wind
             #p_x(t0)1 = p_x(t1)-V_x*dt where dt = t1-t0  
@@ -591,9 +638,9 @@ class dtw_plane:
             #px = -vx*tvals+xvals
             #py = -vy*tvals+yvals
             #pz = -vz*tvals+zvals
-            self.event_dict[cur]['wind_px' = xvals[0]
-            self.event_dict[cur]['wind_py' = yvals[0]
-            self.event_dict[cur]['wind_pz' = zvals[0]
+            self.event_dict[cur]['wind_px'] = xvals[0]
+            self.event_dict[cur]['wind_py'] = yvals[0]
+            self.event_dict[cur]['wind_pz'] = zvals[0]
            
         
             #parameters to add
@@ -693,9 +740,10 @@ class dtw_plane:
             #use positions and vectors to get a solution for plane velocity
             pm  = np.matrix([xvals[1:]-xvals[0],yvals[1:]-yvals[0],zvals[1:]-zvals[0]]).T #coordinate of craft 1 in top row
             tm  = np.matrix(tvals[1:]).T # 1x3 matrix of time (wind-spacecraft)
-            vna = np.linalg.solve(pm,tm) #solve for the velocity vectors normal
-            vn  = vna/np.linalg.norm(vna)
-            vm  = 1./np.linalg.norm(vna) #get velocity magnitude
+            vna,vn,vm = solve_plane(pm,tm)
+            #vna = np.linalg.solve(pm,tm) #solve for the velocity vectors normal
+            #vn  = vna/np.linalg.norm(vna)
+            #vm  = 1./np.linalg.norm(vna) #get velocity magnitude
             
             #store vx,vy,vz values
             vx,vy,vz = vm*np.array(vn).ravel()
