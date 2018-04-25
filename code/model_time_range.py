@@ -308,6 +308,7 @@ class dtw_plane:
             Variables contained in self variable
         """
         #Parameters for file read in and parsing
+        #Could be an issue with downwind THEMIS craft 2018/04/25 J. Prchlik
         par_read_in = partial(read_in,start_t=self.start_t,end_t=self.end_t,center=self.center)
         #read in and format spacecraft in parallel
         #Switched to single loop solution 2018/03/24 J. Prchlik 
@@ -388,13 +389,13 @@ class dtw_plane:
         fax[0,0].set_xlim([top_vs.index.min()-pad,top_vs.index.max()+pad])
         
         #loop over all other craft
-        for k in craft[1:]:
+        for k in craft[1:4]:
             print('###########################################')
             print(k)
             p_mat  = plsm[k] #.loc[i_min-t_rgh_wid:i_min+t_rgh_wid]
         
             #use speed for rough esimation if possible
-            if  (k.lower() == 'soho'): par = ['SPEED']
+            if  ((k.lower() == 'soho') | ('themis' in k.lower())): par = ['SPEED']
             elif (((par is None) | (isinstance(par,float))) & (k.lower() != 'soho')): par = ['Bx','By','Bz']
             elif isinstance(par,str): par = [par]
             else: par = par
@@ -582,6 +583,19 @@ class dtw_plane:
         #big list of velocities
         #big_lis = []
 
+        #Add plot for prediction on THEMIS
+        fig_th,ax_th = plt.subplots()
+        #Add plot with just the THEMIS plasma data
+        for i in self.earth:
+            slicer = np.isfinite(plsm[esp].SPEED)
+            ax_th.plot(plsm[esp].loc[slicer,:].index,pd.rolling_mean(plsm[esp].loc[slicer,:].SPEED,25),color=color[i],label=i.upper(),zorder=100,linewidth=2)
+
+        ax_th.set_xlim([self.start_t-pad,self.end_t+pad])
+        ax_th.set_ylim([300,1150])
+        ax_th.set_xlabel('Time [UTC]')
+        ax_th.set_ylabel('Flow Speed [km/s]')
+        fancy_plot(ax_th)
+
 
         #create dictionary of values for each event 2018/04/24 J. Prchlik
         self.event_dict = {}
@@ -665,6 +679,9 @@ class dtw_plane:
             self.event_dict[cur]['wind_pz'] = zvals[0]
            
         
+            #Add predicted THEMIS plot
+            ax_th.annotate('Event {0:1d}'.format(j+1),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
+                      arrowprops=dict(facecolor='purple',shrink=0.005))
             #parameters to add
             #Switched to dictionary 2018/04/24 J. Prchlik
             #add_lis = [vx,vy,vz,tvals,vm,vn,px,py,pz]
@@ -681,8 +698,11 @@ class dtw_plane:
         
         fig.autofmt_xdate()
                         
+        #Save time warping plot
         fig.savefig('../plots/bou{0:_%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(start_t)),bbox_pad=.1,bbox_inches='tight')
         
+        #save resulting THEMIS plot 2018/04/25 J. Prchlik
+        fig_th.savefig('../plots/themis_pred_{0:_%Y%m%d_%H%M%S}.png',bbox_pad=.1,bbox_inches='tight')
         
         andir = '../plots/boutique_ana/'
         
