@@ -126,6 +126,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
     """
     #Read in plasma and magnetic field data from full res
     pls = pd.read_csv(arch+pls_fmt.format(k.lower()),delim_whitespace=True)
+    Re = 6371.0 # Earth radius in km
 
     #no magnetic field data from SOHO
     if k.lower() != 'soho':
@@ -147,6 +148,9 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
             orb.loc[:,'GSEx'] *= Re
             orb.loc[:,'GSEy'] *= Re
             orb.loc[:,'GSEz'] *= Re
+            #Convert from GSM to GSE 2018/04/25 J. Prchlik
+            mag.loc[:,'By'] *= -1
+            mag.loc[:,'Bz'] *= -1
 
 
         #cut for testing reasons
@@ -337,6 +341,13 @@ class dtw_plane:
     def main(self):
         """
         Finds planar solution to 4 L1 spacecraft
+     
+        Parameters
+        ----------
+ 
+        self: Class
+
+ 
         """
         #Creating modular solution for DTW 2018/03/21 J. Prchlik
         ##set the Start and end time
@@ -389,7 +400,7 @@ class dtw_plane:
         fax[0,0].set_xlim([top_vs.index.min()-pad,top_vs.index.max()+pad])
         
         #loop over all other craft
-        for k in craft[1:4]:
+        for k in craft[1:]:
             print('###########################################')
             print(k)
             p_mat  = plsm[k] #.loc[i_min-t_rgh_wid:i_min+t_rgh_wid]
@@ -586,9 +597,9 @@ class dtw_plane:
         #Add plot for prediction on THEMIS
         fig_th,ax_th = plt.subplots()
         #Add plot with just the THEMIS plasma data
-        for i in self.earth_craft:
+        for esp in self.earth_craft:
             slicer = np.isfinite(plsm[esp].SPEED)
-            ax_th.plot(plsm[esp].loc[slicer,:].index,pd.rolling_mean(plsm[esp].loc[slicer,:].SPEED,25),color=color[i],label=i.upper(),zorder=100,linewidth=2)
+            ax_th.plot(plsm[esp].loc[slicer,:].index,pd.rolling_mean(plsm[esp].loc[slicer,:].SPEED,25),color=color[esp],label=esp.upper(),zorder=100,linewidth=2)
 
         ax_th.set_xlim([self.start_t-pad,self.end_t+pad])
         ax_th.set_ylim([300,1150])
@@ -738,6 +749,7 @@ class dtw_plane:
         fig.savefig('../plots/bou{0:_%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(start_t)),bbox_pad=.1,bbox_inches='tight')
         
         #save resulting THEMIS plot 2018/04/25 J. Prchlik
+        ax_th.legend(loc='best',frameon=False)
         fig_th.savefig('../plots/themis_pred_{0:_%Y%m%d_%H%M%S}.png',bbox_pad=.1,bbox_inches='tight')
         
         andir = '../plots/boutique_ana/'
