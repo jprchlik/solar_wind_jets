@@ -45,16 +45,21 @@ def solve_plane(p,t):
     vm  = 1./np.linalg.norm(vna) #get velocity magnitude
     return vna,vn,vm
 
-def solve_coeff(ps,vn):
+def solve_coeff(pi,vn):
     """
-    Plane coeffiences for given time and position of spacecraft
+    Plane coefficients for given time and position of spacecraft
     
     Parameters:
     ----------
-    ps: np.array or np.matrix
-        Position of earth spacecraft in GSE
-    vn: np.array or np.matrix
-        Normal vector of plane front
+    pi: np.array or np.matrix
+        Position of earth spacecraft in GSE corrected for time offsets
+        The First row is the X,Y,Z values for spacecraft 1
+        The Second row is the X,Y,Z values for spacecraft 2
+        The Thrid row is the X,Y,Z values for spacecraft 3
+    ti: np.array or np.matrix
+        Time offsets to apply to each spacecraft position in s in order (1,2,3)
+    tn: np.array or np.matrix
+        Velocity components of planar front in km/s in order (Vx,Vy,Vz)
   
     Returns:
     ----------
@@ -62,16 +67,24 @@ def solve_coeff(ps,vn):
         Solution for a plane at time t where plane has the solution 0=a*x+b*y+c*z+d
         
     """
-    #solve the plane equation for d
-    #print('###################################################')
-    #print('NEW solution')
-    #scale the coefficiecnts of the normal matrix for distance
-    pm  = float(np.linalg.norm(ps))
-    coeff = vn*pm
+
+    #solve (a*x0+b*y0+c*z0+d)/||v|| = 0
+    #where ||v|| = sqrt(a^2+b^2+c^2)
+    #and distance from the plane to the origin is  dis = d/||v||
+    
+
+    #get the magnitude of the normal vector on the plane from the origin
+    pm = float(np.linalg.norm(pi))
+
+    #Use definition parameter 
+    coeff = np.squeeze(np.asarray(vn*pm)) #.reshape(-1)
+
+
+    #store coefficients
     a = float(coeff[0])
     b = float(coeff[1])
     c = float(coeff[2])
-    d = float(coeff.T.dot(ps))
+    d = -float(np.matrix(coeff).dot(pi))
     
     return [a,b,c,d]
 
