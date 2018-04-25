@@ -56,10 +56,8 @@ def solve_coeff(pi,vn):
         The First row is the X,Y,Z values for spacecraft 1
         The Second row is the X,Y,Z values for spacecraft 2
         The Thrid row is the X,Y,Z values for spacecraft 3
-    ti: np.array or np.matrix
-        Time offsets to apply to each spacecraft position in s in order (1,2,3)
-    tn: np.array or np.matrix
-        Velocity components of planar front in km/s in order (Vx,Vy,Vz)
+    vn: np.array or np.matrix
+        Normal vector to planar front
   
     Returns:
     ----------
@@ -344,6 +342,8 @@ class dtw_plane:
         center   = self.center  
         par      = self.par     
         justparm = self.justparm
+        marker   = self.marker
+        color    = self.color
         
         #set use to use all spacecraft
         craft = self.craft #['Wind','DSCOVR','ACE','SOHO']
@@ -368,14 +368,17 @@ class dtw_plane:
         #Find points with the largest speed differences in wind
         top_vs = (t_mat.SPEED.dropna().diff().abs()/t_mat.SPEED.dropna()).nlargest(7)
         
-        #set range to include all top events (prevents window too large error
-        fax[0,0].set_xlim([top_vs.index.min()-offset,top_vs.index.max()+offset])
         
         #sort by time for event number
         top_vs.sort_index(inplace=True)
         
         #plot with the best timing solution
         fig, fax = plt.subplots(ncols=2,nrows=3,sharex=True,figsize=(18,18))
+
+       
+        #set range to include all top events (prevents window too large error
+        pad = pd.to_timedelta('30 minutes')
+        fax[0,0].set_xlim([top_vs.index.min()-pad,top_vs.index.max()+pad])
         
         #loop over all other craft
         for k in craft[1:]:
@@ -393,7 +396,6 @@ class dtw_plane:
             #sometimes different componets give better chi^2 values therefore reject the worst when more than 1 parameter
             #Try using the parameter with the largest difference  in B values preceding and including the event (2017/12/11 J. Prchlik)
             if len(par) > 1:
-               print(top_vs.index)
                check_min,check_max = top_vs.index[0]-maxrang,top_vs.index[0]+maxrang
                par_chi = np.array([(t_mat.loc[check_min:check_max,par_i].max()-t_mat.loc[check_min:check_max,par_i].min()).max() for par_i in par])
                use_par, = np.where(par_chi == np.max(par_chi))
@@ -528,14 +530,12 @@ class dtw_plane:
             fax[2,1].plot(t_mat[t_mat['Bz'   ] > -9990.0].index,t_mat[t_mat['Bz']    > -9990.0].Bz,color=color[trainer],linewidth=2)
         
         
-        print('HERE')
         fancy_plot(fax[0,0])
         fancy_plot(fax[1,0])
         fancy_plot(fax[2,0])
         fancy_plot(fax[0,1])
         fancy_plot(fax[1,1])
         fancy_plot(fax[2,1])
-        print('HERE')
         #i = pd.to_datetime("2016/12/21 08:43:12") 
         fax[0,0].set_xlim([start_t,end_t])
         
@@ -599,7 +599,7 @@ class dtw_plane:
          
             #create master event dictionary for given event to store parameters
             cur = 'event_{0:1d}'.format(j+1)
-            self.event_dict['cur'] = {}
+            self.event_dict[cur] = {}
            
         
             #loop over all craft and populate time and position arrays
@@ -765,13 +765,11 @@ class dtw_plane:
         
             px = xvals[0]
             py = yvals[0]
+            pz = zvals[0]
             #solve for the plane at time l
             #first get the points
             ps = np.matrix([[px],[py],[pz]])
         
-            #get the magentiude of the position
-            pm  = float(np.linalg.norm(ps))
-            
         
             #switched to solve_coeff function 2018/04/24 J. Prchlik
             #solve the plane equation for d
@@ -779,7 +777,7 @@ class dtw_plane:
             #print('###################################################')
             #print('NEW solution')
             #scale the coefficiecnts of the normal matrix for distance
-            a,b,c,d = solve_coeff(pm,ps,vn)
+            a,b,c,d = solve_coeff(ps,vn)
             #coeff = vn*pm
             #a = float(coeff[0])
             #b = float(coeff[1])
@@ -848,7 +846,7 @@ class dtw_plane:
                 
         
                 #Switched to solve_coeff function 2018/04/24 J. Prchlik
-                a,b,c,d = solve_coeff(pm,ps,vn)
+                a,b,c,d = solve_coeff(ps,vn)
                 #solve the plane equation for d
                 #d = float(vn.T.dot(ps))
                 ##print('###################################################')
