@@ -586,7 +586,7 @@ class dtw_plane:
         #Add plot for prediction on THEMIS
         fig_th,ax_th = plt.subplots()
         #Add plot with just the THEMIS plasma data
-        for i in self.earth:
+        for i in self.earth_craft:
             slicer = np.isfinite(plsm[esp].SPEED)
             ax_th.plot(plsm[esp].loc[slicer,:].index,pd.rolling_mean(plsm[esp].loc[slicer,:].SPEED,25),color=color[i],label=i.upper(),zorder=100,linewidth=2)
 
@@ -677,15 +677,51 @@ class dtw_plane:
             self.event_dict[cur]['wind_px'] = xvals[0]
             self.event_dict[cur]['wind_py'] = yvals[0]
             self.event_dict[cur]['wind_pz'] = zvals[0]
-           
+
+
+            for esp in self.earth_craft:
+                ################################################################
+                #Get THEMIS B location and compare arrival times
+                ################################################################
+                #Get closest index value location
+                ii = plsm[esp].GSEx.dropna().index.get_loc(i,method='nearest')
+
+                #convert index location back to time index
+                it = plsm[esp].GSEx.dropna().index[ii]
+
+                #append craft values onto time and position arrays
+                #changed to min values 2018/03/12 J. Prchlik
+                itval = plsm[esp].loc[i,'offsets']
+                #Get time of observation in THEMIS B
+                itind = pd.to_datetime(plsm[esp].loc[i+itval,'Time'])
+                #Get first match if DTW produces more than one
+                if isinstance(itind,pd.Series): itind = itind.dropna()[1]
+                if isinstance(itval,pd._libs.tslib.Timedelta):
+                    atval = itval.total_seconds()
+                elif isinstance(itval,pd.Series):
+                    atval = np.mean(itval).total_seconds() #,key=abs).total_seconds()
+                axval = np.mean(plsm[esp].loc[it,'GSEx'])
+                ayval = np.mean(plsm[esp].loc[it,'GSEy'])
+                azval = np.mean(plsm[esp].loc[it,'GSEz'])
+
+                ################################################################
+                ################################################################
+
         
-            #Add predicted THEMIS plot
-            ax_th.annotate('Event {0:1d}'.format(j+1),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
-                      arrowprops=dict(facecolor='purple',shrink=0.005))
-            #parameters to add
-            #Switched to dictionary 2018/04/24 J. Prchlik
-            #add_lis = [vx,vy,vz,tvals,vm,vn,px,py,pz]
-            #big_lis.append(add_lis)
+                #Add predicted THEMIS plot
+                ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
+                          arrowprops=dict(facecolor='purple',shrink=0.005))
+                #parameters to add
+                #Switched to dictionary 2018/04/24 J. Prchlik
+                #add_lis = [vx,vy,vz,tvals,vm,vn,px,py,pz]
+                #big_lis.append(add_lis)
+                #Wind Themis B distance difference from plane at wind
+                themis_d = np.linalg.norm(np.matrix([axval,ayval,azval])-np.matrix([px,py,pz]).dot(vn))
+                themis_dt = float(themis_d)/vm
+                themis_pr = i+pd.to_timedelta(themis_dt,unit='s')
+
+                print('Predicted Arrival Time at {2} {0:%Y/%m/%d %H:%M:%S}, Distance = {1:4.1f}km'.format(themis_pr,themis_d,esp.upper()))
+                print('Actual Arrival Time at {2} {0:%Y/%m/%d %H:%M:%S}, Offset (Pred.-Act.) = {1:4.2f}s'.format(itind,themis_dt-atval,esp.upper()))
 
 
             #put values in new dataframe
