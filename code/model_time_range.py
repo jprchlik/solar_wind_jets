@@ -142,6 +142,13 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
         mag.set_index(mag.time_dt_mag,inplace=True)
         orb.set_index(orb.time_dt_orb,inplace=True)
 
+        #multiply each component by Earth Radius for Themis observations
+        if 'themis' in k.lower():
+            orb.loc[:,'GSEx'] *= Re
+            orb.loc[:,'GSEy'] *= Re
+            orb.loc[:,'GSEz'] *= Re
+
+
         #cut for testing reasons
         pls = pls[start_t:end_t]
         mag = mag[start_t:end_t]
@@ -366,7 +373,7 @@ class dtw_plane:
         t_mat  = plsm[trainer] #.loc[trainer_t-t_rgh_wid:trainer_t+t_rgh_wid]
 
         #Find points with the largest speed differences in wind
-        top_vs = (t_mat.SPEED.dropna().diff().abs()/t_mat.SPEED.dropna()).nlargest(7)
+        top_vs = (t_mat.SPEED.dropna().diff().abs()/t_mat.SPEED.dropna()).nlargest(self.events)
         
         
         #sort by time for event number
