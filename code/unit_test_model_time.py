@@ -23,7 +23,13 @@ class check_solution(unittest.TestCase):
         x = 200.
         y = 0.
         z = -(a*x+b*y+d)/c
-        wind_pos =  np.matrix([x,y,z])
+        wind_pos = np.matrix([x,y,z])
+
+        #set really far away position
+        xf = 1.2E8
+        yf = -1.E3
+        zf = -(a*xf+b*yf+d)/c
+
         #magnitude of velocity
         vm = 600. #km/s
         #get normal vector  
@@ -64,9 +70,14 @@ class check_solution(unittest.TestCase):
         #get solution of coefficents at wind
         test = np.array(mtr.solve_coeff(wind_pos.T,vn))
 
-        #check I get the same Z value
+        #check I get the same Z value for wind position
         nz = -(test[0]*x+test[1]*y+test[3])/test[2]
         self.assertEqual(int(nz),int(z))
+
+        
+        #for far out postion
+        nzf = -(test[0]*xf+test[1]*yf+test[3])/test[2]
+        self.assertEqual(int(nzf),int(zf))
 
 if __name__=='__main__':
     unittest.main()
