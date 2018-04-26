@@ -569,6 +569,7 @@ class dtw_plane:
         fax[2,1].set_xlabel('Time [UTC]',fontsize=20)
         
         fax[1,0].set_ylim([0.,100.])
+        fax[2,0].set_ylim([t_mat.SPEED.dropna().min(),t_mat.SPEED.dropna.max()])
         
         
         #turn into data frame 
@@ -615,8 +616,11 @@ class dtw_plane:
         #fax[2,0].scatter(t_mat.loc[top_vs.index,:].index,t_mat.loc[top_vs.index,:].SPEED,color='purple',marker='X',s=150)
         for j,i in enumerate(top_vs.index):
             yval = t_mat.loc[i,:].SPEED
+            yvalb = t_mat.loc[i,:].Bz
             xval = mdates.date2num(i)
             fax[2,0].annotate('Event {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
+                              arrowprops=dict(facecolor='purple',shrink=0.005))
+            fax[2,1].annotate('Event {0:1d}'.format(j+1),xy=(xval,yvalb),xytext=(xval,yvalb+2.),
                               arrowprops=dict(facecolor='purple',shrink=0.005))
             #computer surface for events
             #tvals = -np.array([np.mean(plsm[c+'_offset'].loc[i,'offsets']).total_seconds() for c in craft])
