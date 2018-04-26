@@ -222,7 +222,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
 class dtw_plane:
 
 
-    def __init__(self,start_t,end_t,center=True,events=1,par=None,justparm=True,nproc=1,earth_craft=None,penalty=True):
+    def __init__(self,start_t,end_t,center=True,events=1,par=None,justparm=True,nproc=1,earth_craft=None,penalty=True,pad_earth=pd.to_timedelta('1 hour')):
         """
         Class to get planar DTW solutions for L1 spacecraft.      
  
@@ -252,6 +252,8 @@ class dtw_plane:
             any combinateion of ['THEMIS_B','THEMIS_C','THEMIS_A'] 
         penalty: boolean, optional
             Include a penalty in the DTW solution for compression of time (Default = True)
+        pad_earth: pandas time delta object, optional
+            Time offset to apply when reading in spacecraft data near earth (Default = pd.to_timedelta('1 hour'))
             
         Example: 
         ----------
@@ -272,6 +274,7 @@ class dtw_plane:
         self.events = events
         self.earth_craft = earth_craft
         self.penalty = penalty
+        self.pad_earth = pad_earth
 
         self.first = True
 
@@ -293,9 +296,6 @@ class dtw_plane:
 
         #reset craft variable and add earth craft as requested
         self.craft = ['Wind','DSCOVR','ACE','SOHO']
-        #Remove earth spacecraft no listed 
-        if earth_craft is not None:  
-            for i in earth_craft: self.craft.append(i)
       
         
     
@@ -337,6 +337,35 @@ class dtw_plane:
             #set readin to first attempt to false
             #prevent multiple readin of big files
             self.first = False
+
+
+            #do the same for the Earth spacecraft 
+            if self.earth_craft is not None:  
+                for i in earth_craft: self.craft.append(i)
+ 
+                 
+                #Add an hour to the data to approximate time delay
+                self.earth_start = str(pd.to_datetime(self.start_t)+self.pad_earth)
+                self.earth_end = str(pd.to_datetime(self.end_t)+self.pad_earth)
+                par_read_in = partial(read_in,start_t=self.earth_start,end_t=self.earth_end,center=self.center)
+
+                if self.nproc > 1.5:
+                    pool = Pool(processes=len(self.earth_craft))
+                    outp = pool.map(par_read_in,self.earth_craft)
+                    pool.terminate()
+                    pool.close()
+                    pool.join()
+
+                    #create global plasma key
+                    for i in outp:
+                        self.plsm[i.craft.values[0]] = i
+                else:
+                    #create global plasma key
+                    for i in self.earth_craft:
+                        self.plsm[i] = par_read_in(i)
+        
+            #set readin to first attempt to false
+            #prevent multiple readin of big files
 
     def main(self):
         """
