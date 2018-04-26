@@ -406,7 +406,7 @@ class dtw_plane:
             p_mat  = plsm[k] #.loc[i_min-t_rgh_wid:i_min+t_rgh_wid]
         
             #use speed for rough esimation if possible
-            if  ((k.lower() == 'soho') | ('themis' in k.lower())): par = ['SPEED']
+            if  ((k.lower() == 'soho') ): par = ['SPEED']
             elif (((par is None) | (isinstance(par,float))) & (k.lower() != 'soho')): par = ['Bx','By','Bz']
             elif isinstance(par,str): par = [par]
             else: par = par
