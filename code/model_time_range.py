@@ -601,7 +601,7 @@ class dtw_plane:
             slicer = np.isfinite(plsm[esp].SPEED)
             ax_th.plot(plsm[esp].loc[slicer,:].index,pd.rolling_mean(plsm[esp].loc[slicer,:].SPEED,25),color=color[esp],label=esp.upper(),zorder=100,linewidth=2)
 
-        ax_th.set_xlim([self.start_t-pad,self.end_t+pad])
+        ax_th.set_xlim([pd.to_datetime(self.start_t)-pad,pd.to_datetime(self.end_t)+pad])
         ax_th.set_ylim([300,1150])
         ax_th.set_xlabel('Time [UTC]')
         ax_th.set_ylabel('Flow Speed [km/s]')
@@ -636,20 +636,33 @@ class dtw_plane:
         
             #loop over all craft and populate time and position arrays
             for c in craft:
-                #Get closest index value location
-                ii = plsm[c].GSEx.dropna().index.get_loc(i,method='nearest')
-                #convert index location back to time index
-                it = plsm[c].GSEx.dropna().index[ii]
                 #append craft values onto time and position arrays
                 #changed to min values 2018/03/12 J. Prchlik
-                itval = plsm[c+'_offset'].loc[i,'offsets']
+                try:
+                    itval = plsm[c+'_offset'].loc[i,:].offsets
+                #Fix THEMIS having out of range index
+                except KeyError:
+                    check = plsm[c+'_offset'].GSEx.dropna().index.get_loc(i,method='nearest')
+                    it = plsm[c+'_offset'].GSEx.dropna().index[check]
+                    itval = plsm[c+'_offset'].loc[it,:].offsets
+                    
                 if isinstance(itval,pd._libs.tslib.Timedelta):
+                    off_cor = itval.total_seconds()
                     tvals.append(itval.total_seconds())
                 elif isinstance(itval,pd.Series):
                     tvals.append(min(itval,key=abs).total_seconds())
-                xvals.append(np.mean(plsm[c].loc[it,'GSEx']))
-                yvals.append(np.mean(plsm[c].loc[it,'GSEy']))
-                zvals.append(np.mean(plsm[c].loc[it,'GSEz']))
+                    off_cor = min(itval,key=abs).total_seconds()
+
+                #Get closest index value location
+                #Update with time offset implimented
+                ii = plsm[c].GSEx.dropna().index.get_loc(i+pd.to_timedelta(off_cor,unit='s'),method='nearest')
+                #convert index location back to time index
+                it = plsm[c].GSEx.dropna().index[ii]
+
+                #Use offset pandas DF position 2018/04/25 J. Prchlik
+                xvals.append(np.mean(plsm[c].iloc[ii,:].GSEx))
+                yvals.append(np.mean(plsm[c].iloc[ii,:].GSEy))
+                zvals.append(np.mean(plsm[c].iloc[ii,:].GSEz))
         
             #Covert arrays into numpy arrays and flip sign of offset
             self.event_dict[cur]['tvals'] = np.array(tvals)
@@ -689,51 +702,67 @@ class dtw_plane:
             self.event_dict[cur]['wind_py'] = yvals[0]
             self.event_dict[cur]['wind_pz'] = zvals[0]
 
+            #Wind position to determine starting point  2018/05/24 J. Prchlik
+            px = xvals[0]
+            py = yvals[0]
+            pz = zvals[0]
 
             for esp in self.earth_craft:
                 ################################################################
                 #Get THEMIS B location and compare arrival times
                 ################################################################
                 #Get closest index value location
-                ii = plsm[esp].GSEx.dropna().index.get_loc(i,method='nearest')
+                #Fix THEMIS having out of range index
+                try:
+                    itval = plsm[esp+'_offset'].loc[i,:].offsets
+                    #Get time of observation in THEMIS B
+                    itind = pd.to_datetime(plsm[esp+'_offset'].loc[i,'Time'])
+                    it = i
+                #Fix THEMIS having out of range index
+                except KeyError:
+                    check = plsm[esp+'_offset'].GSEx.dropna().index.get_loc(i,method='nearest')
+                    it = plsm[esp+'_offset'].GSEx.dropna().index[check]
+                    itval = plsm[esp+'_offset'].loc[it,:].offsets
+                    #Get time of observation in THEMIS B
+                    itind = pd.to_datetime(plsm[esp+'_offset'].loc[it,'Time'])
 
-                #convert index location back to time index
-                it = plsm[esp].GSEx.dropna().index[ii]
-
-                #append craft values onto time and position arrays
-                #changed to min values 2018/03/12 J. Prchlik
-                itval = plsm[esp].loc[i,'offsets']
-                #Get time of observation in THEMIS B
-                itind = pd.to_datetime(plsm[esp].loc[i+itval,'Time'])
                 #Get first match if DTW produces more than one
                 if isinstance(itind,pd.Series): itind = itind.dropna()[1]
                 if isinstance(itval,pd._libs.tslib.Timedelta):
                     atval = itval.total_seconds()
                 elif isinstance(itval,pd.Series):
                     atval = np.mean(itval).total_seconds() #,key=abs).total_seconds()
-                axval = np.mean(plsm[esp].loc[it,'GSEx'])
-                ayval = np.mean(plsm[esp].loc[it,'GSEy'])
-                azval = np.mean(plsm[esp].loc[it,'GSEz'])
+
+                #Store THEMIS position
+                axval = np.mean(plsm[esp+'_offset'].loc[it,'GSEx'])
+                ayval = np.mean(plsm[esp+'_offset'].loc[it,'GSEy'])
+                azval = np.mean(plsm[esp+'_offset'].loc[it,'GSEz'])
 
                 ################################################################
                 ################################################################
 
-        
-                #Add predicted THEMIS plot
-                ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
-                          arrowprops=dict(facecolor='purple',shrink=0.005))
                 #parameters to add
                 #Switched to dictionary 2018/04/24 J. Prchlik
                 #add_lis = [vx,vy,vz,tvals,vm,vn,px,py,pz]
                 #big_lis.append(add_lis)
                 #Wind Themis B distance difference from plane at wind
-                themis_d = np.linalg.norm(np.matrix([axval,ayval,azval])-np.matrix([px,py,pz]).dot(vn))
+                themis_d = float(vn.T.dot((np.matrix([axval,ayval,azval])-np.matrix([px,py,pz])).T))
+                print(vm)
+                print(themis_d)
                 themis_dt = float(themis_d)/vm
                 themis_pr = i+pd.to_timedelta(themis_dt,unit='s')
 
+                print('Arrival Time {0::%Y/%m/%d %H:%M:%S} at Wind'.format(i))
                 print('Predicted Arrival Time at {2} {0:%Y/%m/%d %H:%M:%S}, Distance = {1:4.1f}km'.format(themis_pr,themis_d,esp.upper()))
                 print('Actual Arrival Time at {2} {0:%Y/%m/%d %H:%M:%S}, Offset (Pred.-Act.) = {1:4.2f}s'.format(itind,themis_dt-atval,esp.upper()))
 
+                #Use wind parameters to predict shock location 2018/04/25 J. Prchlik
+                th_yval = t_mat.loc[i,:].SPEED
+                th_xval = mdates.date2num(themis_pr)
+                    
+                #Add predicted THEMIS plot
+                ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
+                          arrowprops=dict(facecolor='purple',shrink=0.005))
 
             #put values in new dataframe
             #for l in range(len(col_add)):
@@ -750,7 +779,7 @@ class dtw_plane:
         
         #save resulting THEMIS plot 2018/04/25 J. Prchlik
         ax_th.legend(loc='best',frameon=False)
-        fig_th.savefig('../plots/themis_pred_{0:_%Y%m%d_%H%M%S}.png',bbox_pad=.1,bbox_inches='tight')
+        fig_th.savefig('../plots/themis_pred_{0:_%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(start_t)),bbox_pad=.1,bbox_inches='tight')
         
         andir = '../plots/boutique_ana/'
         
