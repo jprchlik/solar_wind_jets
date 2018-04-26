@@ -775,11 +775,11 @@ class dtw_plane:
         fig.autofmt_xdate()
                         
         #Save time warping plot
-        fig.savefig('../plots/bou{0:_%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(start_t)),bbox_pad=.1,bbox_inches='tight')
+        fig.savefig('../plots/bou_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(start_t)),bbox_pad=.1,bbox_inches='tight')
         
         #save resulting THEMIS plot 2018/04/25 J. Prchlik
         ax_th.legend(loc='best',frameon=False)
-        fig_th.savefig('../plots/themis_pred_{0:_%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(start_t)),bbox_pad=.1,bbox_inches='tight')
+        fig_th.savefig('../plots/themis_pred_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(start_t)),bbox_pad=.1,bbox_inches='tight')
         
         andir = '../plots/boutique_ana/'
         
