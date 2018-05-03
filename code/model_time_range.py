@@ -803,12 +803,15 @@ class dtw_plane:
         #I don't need to do this 2018/03/15 J. Prchlik
         #big_lis = np.array(big_lis)
         
+        
         fig.autofmt_xdate()
                         
         #Save time warping plot
         fig.savefig('../plots/bou_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(start_t)),bbox_pad=.1,bbox_inches='tight')
         
         #save resulting THEMIS plot 2018/04/25 J. Prchlik
+        ylims = ax_th.get_ylim()
+        ax_th.set_ylim([ylims[0],th_yval+100.])
         ax_th.legend(loc='best',frameon=False)
         fig_th.savefig('../plots/themis_pred_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(start_t)),bbox_pad=.1,bbox_inches='tight')
         
