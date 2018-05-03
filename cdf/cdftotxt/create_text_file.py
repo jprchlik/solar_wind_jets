@@ -231,7 +231,10 @@ def cdf_to_text(f_list,keys,craft,context):
         elif ((context == 'orb') & (craft == 'ace')):
             for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
         elif ((context == 'orb') & ('themis' in craft)):
-            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
+            #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
+            #Switched to effecienct array creation 2018/05/03 J. Prchlik
+            temp = pd.DataFrame(np.array([cdf[keys[0]],cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2]]).T,columns=header)
+            tab = tab.append(temp,ignore_index=True) 
 
 
 
