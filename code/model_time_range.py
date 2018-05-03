@@ -341,7 +341,7 @@ class dtw_plane:
 
             #do the same for the Earth spacecraft 
             if self.earth_craft is not None:  
-                for i in earth_craft: self.craft.append(i)
+                for i in self.earth_craft: self.craft.append(i)
  
                  
                 #Add an hour to the data to approximate time delay
@@ -598,7 +598,6 @@ class dtw_plane:
         fax[2,1].set_xlabel('Time [UTC]',fontsize=20)
         
         fax[1,0].set_ylim([0.,100.])
-        fax[2,0].set_ylim([t_mat.SPEED.dropna().min(),t_mat.SPEED.dropna.max()])
         
         
         #turn into data frame 
@@ -632,7 +631,6 @@ class dtw_plane:
             ax_th.plot(plsm[esp].loc[slicer,:].index,pd.rolling_mean(plsm[esp].loc[slicer,:].SPEED,25),color=color[esp],label=esp.upper(),zorder=100,linewidth=2)
 
         ax_th.set_xlim([pd.to_datetime(self.start_t)-pad,pd.to_datetime(self.end_t)+pad])
-        ax_th.set_ylim([300,1150])
         ax_th.set_xlabel('Time [UTC]')
         ax_th.set_ylabel('Flow Speed [km/s]')
         fancy_plot(ax_th)
@@ -645,7 +643,7 @@ class dtw_plane:
         #fax[2,0].scatter(t_mat.loc[top_vs.index,:].index,t_mat.loc[top_vs.index,:].SPEED,color='purple',marker='X',s=150)
         for j,i in enumerate(top_vs.index):
             yval = t_mat.loc[i,:].SPEED
-            yvalb = t_mat.loc[i,:].Bz
+            yvalb = 0.
             xval = mdates.date2num(i)
             fax[2,0].annotate('Event {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
                               arrowprops=dict(facecolor='purple',shrink=0.005))
@@ -785,7 +783,7 @@ class dtw_plane:
                 themis_dt = float(themis_d)/vm
                 themis_pr = i+pd.to_timedelta(themis_dt,unit='s')
 
-                print('Arrival Time {0::%Y/%m/%d %H:%M:%S} at Wind'.format(i))
+                print('Arrival Time {0:%Y/%m/%d %H:%M:%S} at Wind'.format(i))
                 print('Predicted Arrival Time at {2} {0:%Y/%m/%d %H:%M:%S}, Distance = {1:4.1f}km'.format(themis_pr,themis_d,esp.upper()))
                 print('Actual Arrival Time at {2} {0:%Y/%m/%d %H:%M:%S}, Offset (Pred.-Act.) = {1:4.2f}s'.format(itind,themis_dt-atval,esp.upper()))
 
