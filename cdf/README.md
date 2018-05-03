@@ -15,7 +15,6 @@ get_cdf_files.py downloads cdf files from cdaweb.
         Currently only accepts 'mag', 'plsm', and/or 'orb'.
     space_c: list, optional 
         List of spacecraft to download data for (default = ['ace','dscovr','wind'] but may also take 'themis_a', 'themis_b', and 'themis_c']). 
-        Currently only accepts 'ace', 'dscovr', and/or 'wind'.
     archive: string, optional
         String containing the base location of the ftp archive (default = 'ftp://cdaweb.gsfc.nasa.gov/pub/data/').
     start: datetime object, optional
