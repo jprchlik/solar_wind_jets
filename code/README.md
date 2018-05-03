@@ -148,3 +148,22 @@ Find continuos DTW solution over a given time range.
         plane.main()
        
         """
+
+plot_soho.py
+-----------
+Interactively plot SOHO observations.
+
+plot_space_craft_distributions.py
+---------------
+Old
+
+shock_times.txt
+-------------
+List of shock times
+
+unit_test_model_time.py
+----------------------
+Test whether the planar solutions in model_time_range are accurate.
+Usage:
+
+python unit_test_model_time.py
