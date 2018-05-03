@@ -2,6 +2,10 @@ FILES TO USE from cdaweb (ftp = ftp://cdaweb.gsfc.nasa.gov/pub/data/)
 
 The work horse!!!!
 
+cdftotxt
+--------
+Directory containing text files created from the cdf files and the python program to make the text files.
+
 get_cdf_files.py downloads cdf files from cdaweb.
 
 
