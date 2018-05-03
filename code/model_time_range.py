@@ -347,11 +347,11 @@ class dtw_plane:
                 #Add an hour to the data to approximate time delay
                 self.earth_start = str(pd.to_datetime(self.start_t)+self.pad_earth)
                 self.earth_end = str(pd.to_datetime(self.end_t)+self.pad_earth)
-                par_read_in = partial(read_in,start_t=self.earth_start,end_t=self.earth_end,center=self.center)
+                par_read_in_e = partial(read_in,start_t=self.earth_start,end_t=self.earth_end,center=self.center)
 
                 if self.nproc > 1.5:
                     pool = Pool(processes=len(self.earth_craft))
-                    outp = pool.map(par_read_in,self.earth_craft)
+                    outp = pool.map(par_read_in_e,self.earth_craft)
                     pool.terminate()
                     pool.close()
                     pool.join()
@@ -362,7 +362,7 @@ class dtw_plane:
                 else:
                     #create global plasma key
                     for i in self.earth_craft:
-                        self.plsm[i] = par_read_in(i)
+                        self.plsm[i] = par_read_in_e(i)
         
             #set readin to first attempt to false
             #prevent multiple readin of big files
@@ -406,7 +406,7 @@ class dtw_plane:
         #create new plasma dictory which is a subset of the entire file readin
         plsm = {}
         for i in craft:
-             plsm[i] = self.plsm[i][start_t:end_t]
+             plsm[i] = self.plsm[i] #[start_t:end_t] Cutting not required because already using a small sample 2018/05/03 J. Prchlik
              #remove duplicates
              plsm[i] = plsm[i][~plsm[i].index.duplicated(keep='first')]
 
@@ -454,7 +454,7 @@ class dtw_plane:
             #Dont use interpolated time for solving dynamic time warp (J. Prchlik 2017/12/15)
             #only try SPEED corrections for SOHO observations
             #Only apply speed correction after 1 iteration (J. Prchlik 2017/12/18)
-            if ((k.lower() == 'o')):
+            if ((k.lower() == 'soho') | 'themis' in k.lower()):
                 try:
                     #create copy of p_mat
                     c_mat = p_mat.copy()
@@ -638,6 +638,9 @@ class dtw_plane:
 
         #create dictionary of values for each event 2018/04/24 J. Prchlik
         self.event_dict = {}
+
+        #List of time and Speed value of events J. Prchlik
+        event_plot = []
         
         #Plot the top shock values
         #fax[2,0].scatter(t_mat.loc[top_vs.index,:].index,t_mat.loc[top_vs.index,:].SPEED,color='purple',marker='X',s=150)
@@ -794,6 +797,8 @@ class dtw_plane:
                 #Add predicted THEMIS plot
                 ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
                           arrowprops=dict(facecolor='purple',shrink=0.005))
+                #store speed and time values
+                event_plot.append([th_xval,th_yval])
 
             #put values in new dataframe
             #for l in range(len(col_add)):
@@ -806,12 +811,25 @@ class dtw_plane:
         
         fig.autofmt_xdate()
                         
+        #Puff up y-limit 2018/05/03 J. Prchlik
+        ylims = np.array(fax[2,0].get_ylim())
+        yrang = abs(ylims[1]-ylims[0])
+        fax[2,0].set_ylim([ylims[0],ylims[1]+.5*yrang])
         #Save time warping plot
         fig.savefig('../plots/bou_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(start_t)),bbox_pad=.1,bbox_inches='tight')
         
+        #set up date and time ranges 2018/05/03 J. Prchlik
+        event_plot = np.array(event_plot)
+        min_val = event_plot.min(axis=0)
+        max_val = event_plot.max(axis=0)
+        rng_val = max_val-min_val
+    
+       
         #save resulting THEMIS plot 2018/04/25 J. Prchlik
-        ylims = ax_th.get_ylim()
-        ax_th.set_ylim([ylims[0],th_yval+100.])
+        xlims = ax_th.get_xlim()
+        ax_th.set_ylim([ylims[0],ylims[1]+.5*yrang])
+        #Add 10% padding around plot time window for events
+        ax_th.set_xlim([min_val[0]-.1*rng_val[0],max_val[0]+.1*rng_val[0]])
         ax_th.legend(loc='best',frameon=False)
         fig_th.savefig('../plots/themis_pred_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(start_t)),bbox_pad=.1,bbox_inches='tight')
         
