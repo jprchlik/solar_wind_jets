@@ -227,7 +227,10 @@ def cdf_to_text(f_list,keys,craft,context):
             SPEED = np.sqrt(np.sum(cdf[keys[1]][...]**2,axis=1))
             epoch = pd.to_timedelta(cdf[keys[0]][...],unit='s')+pd.to_datetime('1970/01/01 00:00:00' )
             #Added radial thermal velocity measurement
-            for k,j in enumerate(epoch): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(cdf[keys[3]][k][0]),int(cdf[keys[4]][k])]
+            #for k,j in enumerate(epoch): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(cdf[keys[3]][k][0]),int(cdf[keys[4]][k])]
+            #Switched to effecienct array creation 2018/05/03 J. Prchlik
+            temp = pd.DataFrame(np.array([epoch,SPEED,cdf[keys[2]][...],cdf[keys[3]][...][:,0],cdf[keys[4]][...]]).T,columns=header)
+            tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'mag') & (craft == 'wind')):
             #decrease the wind cadence 10 s in magfield
             loopers = range(0,len(cdf[keys[0]][...]),90) 
@@ -239,10 +242,13 @@ def cdf_to_text(f_list,keys,craft,context):
         elif ((context == 'mag') & (craft == 'ace')):
             for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
         elif ((context == 'mag') & ('themis' in craft)):
-            epoch = pd.to_timedelta(cdf[keys[0]][...]-11.79,unit='s')+pd.to_datetime('1970/01/01 00:00:00' ) #Not corrected for leap seconds
+            epoch = pd.to_timedelta(cdf[keys[0]][...],unit='s')+pd.to_datetime('1970/01/01 00:00:00' ) #Not corrected for leap seconds
             #Cut to ~10s 
             #Removed mag field cut because I am using a 4 s cadence combined file 2018/04/20 J. Prchlik
-            for k,j in enumerate(epoch): tab.loc[len(tab)] = [j,cdf[keys[1]][k][0],cdf[keys[1]][k][1],cdf[keys[1]][k][2],0]
+            #Switched to effecienct array creation 2018/05/03 J. Prchlik
+            #for k,j in enumerate(epoch): tab.loc[len(tab)] = [j,cdf[keys[1]][k][0],cdf[keys[1]][k][1],cdf[keys[1]][k][2],0]
+            temp = pd.DataFrame(np.array([epoch,cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2]]).T,columns=header)
+            tab = tab.append(temp,ignore_index=True) 
             #Hacked for k1 observations
             #Undone 2018/01/26 (J. prchlik)
             #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,int(0),(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
