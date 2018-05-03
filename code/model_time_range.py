@@ -454,7 +454,7 @@ class dtw_plane:
             #Dont use interpolated time for solving dynamic time warp (J. Prchlik 2017/12/15)
             #only try SPEED corrections for SOHO observations
             #Only apply speed correction after 1 iteration (J. Prchlik 2017/12/18)
-            if ((k.lower() == 'soho') | 'themis' in k.lower()):
+            if (('themis' in k.lower())):
                 try:
                     #create copy of p_mat
                     c_mat = p_mat.copy()
@@ -465,18 +465,18 @@ class dtw_plane:
                     good, = np.where(((np.isfinite(t_mat.SPEED.values)) & (np.isfinite(c_mat.SPEED.values))))
          
                     #if few points for comparison only used baseline offset
-                    if ((good.size < 10.) & (par[0] == 'SPEED')):
+                    if ((good.size < 1E36) & (par[0] == 'SPEED')):
                         med_m,med_i = 1.0,0.0
                         off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
                         p_mat.SPEED = p_mat.SPEED-off_speed
                         if med_m > 0: p_mat.SPEED = p_mat.SPEED*med_m+med_i
                     else:
-                        off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
+                        off_speed = p_mat.SPEED.nsmallest(100).median()-t_mat.SPEED.nsmallest(20).median()
                         p_mat.SPEED = p_mat.SPEED-off_speed
                     #only apply slope if greater than 0
                 except IndexError:
                 #get median offset to apply to match spacecraft
-                    off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
+                    off_speed = p_mat.SPEED.nsmallest(100).median()-t_mat.SPEED.nsmallest(20).median()
                     p_mat.SPEED = p_mat.SPEED-off_speed
          
          
@@ -485,8 +485,8 @@ class dtw_plane:
             print('WARPING TIME')
             #use dtw solution that allows penalty for time compression
             if self.penalty:
-                if 'SPEED' in par: penalty = 15.0
-                elif any('B' in s for s in par):  penalty = .2
+                if 'SPEED' in par: penalty = 10.0
+                elif any('B' in s for s in par):  penalty = .15
                 print('Penalty = {0:4.3f}'.format(penalty))
                 path = dtw.warping_path(t_mat[par[0]].ffill().bfill().values,
                                         p_mat[par[0]].ffill().bfill().values,
@@ -793,12 +793,17 @@ class dtw_plane:
                 #Use wind parameters to predict shock location 2018/04/25 J. Prchlik
                 th_yval = t_mat.loc[i,:].SPEED
                 th_xval = mdates.date2num(themis_pr)
+                rl_xval = mdates.date2num(itind)
                     
                 #Add predicted THEMIS plot
                 ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
                           arrowprops=dict(facecolor='purple',shrink=0.005))
+                #Add Actual to THEMIS plot 2018/05/03 J. Prchlik
+                ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(rl_xval,th_yval),xytext=(rl_xval,th_yval-50.),
+                          arrowprops=dict(facecolor='red',shrink=0.005))
                 #store speed and time values
                 event_plot.append([th_xval,th_yval])
+                event_plot.append([rl_xval,th_yval])
 
             #put values in new dataframe
             #for l in range(len(col_add)):
@@ -813,6 +818,10 @@ class dtw_plane:
                         
         #Puff up y-limit 2018/05/03 J. Prchlik
         ylims = np.array(fax[2,0].get_ylim())
+        #if ylim min less than 0 set to 250
+        if ylims[0] < 0:
+            ylims[0] = 250. 
+
         yrang = abs(ylims[1]-ylims[0])
         fax[2,0].set_ylim([ylims[0],ylims[1]+.5*yrang])
         #Save time warping plot
@@ -826,10 +835,20 @@ class dtw_plane:
     
        
         #save resulting THEMIS plot 2018/04/25 J. Prchlik
-        xlims = ax_th.get_xlim()
+        xlims = np.array(ax_th.get_xlim())
         ax_th.set_ylim([ylims[0],ylims[1]+.5*yrang])
         #Add 10% padding around plot time window for events
-        ax_th.set_xlim([min_val[0]-.1*rng_val[0],max_val[0]+.1*rng_val[0]])
+        #increase time range if needed
+        test_xmin = min_val[0]-.1*rng_val[0]
+        test_xmax = max_val[0]+.1*rng_val[0]
+        if test_xmin < xlims[0]:
+            xlims[0] = test_xmin
+        if test_xmax > xlims[1]:
+            xlims[1] = test_xmax
+
+
+        #use pretty axis and save
+        ax_th.set_xlim(xlims)
         ax_th.legend(loc='best',frameon=False)
         fig_th.savefig('../plots/themis_pred_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(start_t)),bbox_pad=.1,bbox_inches='tight')
         
