@@ -223,17 +223,26 @@ def cdf_to_text(f_list,keys,craft,context):
             tab = tab.append(temp,ignore_index=True) 
         #Added orbital files 2018/01/31 J. Prchlik
         elif ((context == 'orb') & (craft == 'wind')):
-            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
+            #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
+            #Switched to effecienct array creation 2018/05/03 J. Prchlik
+            temp = pd.DataFrame(np.array([cdf[keys[0]][...],cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2]]).T,columns=header)
+            tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'orb') & (craft == 'dscovr')):
             #only get orbit every 10 minutes
-            loopers = range(0,len(cdf[keys[0]][...]),10) 
-            for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
+            #loopers = range(0,len(cdf[keys[0]][...]),10) 
+            #for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
+            #Switched to effecienct array creation 2018/05/03 J. Prchlik
+            temp = pd.DataFrame(np.array([cdf[keys[0]][...],cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2]]).T,columns=header)
+            tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'orb') & (craft == 'ace')):
-            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
+            #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
+            #Switched to effecienct array creation 2018/05/03 J. Prchlik
+            temp = pd.DataFrame(np.array([cdf[keys[0]][...],cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2]]).T,columns=header)
+            tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'orb') & ('themis' in craft)):
             #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
             #Switched to effecienct array creation 2018/05/03 J. Prchlik
-            temp = pd.DataFrame(np.array([cdf[keys[0]],cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2]]).T,columns=header)
+            temp = pd.DataFrame(np.array([cdf[keys[0]][...],cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2]]).T,columns=header)
             tab = tab.append(temp,ignore_index=True) 
 
 
