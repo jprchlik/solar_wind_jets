@@ -23,3 +23,7 @@ html_files
 ---------
 Files containing summaries of spacecraft event discontinuities observed in wind and the time offsets with the other 3 L1 spacecraft.
 Use https://rawgit.com/ to view the html files over the internet (e.g. https://cdn.rawgit.com/jprchlik/solar_wind_jets/25aca910/html_files/wind_level_0999_full_res.html).
+
+plots
+-----
+Directory of plots linked in html_files.
