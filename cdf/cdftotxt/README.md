@@ -1,6 +1,6 @@
 Convert the local archive of cdf files into an easy to use txt file.
 
-   """
+   '''
     Python module for formatting cdf files downloaded via get_cdf_files (up one directory) into text files.
     Parameters
     ----------
@@ -18,4 +18,4 @@ Convert the local archive of cdf files into an easy to use txt file.
     -------
     import create_text_file as ctf
     ctf.main(scrf=['themis_b'],pls=True,mag=True,orb=False) 
-    """
+    '''
