@@ -94,7 +94,12 @@ def looper(sc1,pls,mag,orb,lstr,brchive='../cdf/'):
 
     #Get magnetic and plasma cdf files
     t_fpls = glob(archive+'*cdf')
-    t_fmag = glob(mrchive+'*h0*cdf')
+  
+    #different name format for wind observations
+    if sc1 == 'wind': 
+         t_fmag = glob(mrchive+'*h2*cdf')
+    else:
+         t_fmag = glob(mrchive+'*h0*cdf')
     t_forb = glob(orchive+'*or*cdf')
 
    
@@ -209,10 +214,11 @@ def cdf_to_pandas(f_list,keys,craft,context):
         #######MAG fields#########
         elif ((context == 'mag') & (craft == 'wind')):
             #decrease the wind cadence 10 s in magfield
-            #loopers = range(0,len(cdf[keys[0]][...]),90) 
+            loopers = range(0,len(cdf[keys[0]][...]),90) 
             #Update to do without looping  2018/05/17 J. Prchlik
             #for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k][0],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
-            temp = pd.DataFrame(np.array([cdf[keys[0]][...],cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2],cdf[keys[2]][...]]).T,columns=header)
+            temp = pd.DataFrame(np.array([cdf[keys[0]][...].ravel()[loopers],cdf[keys[1]][...][:,0][loopers],cdf[keys[1]][...][:,1][loopers],cdf[keys[1]][...][:,2][loopers],cdf[keys[2]][...].ravel()[loopers]]).T,columns=header)
+            #temp = pd.DataFrame(np.array([cdf[keys[0]][...],cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2],cdf[keys[2]][...]]).T,columns=header)
             tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'mag') & (craft == 'dscovr')):
             #decrease the wind cadence 10 s in magfield
@@ -298,7 +304,7 @@ def day_list(sday,eday):
     dates: list
         list of days from sday to eday
     """
-    dates = [(sday+timedelta(n)).strftime('%Y%m%d')  for n in range(int((eday-sday).days))]
+    dates = [(sday+timedelta(n)).strftime('%Y%m%d')  for n in range(int((eday-sday).days+1))]
     return dates
 
 
@@ -343,7 +349,6 @@ def main(sday,eday,scrf=['wind','ace','dscovr','soho','themis_a','themis_b','the
     """
 
     lday = day_list(sday,eday)
-    print(lday)
     #dictionary output
     outdict = {}
     #Do in parallel per spacecraft
