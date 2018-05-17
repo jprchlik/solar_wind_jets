@@ -823,7 +823,7 @@ class dtw_plane:
             ylims[0] = 250. 
 
         yrang = abs(ylims[1]-ylims[0])
-        fax[2,0].set_ylim([ylims[0],ylims[1]+.5*yrang])
+        fax[2,0].set_ylim([ylims[0],ylims[1]+.1*yrang])
         #Save time warping plot
         fig.savefig('../plots/bou_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(start_t)),bbox_pad=.1,bbox_inches='tight')
         
@@ -836,7 +836,11 @@ class dtw_plane:
        
         #save resulting THEMIS plot 2018/04/25 J. Prchlik
         xlims = np.array(ax_th.get_xlim())
-        ax_th.set_ylim([ylims[0],ylims[1]+.5*yrang])
+        ax_th.set_ylim([ylims[0],ylims[1]+.1*yrang])
+
+        #include earth pad offset in time range 2018/05/04 J. Prchlik 
+        xlims += self.pad_earth.total_seconds()/24./3600.
+
         #Add 10% padding around plot time window for events
         #increase time range if needed
         test_xmin = min_val[0]-.1*rng_val[0]
