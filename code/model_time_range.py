@@ -267,7 +267,7 @@ class dtw_plane:
         import model_time_range as mtr
         plane = mtr.dtw_plane('2016/07/19 21:00:00','2016/07/20 01:00:00',earth_craft=['THEMIS_B'],penalty=False)
         plane.init_read()
-        plane.main()
+        plane.dtw()
        
 
         """
@@ -374,7 +374,7 @@ class dtw_plane:
             #set readin to first attempt to false
             #prevent multiple readin of big files
 
-    def main(self):
+    def dtw(self):
         """
         Finds planar solution to 4 L1 spacecraft
      
@@ -419,6 +419,9 @@ class dtw_plane:
 
         #get all values at full resolution for dynamic time warping
         t_mat  = plsm[trainer] #.loc[trainer_t-t_rgh_wid:trainer_t+t_rgh_wid]
+  
+        #add trainer matrix to self
+        self.t_mat = t_mat
 
         #Find points with the largest speed differences in wind
         top_vs = (t_mat.SPEED.dropna().diff().abs()/t_mat.SPEED.dropna()).nlargest(self.events)
@@ -427,12 +430,17 @@ class dtw_plane:
         #sort by time for event number
         top_vs.sort_index(inplace=True)
         
+        #add to self
+        self.top_vs = top_vs
+
         #plot with the best timing solution
-        fig, fax = plt.subplots(ncols=2,nrows=3,sharex=True,figsize=(18,18))
+        self.fig, self.fax = plt.subplots(ncols=2,nrows=3,sharex=True,figsize=(18,18))
+        fig, fax = self.fig,self.fax
 
        
         #set range to include all top events (prevents window too large error
-        pad = pd.to_timedelta('30 minutes')
+        self.pad = pd.to_timedelta('30 minutes')
+        pad = self.pad
         fax[0,0].set_xlim([top_vs.index.min()-pad,top_vs.index.max()+pad])
         
         #loop over all other craft
@@ -612,6 +620,12 @@ class dtw_plane:
         #add columns
         col_add = ['X','Y','Z','Vx','Vy','Vz']
         for i in col_add: frm_vs[i] = -9999.9
+
+
+
+        #Updated self plasma dictionary
+        self.plsm = plsm
+        self.fig, self.fax = fig,fax
         
         #Do not need this 2018/03/21 J. Prchlik
         ####Use wind CDF to get velocity comps
@@ -629,6 +643,48 @@ class dtw_plane:
         ####wind_v.set_index(wind_v.time_dt,inplace=True)
         #big list of velocities
         #big_lis = []
+
+    def pred_earth(self):
+        """
+        Create prediction for Earth and create corresponding plots
+
+        """
+
+        #Use common names for self variables
+        t_mat = self.t_mat
+        plsm  = self.plsm
+        Re = self.Re # Earth radius
+        start_t  = self.start_t 
+        end_t    = self.end_t   
+        center   = self.center  
+        par      = self.par     
+        justparm = self.justparm
+        marker   = self.marker
+        color    = self.color
+        pad = self.pad
+        fig, fax = self.fig,self.fax
+        
+        #set use to use all spacecraft
+        craft = self.craft #['Wind','DSCOVR','ACE','SOHO']
+        col   = self.col   #['blue','black','red','teal']
+        mar   = self.mar   #['D','o','s','<']
+        trainer = self.trainer
+        
+        #range to find the best maximum value
+        maxrang = pd.to_timedelta('3 minutes')
+
+        #Find points with the largest speed differences in wind
+        #Allow dyanic allocation of top events 2018/05/17 J. Prchlik
+        top_vs = (plsm[trainer].SPEED.dropna().diff().abs()/plsm[trainer].SPEED.dropna()).nlargest(self.events)
+        
+        
+        #sort by time for event number
+        top_vs.sort_index(inplace=True)
+
+
+
+        
+
 
         #Add plot for prediction on THEMIS
         fig_th,ax_th = plt.subplots()
@@ -652,13 +708,20 @@ class dtw_plane:
         #Plot the top shock values
         #fax[2,0].scatter(t_mat.loc[top_vs.index,:].index,t_mat.loc[top_vs.index,:].SPEED,color='purple',marker='X',s=150)
         for j,i in enumerate(top_vs.index):
+        #try producing continous plot 2018/05/17 J. Prchlik
+        #This method did not work
+        #for j,i in enumerate(t_mat.index):
             yval = t_mat.loc[i,:].SPEED
             yvalb = 0.
             xval = mdates.date2num(i)
-            fax[2,0].annotate('Event {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
-                              arrowprops=dict(facecolor='purple',shrink=0.005))
-            fax[2,1].annotate('Event {0:1d}'.format(j+1),xy=(xval,yvalb),xytext=(xval,yvalb+2.),
-                              arrowprops=dict(facecolor='purple',shrink=0.005))
+
+            #try producing continous plot 2018/05/17 J. Prchlik
+            #fax[2,0].annotate('Event {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
+            #                  arrowprops=dict(facecolor='purple',shrink=0.005))
+            #fax[2,1].annotate('Event {0:1d}'.format(j+1),xy=(xval,yvalb),xytext=(xval,yvalb+2.),
+            #                  arrowprops=dict(facecolor='purple',shrink=0.005))
+
+
             #computer surface for events
             #tvals = -np.array([np.mean(plsm[c+'_offset'].loc[i,'offsets']).total_seconds() for c in craft])
             #xvals = np.array([np.mean(plsm[c].loc[i,'GSEx']) for c in craft])
@@ -793,21 +856,28 @@ class dtw_plane:
                 themis_dt = float(themis_d)/vm
                 themis_pr = i+pd.to_timedelta(themis_dt,unit='s')
 
-                print('Arrival Time {0:%Y/%m/%d %H:%M:%S} at Wind'.format(i))
-                print('Predicted Arrival Time at {2} {0:%Y/%m/%d %H:%M:%S}, Distance = {1:4.1f}km'.format(themis_pr,themis_d,esp.upper()))
-                print('Actual Arrival Time at {2} {0:%Y/%m/%d %H:%M:%S}, Offset (Pred.-Act.) = {1:4.2f}s'.format(itind,themis_dt-atval,esp.upper()))
+                #Try to print prediction, but if it fails just move on 2018/05/17 J. Prchlik
+                try:
+                    print('Arrival Time {0:%Y/%m/%d %H:%M:%S} at Wind'.format(i))
+                    print('Predicted Arrival Time at {2} {0:%Y/%m/%d %H:%M:%S}, Distance = {1:4.1f}km'.format(themis_pr,themis_d,esp.upper()))
+                    print('Actual Arrival Time at {2} {0:%Y/%m/%d %H:%M:%S}, Offset (Pred.-Act.) = {1:4.2f}s'.format(itind,themis_dt-atval,esp.upper()))
+                except:
+                    continue
 
                 #Use wind parameters to predict shock location 2018/04/25 J. Prchlik
                 th_yval = t_mat.loc[i,:].SPEED
                 th_xval = mdates.date2num(themis_pr)
                 rl_xval = mdates.date2num(itind)
                     
+                #plot parameters from wind prediction 2018/05/17 J. Prchlik
+                ax_th.scatter(th_xval,th_yval,color='blue',label=None)
+                #change to line at wind 2018/05/17
                 #Add predicted THEMIS plot
-                ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
-                          arrowprops=dict(facecolor='purple',shrink=0.005))
-                #Add Actual to THEMIS plot 2018/05/03 J. Prchlik
-                ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(rl_xval,th_yval),xytext=(rl_xval,th_yval-50.),
-                          arrowprops=dict(facecolor='red',shrink=0.005))
+                ##ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
+                ##          arrowprops=dict(facecolor='purple',shrink=0.005))
+                ###Add Actual to THEMIS plot 2018/05/03 J. Prchlik
+                ##ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(rl_xval,th_yval),xytext=(rl_xval,th_yval-50.),
+                ##          arrowprops=dict(facecolor='red',shrink=0.005))
                 #store speed and time values
                 event_plot.append([th_xval,th_yval])
                 event_plot.append([rl_xval,th_yval])
