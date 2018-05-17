@@ -15,20 +15,23 @@ def wrap_looper(inp):
     """
     return looper(*inp)
 
-def looper(sc1,pls,mag,orb):
+def looper(sc1,pls,mag,orb,brchive='../cdf/'):
     """
     Function specifying which parameters to use when creating a formatted file
   
     Parameters:
     -----------
     sc1:  string
-        List of spacecraft to created formatted text files for
+        List of spacecraft to created formatted text files for 
+        (Allow inputs are 'wind','ace','dscovr','soho','themis_a','themis_b','themis_c')
     pls: boolean
         Create formatted plasma parameter file.
     mag: boolean
         Create formatted magnetic field file.
     orb: boolean
         Create formatted orbit file.
+    brchive: string
+        Base location of cdf archives
 
     """
 
@@ -49,12 +52,9 @@ def looper(sc1,pls,mag,orb):
     
     
     #archive location of all spacecraft
-    archive='..'#set output cdf location
-    archive = archive+'/'+sc1+'/plsm/'
-    mrchive='..'#set output cdf location
-    mrchive = mrchive+'/'+sc1+'/mag/'
-    orchive='..'#set output cdf location
-    orchive = orchive+'/'+sc1+'/orb/'
+    archive = brchive+'/'+sc1+'/plsm/'
+    mrchive = brchive+'/'+sc1+'/mag/'
+    orchive = brchive+'/'+sc1+'/orb/'
 
     
     
@@ -107,9 +107,9 @@ def looper(sc1,pls,mag,orb):
     if orb: cdf_to_text(forb,orb_key,sc1,'orb')
 
 #function to create pandas dataframe
-def cdf_to_text(f_list,keys,craft,context):
+def cdf_to_pandas(f_list,keys,craft,context):
     """
-    Function which creates a formatted file for a given spacecraft and parameter (i.e. mag. field, plasma, or orbit location)
+    Function which creates a formatted pandas dataframe for a given spacecraft and parameter (i.e. mag. field, plasma, or orbit location)
    
     Parameters:
     ----------
@@ -138,40 +138,6 @@ def cdf_to_text(f_list,keys,craft,context):
         header = ['Time','GSEx','GSEy','GSEz']
 
 
-    #output header
-    out_hdr = '{0}                          {1}               {2}              {3}             {4}\n'
-    #output format
-    out_fmt = '{0:%Y/%m/%dT%H:%M:%S}  {2:15.2f}  {3:15.2f}  {4:15.2f}             {1}\n'
-
-    #get name of output file
-    out_fil = '{0}_{1}_2015_2017_formatted.txt'.format(craft,context)
-
-    #see if output file already exists
-    out_chk = os.path.isfile(out_fil)
-
-    #if file exists read in the file
-    if out_chk: 
-        tab = pd.read_table(out_fil,delim_whitespace=True)
-        #create datetime objects from time
-        tab['Time'] = pd.to_datetime(tab['Time'])
-        #setup index
-        #day text 
-        day_txt = tab.Time.dt.strftime('%Y%m%d')
-
-        #tab.set_index(tab.time_dt,inplace=True)
-
-    #create new table
-    else:
-        tab = pd.DataFrame(columns=header)
-        day_txt = np.array(['17760704','19580102'])
-    #out_fil = open('{0}_{1}_2017_2017_formatted.txt'.format(craft,context),'w')
-
-    ###write header
-    #out_fil.write(out_hdr.format(*header))
-
-    #Wether or not to write out a new file at the end
-    write_out = False
-
     #loop over all files and write text file
     for i in f_list:
 
@@ -184,43 +150,67 @@ def cdf_to_text(f_list,keys,craft,context):
         #if day already exists continue in loop
         if day_chk: continue
 
-        #If you get this far write out a new file because it means there is a new cdf
-        write_out = True
-     
         #read cdffile
         cdf = pycdf.CDF(i)
 
 
+        #######Plasma Parameters#########
         if ((context == 'pls') & (craft == 'wind')):
-            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,float(cdf[keys[1]][k]),float(cdf[keys[2]][k]),float(cdf[keys[3]][k]),int(cdf[keys[4]][k])]
+            #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,float(cdf[keys[1]][k]),float(cdf[keys[2]][k]),float(cdf[keys[3]][k]),int(cdf[keys[4]][k])]
+            #Switched to effecienct array creation 2018/05/17 J. Prchlik
+            temp = pd.DataFrame(np.array([epoch,cdf[keys[1]][...],cdf[keys[2]][...],cdf[keys[3]][...],cdf[keys[4]][...]]).T,columns=header)
+            tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'pls') & (craft == 'dscovr')):
             SPEED = np.sqrt(np.sum(cdf['V_GSE'][...]**2,axis=1))
-            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(cdf[keys[3]][k]),int(cdf[keys[4]][k])]
+            #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(cdf[keys[3]][k]),int(cdf[keys[4]][k])]
+            #Switched to effecienct array creation 2018/05/17 J. Prchlik
+            temp = pd.DataFrame(np.array([epoch,SPEED,cdf[keys[2]][...],cdf[keys[3]][...],cdf[keys[4]][...]]).T,columns=header)
+            tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'pls') & (craft == 'ace')):
             SPEED = np.sqrt(np.sum(cdf['V_GSE'][...]**2,axis=1))
             Vth   = 1.E-3*np.sqrt(2.*kb/mp*cdf[keys[3]][...]) #convert Thermal Temp to Speed
-            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(Vth[k]),0]
+            #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(Vth[k]),0]
+            #Switched to effecienct array creation 2018/05/17 J. Prchlik
+            temp = pd.DataFrame(np.array([epoch,SPEED,cdf[keys[2]][...],Vth,np.zeros(len(Vth))]).T,columns=header)
+            tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'pls') & ('themis' in craft)):
             SPEED = np.sqrt(np.sum(cdf[keys[1]][...]**2,axis=1))
             epoch = pd.to_timedelta(cdf[keys[0]][...],unit='s')+pd.to_datetime('1970/01/01 00:00:00' )
             #Switched to effecienct array creation 2018/05/03 J. Prchlik
             temp = pd.DataFrame(np.array([epoch,SPEED,cdf[keys[2]][...],cdf[keys[3]][...][:,0],cdf[keys[4]][...]]).T,columns=header)
             tab = tab.append(temp,ignore_index=True) 
+
+
+
+        #######MAG fields#########
         elif ((context == 'mag') & (craft == 'wind')):
             #decrease the wind cadence 10 s in magfield
-            loopers = range(0,len(cdf[keys[0]][...]),90) 
-            for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k][0],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
+            #loopers = range(0,len(cdf[keys[0]][...]),90) 
+            #Update to do without looping  2018/05/17 J. Prchlik
+            #for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k][0],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
+            temp = pd.DataFrame(np.array([cdf[keys[0]][...],cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2],cdf[keys[2]][...]]).T,columns=header)
+            tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'mag') & (craft == 'dscovr')):
             #decrease the wind cadence 10 s in magfield
-            loopers = range(0,len(cdf[keys[0]][...]),10) 
-            for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
+            #Update to do without looping  2018/05/17 J. Prchlik
+            #loopers = range(0,len(cdf[keys[0]][...]),10) 
+            #for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
+            temp = pd.DataFrame(np.array([cdf[keys[0]][...],cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2],cdf[keys[2]][...]]).T,columns=header)
+            tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'mag') & (craft == 'ace')):
-            for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
+            #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
+            #Update to do without looping  2018/05/17 J. Prchlik
+            #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
+            temp = pd.DataFrame(np.array([cdf[keys[0]][...],cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2],cdf[keys[2]][...]]).T,columns=header)
+            tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'mag') & ('themis' in craft)):
             epoch = pd.to_timedelta(cdf[keys[0]][...],unit='s')+pd.to_datetime('1970/01/01 00:00:00' ) #Not corrected for leap seconds
             #Switched to effecienct array creation 2018/05/03 J. Prchlik
             temp = pd.DataFrame(np.array([epoch,cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2],np.zeros(len(epoch))]).T,columns=header)
             tab = tab.append(temp,ignore_index=True) 
+
+
+        #######Orbital Parameters#########
         #Added orbital files 2018/01/31 J. Prchlik
         elif ((context == 'orb') & (craft == 'wind')):
             #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]
@@ -252,28 +242,32 @@ def cdf_to_text(f_list,keys,craft,context):
         print('Completed {0}'.format(i))
  
 
+    return tab
     #close output file
     ####SWITCH TO PANDAS Tabling 2018/01/26 (J. Prchlik)
     #Only do if there is a reason to write out a given file (2018/01/29) J. Prchlik
     #out_fil.close()
-    if write_out:
-        tab.to_csv(out_fil,index=None,sep=' ')
-        tab.drop_duplicates(subset='Time',keep='last',inplace=True)
-        tab.fillna(-9999.9,inplace=True)
-        tab['Time'] = pd.to_datetime(tab['Time'])
-        tab.sort_values('Time',inplace=True)
-        #drop if we some how get duplicates
-        tab.drop_duplicates(subset='Time',keep='last',inplace=True)
-        tab.to_csv(out_fil,index=None,sep=' ')
+    #if write_out:
+    #    tab.to_csv(out_fil,index=None,sep=' ')
+    #    tab.drop_duplicates(subset='Time',keep='last',inplace=True)
+    #    tab.fillna(-9999.9,inplace=True)
+    #    tab['Time'] = pd.to_datetime(tab['Time'])
+    #    tab.sort_values('Time',inplace=True)
+    #    #drop if we some how get duplicates
+    #    tab.drop_duplicates(subset='Time',keep='last',inplace=True)
+    #    tab.to_csv(out_fil,index=None,sep=' ')
 
 
 
-def main(scrf=['wind','ace','dscovr','soho','themis_a','themis_b','themis_c'],nproc=1,pls=True,mag=True,orb=True):
+def main(sday,eday,scrf=['wind','ace','dscovr','soho','themis_a','themis_b','themis_c'],nproc=1,pls=True,mag=True,orb=True):
     """
     Python module for formatting cdf files downloaded via get_cdf_files (up one directory) into text files.
 
     Parameters
     ----------
+    stime: string
+        Starting date to read in 
+    etime: string
     scrf:  list,optional
         List of spacecraft to created formatted text files for (default= ['wind','ace','dscovr','soho','themis_a','themis_b','themis_c'])
     nproc: int, optional
@@ -284,6 +278,8 @@ def main(scrf=['wind','ace','dscovr','soho','themis_a','themis_b','themis_c'],np
         Create formatted magnetic field file (Default = True).
     orb: boolean, optional
         Create formatted orbit file (Default = True).
+
+    Returns
 
     Example:
     -------
@@ -296,12 +292,12 @@ def main(scrf=['wind','ace','dscovr','soho','themis_a','themis_b','themis_c'],np
     if nproc > 1:
         #Add arguments to spacecraft name        
         arg_scrf =[]
-        for i in scrf: arg_scrf.append([i,pls,mag,orb])
+        for i in scrf: arg_scrf.append([i,pls,mag,orb,sday,eday])
 
         pool = Pool(processes=nproc)
         out  = pool.map(wrap_looper,arg_scrf)
         pool.close()
         pool.join()
     else:
-        for i in scrf: looper(i,pls,mag,orb)
+        for i in scrf: looper(i,pls,mag,orb,sday,eday)
     
