@@ -269,7 +269,7 @@ def cdf_to_pandas(f_list,keys,craft,context):
 
         #close cdf file
         cdf.close()
-        print('Completed {0}'.format(i))
+        #print('Completed {0}'.format(i))
  
 
     return tab
