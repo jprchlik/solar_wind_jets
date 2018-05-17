@@ -151,9 +151,9 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
 
 
 #set use to use all spacecraft
-craft = ['Wind','DSCOVR','ACE','SOHO','THEMIS_A','THEMIS_B']
-col   = ['blue','black','red','teal','purple','orange']
-mar   = ['D','o','s','<','<','^']
+craft = ['Wind','DSCOVR','ACE','SOHO','THEMIS_A','THEMIS_B','THEMIS_C']
+col   = ['blue','black','red','teal','purple','orange','cyan']
+mar   = ['D','o','s','<','>','^','8']
 marker = {}
 color  = {}
 trainer = 'Wind'
@@ -181,15 +181,17 @@ ref_window['ACE'] = pd.to_timedelta('5 minutes')
 ref_window['SOHO'] = pd.to_timedelta('5 minutes')
 ref_window['Wind'] = pd.to_timedelta('5 minutes')
 
+craft.remove('THEMIS_A')
+
 #refined window to calculate Chi^2 min for each time
 #(ref_chi_t)
 #Parameters for file read in and parsing
 par_read_in = partial(read_in,start_t=start_t,end_t=end_t,center=center)
 
 
-#remove themis a and b from initial spacecraft readin
-craft.remove('THEMIS_A')
+#remove themis a, b, and from initial spacecraft readin
 craft.remove('THEMIS_B')
+craft.remove('THEMIS_C')
 
 #plot window 
 plt_windw = pd.to_timedelta('180 minutes')
@@ -217,7 +219,7 @@ for i in outp:
 themis_s = '2016/12/21 09:22:00'
 themis_e = '2016/12/21 15:22:00'
 par_read_in = partial(read_in,start_t=themis_s,end_t=themis_e,center=center)
-earth = ['THEMIS_A','THEMIS_B']
+earth = ['THEMIS_B','THEMIS_C']
 #read in and format themis spacecraft in parallel
 pool = Pool(processes=2)
 outp = pool.map(par_read_in,earth)
@@ -228,6 +230,7 @@ pool.join()
 #Add themis_a and themis_b back into craft to find DTW solution
 #craft.append('THEMIS_A') #Skip Themis A for bad plasma data
 craft.append('THEMIS_B')
+craft.append('THEMIS_C')
 
 #Add Themis to plasma dictionary
 for i in outp:
@@ -297,7 +300,8 @@ for k in craft[1:]:
     #dist, cost, path = mlpy.dtw_std(t_mat[par[0]].ffill().bfill().values,p_mat[par[0]].ffill().bfill().values,dist_only=False)
     #changed to dtwp that allows penalty for compression (i.e. prevent long stretches of the same value 2018/04/12 J. Prchlik
     #penalty = np.abs(p_mat[par[0]].median()-t_mat[par[0]].median())
-    penalty = 5.0
+    if 'SPEED' in par: penalty = 15.0
+    elif any('B' in s for s in par):  penalty = .2
     print('Penalty = {0:4.3f}'.format(penalty))
     path = dtw.warping_path(t_mat[par[0]].ffill().bfill().values,
                             p_mat[par[0]].ffill().bfill().values,
@@ -393,7 +397,8 @@ fancy_plot(fax[0,1])
 fancy_plot(fax[1,1])
 fancy_plot(fax[2,1])
 i = pd.to_datetime("2016/12/21 08:43:12") 
-fax[0,0].set_xlim([i-pd.to_timedelta('100 minutes'),i+pd.to_timedelta('180 minutes')])
+offset = pd.to_timedelta('30 minutes')
+
 
 fax[0,0].set_ylabel('Np [cm$^{-3}$]',fontsize=20)
 fax[1,0].set_ylabel('Th. Speed [km/s]',fontsize=20)
@@ -408,7 +413,10 @@ fax[2,1].set_xlabel('Time [UTC]',fontsize=20)
 fax[1,0].set_ylim([0.,100.])
 
 #Find points with the largest speed differences in wind
-top_vs = t_mat.SPEED.dropna().diff().abs().nlargest(7)
+top_vs = (t_mat.SPEED.dropna().diff().abs()/t_mat.SPEED.dropna()).nlargest(7)
+
+#set range to include all top events (prevents window too large error
+fax[0,0].set_xlim([top_vs.index.min()-offset,top_vs.index.max()+offset])
 
 #sort by time for event number
 top_vs.sort_index(inplace=True)
@@ -419,21 +427,36 @@ frm_vs = pd.DataFrame(top_vs)
 col_add = ['X','Y','Z','Vx','Vy','Vz']
 for i in col_add: frm_vs[i] = -9999.9
 
+
 #Use wind CDF to get velocity comps
-cdf = pycdf.CDF('/Volumes/Pegasus/jprchlik/dscovr/solar_wind_events/cdf/wind/plsm/wi_h1_swe_20161221_v01.cdf')
-
-wind_vx = cdf['Proton_VX_nonlin'][...]
-wind_vy = cdf['Proton_VY_nonlin'][...]
-wind_vz = cdf['Proton_VZ_nonlin'][...]
-wind_t0 = cdf['Epoch'][...]
-
-cdf.close()
-
-#create pandas dataframe with wind components
-wind_v = pd.DataFrame(np.array([wind_t0,wind_vx,wind_vy,wind_vz]).T,columns=['time_dt','Vx','Vy','Vz'])
-wind_v.set_index(wind_v.time_dt,inplace=True)
+#NOT REQUIRED REMOVE 2018/04/20 J. Prchlik
+####cdf = pycdf.CDF('/Volumes/Pegasus/jprchlik/dscovr/solar_wind_events/cdf/wind/plsm/wi_h1_swe_20161221_v01.cdf')
+####
+####wind_vx = cdf['Proton_VX_nonlin'][...]
+####wind_vy = cdf['Proton_VY_nonlin'][...]
+####wind_vz = cdf['Proton_VZ_nonlin'][...]
+####wind_t0 = cdf['Epoch'][...]
+####
+####cdf.close()
+####
+#####create pandas dataframe with wind components
+####wind_v = pd.DataFrame(np.array([wind_t0,wind_vx,wind_vy,wind_vz]).T,columns=['time_dt','Vx','Vy','Vz'])
+####wind_v.set_index(wind_v.time_dt,inplace=True)
 #big list of velocities
 big_lis = []
+
+
+#Add plot for prediction on THEMIS
+fig_th,ax_th = plt.subplots()
+#Add plot with just the plasma data
+slicer = np.isfinite(plsm['THEMIS_B'].SPEED)
+ax_th.scatter(plsm['THEMIS_B'].loc[slicer,:].index,plsm['THEMIS_B'].loc[slicer,:].SPEED,color=color['THEMIS_B'],label='')
+ax_th.plot(plsm['THEMIS_B'].loc[slicer,:].index,pd.rolling_mean(plsm['THEMIS_B'].loc[slicer,:].SPEED,25),color='black',label='',zorder=100,linewidth=1)
+ax_th.set_xlim([pd.to_datetime('2016/12/21 09:00:00'),pd.to_datetime('2016/12/21 15:30:00')])
+ax_th.set_ylim([350,750])
+ax_th.set_xlabel('Time [UTC]')
+ax_th.set_ylabel('Flow Speed [km/s]')
+fancy_plot(ax_th)
 
 #Plot the top shock values
 #fax[2,0].scatter(t_mat.loc[top_vs.index,:].index,t_mat.loc[top_vs.index,:].SPEED,color='purple',marker='X',s=150)
@@ -555,6 +578,10 @@ for j,i in enumerate(top_vs.index):
     c = float(coeff[2])
     d = float(coeff.T.dot(ps))
 
+
+   
+
+
     #Wind Themis B distance difference from plane at wind
     themis_d = np.linalg.norm(np.matrix([axval,ayval,azval])-np.matrix([px,py,pz]).dot(vn))
     themis_dt = float(themis_d)/vm
@@ -563,6 +590,11 @@ for j,i in enumerate(top_vs.index):
 
     print('Predicted Arrival Time at THEMIS B {0:%Y/%m/%d %H:%M:%S}, Distance = {1:4.1f}km'.format(themis_pr,themis_d))
     print('Actual Arrival Time at THEMIS B {0:%Y/%m/%d %H:%M:%S}, Offset (Pred.-Act.) = {1:4.2f}s'.format(itind,themis_dt-atval))
+
+    th_yval = t_mat.loc[i,:].SPEED
+    th_xval = mdates.date2num(themis_pr)
+    ax_th.annotate('Event {0:1d}'.format(j+1),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
+                      arrowprops=dict(facecolor='purple',shrink=0.005))
     #print(a,b,c,d)
     print('###################################################')
 
@@ -574,6 +606,7 @@ fax[0,0].legend(loc='upper right',frameon=False,scatterpoints=1)
 fig.autofmt_xdate()
                 
 fig.savefig('../plots/bou_20161221_084312.png',bbox_pad=.1,bbox_inches='tight')
+fig_th.savefig('../plots/themis_pred_20161221_084312.png',bbox_pad=.1,bbox_inches='tight')
 
 
 andir = '../plots/boutique_ana/'
