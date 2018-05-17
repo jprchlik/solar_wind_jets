@@ -4,6 +4,7 @@ import pandas as pd
 from glob import glob
 import os,sys
 import pandas as pd
+from datetime import timedelta
 
 from multiprocessing import Pool
 
@@ -15,7 +16,7 @@ def wrap_looper(inp):
     """
     return looper(*inp)
 
-def looper(sc1,pls,mag,orb,brchive='../cdf/'):
+def looper(sc1,pls,mag,orb,lstr,brchive='../cdf/'):
     """
     Function specifying which parameters to use when creating a formatted file
   
@@ -30,7 +31,9 @@ def looper(sc1,pls,mag,orb,brchive='../cdf/'):
         Create formatted magnetic field file.
     orb: boolean
         Create formatted orbit file.
-    brchive: string
+    lstr: list of strings
+        String of input start dates in YYYYMMDD format 
+    brchive: string,optional
         Base location of cdf archives
 
     """
@@ -90,21 +93,48 @@ def looper(sc1,pls,mag,orb,brchive='../cdf/'):
         orb_key = ['Epoch','XYZ_GSE']
 
     #Get magnetic and plasma cdf files
-    fpls = glob(archive+'*cdf')
-    fmag = glob(mrchive+'*h0*cdf')
-    forb = glob(orchive+'*or*cdf')
+    t_fpls = glob(archive+'*cdf')
+    t_fmag = glob(mrchive+'*h0*cdf')
+    t_forb = glob(orchive+'*or*cdf')
+
    
     #Use combined moment data because 4 second cadence is good enough time resolution 2018/04/20 J. Prchlik
-    if 'themis' in sc1: fmag = glob(archive+'*mom*cdf')
+    if 'themis' in sc1: t_fmag = glob(archive+'*mom*cdf')
+
+    #Only use files in time range
+    fpls = [ s for s in t_fpls for d in lstr if d in s]
+    fmag = [ s for s in t_fmag for d in lstr if d in s]
+    #check for orbital files only that  have the year
+    if sc1 == 'ace':
+        cstr = np.unique([d[:4] for d in lstr]) 
+        forb = [ s for s in t_forb for d in cstr if d in s]
+    #Or 1 per month
+    elif 'themis' in sc1:
+        cstr = np.unique([d[:6] for d in lstr]) 
+        forb = [ s for s in t_forb for d in cstr if d in s]
+    else:
+        forb = [ s for s in t_forb for d in lstr if d in s]
+    
+
+
+    #list dataframe to return
+    ret_df = {}
+    #add spacecraft identification
+    ret_df['craft'] = sc1
     
     #convert to textfile
     #Commented to fix time error J. Prchlik 2017/11/14
     #creating logic switches 
-    if pls: cdf_to_text(fpls,pls_key,sc1,'pls')
+    if pls:
+        ret_df['pls'] = cdf_to_pandas(fpls,pls_key,sc1,'pls')
     ##commented out J. Prchlik 2017/11/14 to fix wrong Vth in ACE
-    if mag: cdf_to_text(fmag,mag_key,sc1,'mag')
+    if mag:
+        ret_df['mag'] = cdf_to_pandas(fmag,mag_key,sc1,'mag')
     #Add orbital files 2018/01/31 J. Prchlik
-    if orb: cdf_to_text(forb,orb_key,sc1,'orb')
+    if orb: 
+        ret_df['orb'] = cdf_to_pandas(forb,orb_key,sc1,'orb')
+
+    return ret_df
 
 #function to create pandas dataframe
 def cdf_to_pandas(f_list,keys,craft,context):
@@ -138,17 +168,11 @@ def cdf_to_pandas(f_list,keys,craft,context):
         header = ['Time','GSEx','GSEy','GSEz']
 
 
+    #create initial data frame
+    tab = pd.DataFrame(columns=header)
+
     #loop over all files and write text file
     for i in f_list:
-
-        #get day of observation
-        day = i.split('_')[-2]
- 
-        #check if day is already in file
-        day_chk = (day_txt == day).any()
-   
-        #if day already exists continue in loop
-        if day_chk: continue
 
         #read cdffile
         cdf = pycdf.CDF(i)
@@ -158,20 +182,20 @@ def cdf_to_pandas(f_list,keys,craft,context):
         if ((context == 'pls') & (craft == 'wind')):
             #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,float(cdf[keys[1]][k]),float(cdf[keys[2]][k]),float(cdf[keys[3]][k]),int(cdf[keys[4]][k])]
             #Switched to effecienct array creation 2018/05/17 J. Prchlik
-            temp = pd.DataFrame(np.array([epoch,cdf[keys[1]][...],cdf[keys[2]][...],cdf[keys[3]][...],cdf[keys[4]][...]]).T,columns=header)
+            temp = pd.DataFrame(np.array([cdf[keys[0]][...],cdf[keys[1]][...],cdf[keys[2]][...],cdf[keys[3]][...],cdf[keys[4]][...]]).T,columns=header)
             tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'pls') & (craft == 'dscovr')):
             SPEED = np.sqrt(np.sum(cdf['V_GSE'][...]**2,axis=1))
             #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(cdf[keys[3]][k]),int(cdf[keys[4]][k])]
             #Switched to effecienct array creation 2018/05/17 J. Prchlik
-            temp = pd.DataFrame(np.array([epoch,SPEED,cdf[keys[2]][...],cdf[keys[3]][...],cdf[keys[4]][...]]).T,columns=header)
+            temp = pd.DataFrame(np.array([cdf[keys[0]][...],SPEED,cdf[keys[2]][...],cdf[keys[3]][...],cdf[keys[4]][...]]).T,columns=header)
             tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'pls') & (craft == 'ace')):
             SPEED = np.sqrt(np.sum(cdf['V_GSE'][...]**2,axis=1))
             Vth   = 1.E-3*np.sqrt(2.*kb/mp*cdf[keys[3]][...]) #convert Thermal Temp to Speed
             #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(Vth[k]),0]
             #Switched to effecienct array creation 2018/05/17 J. Prchlik
-            temp = pd.DataFrame(np.array([epoch,SPEED,cdf[keys[2]][...],Vth,np.zeros(len(Vth))]).T,columns=header)
+            temp = pd.DataFrame(np.array([cdf[keys[0]][...],SPEED,cdf[keys[2]][...],Vth,np.zeros(len(Vth))]).T,columns=header)
             tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'pls') & ('themis' in craft)):
             SPEED = np.sqrt(np.sum(cdf[keys[1]][...]**2,axis=1))
@@ -258,6 +282,25 @@ def cdf_to_pandas(f_list,keys,craft,context):
     #    tab.to_csv(out_fil,index=None,sep=' ')
 
 
+def day_list(sday,eday):
+    """
+    Returns a list of days including the start and end days
+
+    Parameters
+    ----------
+    sday: datetime object
+        Starting date to read in cdf files
+    eday: datetime object
+        Ending date to read in cdf files
+
+    Returns
+    -------
+    dates: list
+        list of days from sday to eday
+    """
+    dates = [(sday+timedelta(n)).strftime('%Y%m%d')  for n in range(int((eday-sday).days))]
+    return dates
+
 
 def main(sday,eday,scrf=['wind','ace','dscovr','soho','themis_a','themis_b','themis_c'],nproc=1,pls=True,mag=True,orb=True):
     """
@@ -265,9 +308,10 @@ def main(sday,eday,scrf=['wind','ace','dscovr','soho','themis_a','themis_b','the
 
     Parameters
     ----------
-    stime: string
-        Starting date to read in 
-    etime: string
+    stime: datetime object
+        Starting date to read in cdf files
+    etime: datetime object
+        Ending date to read in cdf files
     scrf:  list,optional
         List of spacecraft to created formatted text files for (default= ['wind','ace','dscovr','soho','themis_a','themis_b','themis_c'])
     nproc: int, optional
@@ -279,25 +323,49 @@ def main(sday,eday,scrf=['wind','ace','dscovr','soho','themis_a','themis_b','the
     orb: boolean, optional
         Create formatted orbit file (Default = True).
 
-    Returns
+    Returns:
+    --------
+    outdict: dictionary
+        Dictionary of output parameters
+    
 
     Example:
     -------
-    import create_text_file as ctf
-    ctf.main(scrf=['themis_b'],pls=True,mag=True,orb=False) 
+    import load_cdf_files as lcf
+    from datetime import datetime
+
+    stime = datetime(2017,01,06)
+    etime = datetime(2017,01,10)
+
+    out = lcf.main(stime,etime,scrf=['wind','ace','dscovr','themis_b'],pls=True,mag=True,orb=True,nproc=4) 
+    out = lcf.main(stime,etime,scrf=['ace'],pls=True,mag=True,orb=True) 
 
     """
 
+    lday = day_list(sday,eday)
+    print(lday)
+    #dictionary output
+    outdict = {}
     #Do in parallel per spacecraft
     if nproc > 1:
         #Add arguments to spacecraft name        
         arg_scrf =[]
-        for i in scrf: arg_scrf.append([i,pls,mag,orb,sday,eday])
+        for i in scrf: arg_scrf.append([i,pls,mag,orb,lday])
 
         pool = Pool(processes=nproc)
         out  = pool.map(wrap_looper,arg_scrf)
         pool.close()
         pool.join()
+
+        #store in larger dictionary
+        for i in out:
+            if i is not None:
+                outdict[i['craft']] = i 
+    #Just loop if given 1 processor
     else:
-        for i in scrf: looper(i,pls,mag,orb,sday,eday)
+        for i in scrf: 
+            outdict[i] = looper(i,pls,mag,orb,lday)
+
+    return outdict
+
     
