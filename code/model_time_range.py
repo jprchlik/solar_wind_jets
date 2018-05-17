@@ -15,6 +15,7 @@ import sys
 import time
 import mlpy #for dynamic time warping 
 from dtaidistance import dtw #try new dynamic time warping function that creates penalty for compression
+import load_cdf_files as lcf #reading cdfs to pandas arrays
 
 
 from scipy.stats.mstats import theilslopes
@@ -115,7 +116,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
         in order to reject spikes and increase S/N.
     start_t: string, optional
         Date in YYYY/MM/DD format to start looking for events (Default = '2016/06/04')
-    start_t: string, optional
+    end_t: string, optional
         Date in YYYY/MM/DD format to stop looking for events (inclusive, Default = '2017/07/31')
 
     Returns
@@ -125,13 +126,19 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
     
     """
     #Read in plasma and magnetic field data from full res
-    pls = pd.read_csv(arch+pls_fmt.format(k.lower()),delim_whitespace=True)
+    if k.lower() == 'soho':
+        pls = pd.read_csv(arch+pls_fmt.format(k.lower()),delim_whitespace=True)
+    #Change to function that reads cdf files for less data intense loads 2018/05/17 J. Prchlik
+    else:
+        outp = lcf.main(pd.to_datetime(start_t),pd.to_datetime(end_t),scrf=[k.lower()],pls=True,mag=True,orb=True)
+        pls = outp[k.lower()]['pls']
     Re = 6371.0 # Earth radius in km
 
     #no magnetic field data from SOHO
     if k.lower() != 'soho':
-        mag = pd.read_table(arch+mag_fmt.format(k.lower()),delim_whitespace=True)
-        orb = pd.read_table(arch+orb_fmt.format(k.lower()),delim_whitespace=True)
+        #Change to function that reads cdf files for less data intense loads 2018/05/17 J. Prchlik
+        mag = outp[k.lower()]['mag']
+        orb = outp[k.lower()]['orb']
 
         #create datetime objects from time
         pls['time_dt_pls'] = pd.to_datetime(pls['Time'])
