@@ -15,6 +15,9 @@ mike_event = glob('../mikes_big_events/*idl')
 mike_event.remove('../mikes_big_events/event_20170527.idl')
 mike_event.remove('../mikes_big_events/event_20151024.idl')
 
+#Just do 1 event for now 2018/04/25 J. Prchlik 
+mike_event = ['../mikes_big_events/event_20170105.idl']
+
 #mike keys in the order I use them (Wind,DSCOVR,ACE,SOHO)
 skey = ['WI','DS','AC','SO']
 
@@ -26,7 +29,7 @@ vkey = ['TIME','V','VX','VY','VZ','N','W']
 
 
 #Wind to get DTW solution
-window = pd.to_timedelta(3600.,unit='s')
+window = pd.to_timedelta(3.*3600.,unit='s')
 
 
 
@@ -79,17 +82,17 @@ for event in mike_event:
 
     start_t = dfmt.format(twind-window)
     end_t = dfmt.format(twind+window)
-    my_dtw = mtr.dtw_plane(start_t,end_t,nproc=4)
+    my_dtw = mtr.dtw_plane(start_t,end_t,nproc=4,earth_craft=['THEMIS_C'])
     my_dtw.init_read()  
 
-    big_arr = my_dtw.main()
-    store_parm.append(big_arr)
+    my_dtw.main()
+    store_parm.append(my_dtw.event_dict['event_1'])
     #big_arr = mtr.main(str(twind-window),str(twind+window))
 
-    vn = np.array(big_arr[0][5]).T #The normal vectory for my solution
+    vn = my_dtw.event_dict['event_1']['vn'].T #The normal vectory for my solution
  
     #Get my tvals and switch to mike's order (Wind,DSCOVR,SOHO,ACE)
-    tvals = big_arr[0][3][mike_order]
+    tvals = my_dtw.event_dict['event_1']['tvals'][mike_order]
 
     print('#######################################################')
     print('Wind EVENT AT',twind)
@@ -170,7 +173,7 @@ for event in mike_event:
 
     
     
-for j,i in enumerate(store_parm): print(bwnd[j],i[0][4],mike_vel[j])
+for j,i in enumerate(store_parm): print(bwnd[j],i['vm'],mike_vel[j])
 
 #create class which contains information on all spacecraft
 #my_dtw = mtr.dtw_plane('2016/07/10 00:00:00','2017/09/15 00:00:00',nproc=4)
