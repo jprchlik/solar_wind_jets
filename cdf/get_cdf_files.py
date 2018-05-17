@@ -145,7 +145,7 @@ def main(f_types=['mag','plsm','orb'],space_c=['ace','dscovr','wind'], #,'themis
     Parameters:
     ----------
     f_types: list, optional
-        List of parameters to download for ftp archive (default = ['mag','plsm','orb').
+        List of parameters to download for ftp archive (default = ['mag','plsm','orb']).
         Currently only accepts 'mag', 'plsm', and/or 'orb'.
     space_c: list, optional 
         List of spacecraft to download data for (default = ['ace','dscovr','wind'] but may also take 'themis_a', 'themis_b', and 'themis_c']). 
