@@ -137,7 +137,14 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
     #no magnetic field data from SOHO
     if k.lower() != 'soho':
         #Change to function that reads cdf files for less data intense loads 2018/05/17 J. Prchlik
-        mag = outp[k.lower()]['mag']
+        #Add data quality cut 2018/05/18 J. Prchlik
+        if k.lower == 'dscovr':
+            good_mag = (outp[k.lower()]['mag'].DQF == 0)
+            mag = outp[k.lower()]['mag'][good_mag]
+        else:
+            mag = outp[k.lower()]['mag']
+
+
         orb = outp[k.lower()]['orb']
 
         #create datetime objects from time
@@ -229,7 +236,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
 class dtw_plane:
 
 
-    def __init__(self,start_t,end_t,center=True,events=1,par=None,justparm=True,nproc=1,earth_craft=None,penalty=True,pad_earth=pd.to_timedelta('1 hour')):
+    def __init__(self,start_t,end_t,center=True,events=1,par=None,justparm=True,nproc=1,earth_craft=None,penalty=True,pad_earth=pd.to_timedelta('1 hour'),speed_pen=10.,mag_pen=0.2):
         """
         Class to get planar DTW solutions for L1 spacecraft.      
  
@@ -261,7 +268,11 @@ class dtw_plane:
             Include a penalty in the DTW solution for compression of time (Default = True)
         pad_earth: pandas time delta object, optional
             Time offset to apply when reading in spacecraft data near earth (Default = pd.to_timedelta('1 hour'))
-            
+        speed_pen: float
+            Penatly in km/s for squashing speed time in DTW (Default = 10.). Only works if penalty is set to True
+        mag_pen: float
+            Penatly in nT for squashing magnetic field time in DTW (Default = 0.2). Only works if penalty is set to True.
+
         Example: 
         ----------
         import model_time_range as mtr
@@ -284,6 +295,11 @@ class dtw_plane:
         self.pad_earth = pad_earth
 
         self.first = True
+
+
+        #store penanalties
+        self.speed_pen = speed_pen
+        self.mag_pen = mag_pen
 
 
         #set use to use all spacecraft
@@ -500,8 +516,11 @@ class dtw_plane:
             print('WARPING TIME')
             #use dtw solution that allows penalty for time compression
             if self.penalty:
-                if 'SPEED' in par: penalty = 10.0
-                elif any('B' in s for s in par):  penalty = .15
+                if 'SPEED' in par:
+                    penalty = self.speed_pen
+                elif any('B' in s for s in par):
+                    penalty = self.mag_pen
+ 
                 print('Penalty = {0:4.3f}'.format(penalty))
                 path = dtw.warping_path(t_mat[par[0]].ffill().bfill().values,
                                         p_mat[par[0]].ffill().bfill().values,
@@ -716,8 +735,8 @@ class dtw_plane:
             xval = mdates.date2num(i)
 
             #try producing continous plot 2018/05/17 J. Prchlik
-            #fax[2,0].annotate('Event {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
-            #                  arrowprops=dict(facecolor='purple',shrink=0.005))
+            fax[2,0].annotate('Event {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
+                              arrowprops=dict(facecolor='purple',shrink=0.005))
             #fax[2,1].annotate('Event {0:1d}'.format(j+1),xy=(xval,yvalb),xytext=(xval,yvalb+2.),
             #                  arrowprops=dict(facecolor='purple',shrink=0.005))
 
@@ -873,8 +892,8 @@ class dtw_plane:
                 ax_th.scatter(th_xval,th_yval,color='blue',label=None)
                 #change to line at wind 2018/05/17
                 #Add predicted THEMIS plot
-                ##ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
-                ##          arrowprops=dict(facecolor='purple',shrink=0.005))
+                ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
+                          arrowprops=dict(facecolor='purple',shrink=0.005))
                 ###Add Actual to THEMIS plot 2018/05/03 J. Prchlik
                 ##ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(rl_xval,th_yval),xytext=(rl_xval,th_yval-50.),
                 ##          arrowprops=dict(facecolor='red',shrink=0.005))
