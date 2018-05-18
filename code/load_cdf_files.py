@@ -24,7 +24,7 @@ def looper(sc1,pls,mag,orb,lstr,brchive='../cdf/'):
     -----------
     sc1:  string
         List of spacecraft to created formatted text files for 
-        (Allow inputs are 'wind','ace','dscovr','soho','themis_a','themis_b','themis_c')
+        (Allow inputs are 'wind','ace','dscovr','soho','themis_a','themis_b','themis_c','omni')
     pls: boolean
         Create formatted plasma parameter file.
     mag: boolean
@@ -39,7 +39,7 @@ def looper(sc1,pls,mag,orb,lstr,brchive='../cdf/'):
     """
 
     ##List of possible spacecraft
-    scrf = ['wind','ace','dscovr','soho','themis_a','themis_b','themis_c']
+    scrf = ['wind','ace','dscovr','soho','themis_a','themis_b','themis_c','omni']
 
     #exit cleanly if spacecraft is not in list of possible spacecraft
     if sc1 not in scrf: 
@@ -92,6 +92,12 @@ def looper(sc1,pls,mag,orb,lstr,brchive='../cdf/'):
         pls_key = ['tha_peim_time','tha_peim_velocity_gse','tha_peim_density','tha_peim_t3_mag','tha_peim_data_quality']
         orb_key = ['Epoch','XYZ_GSE']
 
+    #Omni parameters
+    if sc1 == 'omni':
+        mag_key = []
+        pls_key = ['Epoch','flow_speed','proton_density','T']
+        orb_key = []
+
     #Get magnetic and plasma cdf files
     t_fpls = glob(archive+'*cdf')
   
@@ -107,7 +113,13 @@ def looper(sc1,pls,mag,orb,lstr,brchive='../cdf/'):
     if 'themis' in sc1: t_fmag = glob(archive+'*mom*cdf')
 
     #Only use files in time range
-    fpls = [ s for s in t_fpls for d in lstr if d in s]
+    #only 1 omni file per month
+    if 'omni' in sc1:
+        cstr = np.unique([d[:6] for d in lstr]) 
+        fpls = [ s for s in t_fpls for d in cstr if d in s]
+    else:
+        fpls = [ s for s in t_fpls for d in lstr if d in s]
+
     fmag = [ s for s in t_fmag for d in lstr if d in s]
     #check for orbital files only that  have the year
     if sc1 == 'ace':
@@ -130,6 +142,7 @@ def looper(sc1,pls,mag,orb,lstr,brchive='../cdf/'):
     #convert to textfile
     #Commented to fix time error J. Prchlik 2017/11/14
     #creating logic switches 
+    print(fpls)
     if pls:
         ret_df['pls'] = cdf_to_pandas(fpls,pls_key,sc1,'pls')
     ##commented out J. Prchlik 2017/11/14 to fix wrong Vth in ACE
@@ -207,6 +220,12 @@ def cdf_to_pandas(f_list,keys,craft,context):
             epoch = pd.to_timedelta(cdf[keys[0]][...],unit='s')+pd.to_datetime('1970/01/01 00:00:00' )
             #Switched to effecienct array creation 2018/05/03 J. Prchlik
             temp = pd.DataFrame(np.array([epoch,SPEED,cdf[keys[2]][...],cdf[keys[3]][...][:,0],cdf[keys[4]][...]]).T,columns=header)
+            tab = tab.append(temp,ignore_index=True) 
+        elif ((context == 'pls') & (craft == 'omni')):
+            Vth   = 1.E-3*np.sqrt(2.*kb/mp*cdf[keys[3]][...]) #convert Thermal Temp to Speed
+            #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(Vth[k]),0]
+            #Switched to effecienct array creation 2018/05/17 J. Prchlik
+            temp = pd.DataFrame(np.array([cdf[keys[0]][...],cdf[keys[1]][...],cdf[keys[2]][...],Vth,np.zeros(len(Vth))]).T,columns=header)
             tab = tab.append(temp,ignore_index=True) 
 
 
