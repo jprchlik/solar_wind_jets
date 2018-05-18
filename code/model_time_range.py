@@ -131,14 +131,22 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
     #Change to function that reads cdf files for less data intense loads 2018/05/17 J. Prchlik
     else:
         outp = lcf.main(pd.to_datetime(start_t),pd.to_datetime(end_t),scrf=[k.lower()],pls=True,mag=True,orb=True)
-        pls = outp[k.lower()]['pls']
-    Re = 6371.0 # Earth radius in km
+     
+        #Add data quality cut 2018/05/18 J. Prchlik
+        if k.lower() == 'dscovr':
+            good_pls = (outp[k.lower()]['pls'].DQF == 0)
+            pls = outp[k.lower()]['pls'][good_pls]
+        else:
+            pls = outp[k.lower()]['pls']
+
+
+    Re = 6371.0# Earth radius in km 
 
     #no magnetic field data from SOHO
     if k.lower() != 'soho':
         #Change to function that reads cdf files for less data intense loads 2018/05/17 J. Prchlik
         #Add data quality cut 2018/05/18 J. Prchlik
-        if k.lower == 'dscovr':
+        if k.lower() == 'dscovr':
             good_mag = (outp[k.lower()]['mag'].DQF == 0)
             mag = outp[k.lower()]['mag'][good_mag]
         else:
