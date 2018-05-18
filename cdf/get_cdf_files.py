@@ -59,6 +59,13 @@ def set_directory(craft,param):
     elif ((craft == 'themis_c') & (param == 'plsm')):
         a_dir = 'themis/thc/l2/mom/'
 
+    #Omni directories
+    elif ((craft == 'omni') & (param == 'orb')):
+        a_dir = 'omni/omni_cdaweb/hro_1min/'
+    elif ((craft == 'omni') & (param == 'mag')):
+        a_dir = 'omni/omni_cdaweb/hro_1min/'
+    elif ((craft == 'omni') & (param == 'plsm')):
+        a_dir = 'omni/omni_cdaweb/hro_1min/'
 
 
     #return specific directory
@@ -148,7 +155,7 @@ def main(f_types=['mag','plsm','orb'],space_c=['ace','dscovr','wind'], #,'themis
         List of parameters to download for ftp archive (default = ['mag','plsm','orb']).
         Currently only accepts 'mag', 'plsm', and/or 'orb'.
     space_c: list, optional 
-        List of spacecraft to download data for (default = ['ace','dscovr','wind'] but may also take 'themis_a', 'themis_b', and 'themis_c']). 
+        List of spacecraft to download data for (default = ['ace','dscovr','wind'] but may also take 'themis_a', 'themis_b', 'themis_c', and 'omni']). 
         Currently only accepts 'ace', 'dscovr', and/or 'wind'.
     archive: string, optional
         String containing the base location of the ftp archive (default = 'ftp://cdaweb.gsfc.nasa.gov/pub/data/').
