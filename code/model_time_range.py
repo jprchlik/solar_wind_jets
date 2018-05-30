@@ -728,6 +728,11 @@ class dtw_plane:
 
         #create dictionary of values for each event 2018/04/24 J. Prchlik
         self.event_dict = {}
+        #Store arrival times and plasma parameters in seperate array
+        #to call when comparing with omni prediction
+        for esp in self.earth_craft:
+            self.event_dict[esp+'_time'] = []
+            self.event_dict[esp+'_plsm'] = []
 
         #List of time and Speed value of events J. Prchlik
         event_plot = []
@@ -842,6 +847,8 @@ class dtw_plane:
                 ################################################################
                 #Get THEMIS B location and compare arrival times
                 ################################################################
+                #
+                #
                 #Get closest index value location
                 #Fix THEMIS having out of range index
                 try:
@@ -898,6 +905,13 @@ class dtw_plane:
                     
                 #plot parameters from wind prediction 2018/05/17 J. Prchlik
                 ax_th.scatter(th_xval,th_yval,color='blue',label=None)
+
+                #Store the prediction in array for plotting and comparing to omni
+                self.event_dict[esp+'_time'].append(th_xval)
+                self.event_dict[esp+'_plsm'].append(th_yval)
+
+
+
                 #change to line at wind 2018/05/17
                 #Add predicted THEMIS plot
                 ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
@@ -1271,3 +1285,56 @@ class dtw_plane:
             plt.close()
     
 
+    def omni_plot(self):
+        """
+        Function to plot 4-spacecraft plane solution at L1 compared to omni prediciton
+ 
+        """
+
+        #Create omni figure
+        fig_omni, ax_omni = plt.subplots(figsize=(2,2),dpi=600)
+ 
+        #local plsm variable to skip self
+        plsm = self.plsm
+
+        #Read and store omni observations
+        omni = lcf.main(pd.to_datetime(self.start_t)+self.pad_earth,pd.to_datetime(self.end_t)+self.pad_earth,scrf=['omni'],pls=True,mag=False,orb=False)
+        omni = omni['omni']['pls']
+        omni['time_dt'] = pd.to_datetime(omni.Time)
+        omni.set_index(omni.time_dt,inplace=True)
+        self.plsm['omni'] = omni
+
+        #plot omni parameters
+        slicer = ((omni.SPEED < 10000.) & (omni.time_dt > self.start_t) & (omni.time_dt < self.end_t))
+        ax_omni.plot(omni.loc[slicer,:].index,omni.loc[slicer,:].SPEED,linestyle='--',color='grey',label='OMNI')
+
+        #loop over all earth space craft to plot
+        for esp in self.earth_craft:
+            #Plot predictions at themis
+            pre_x = self.event_dict[esp+'_time']
+            pre_y = self.event_dict[esp+'_plsm']
+
+            #create box like plot
+            pre_x = np.array([pre_x,pre_x]).T.flatten()[1:]
+            pre_y = np.array([pre_y,pre_y]).T.flatten()[:-1]
+ 
+            #Plot plane prediction
+            ax_omni.plot(pre_x,pre_y,color='black',linestyle='-.',label='Plane Pred.')
+            
+            #Add plot with just the THEMIS plasma data
+            slicer = np.isfinite(plsm[esp].SPEED)
+            ax_omni.plot(plsm[esp].loc[slicer,:].index,pd.rolling_mean(plsm[esp].loc[slicer,:].SPEED,25),color=self.color[esp],label=esp.upper().replace('_',' '),zorder=100,linewidth=1)
+
+
+        ax_omni.legend(loc='upper left',frameon=False,fontsize=4)
+        #set axis labels
+        ax_omni.set_xlabel("Time [UTC]",fontsize=8)
+        ax_omni.set_ylabel("Flow Speed [km/s]",fontsize=8)
+        fancy_plot(ax_omni)
+        #rotate y,z y axis tick labels
+        for tick in ax_omni.get_xticklabels():
+            tick.set_rotation(45)
+        
+
+        fig_omni.savefig('../plots/omni_pred_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(self.start_t)),bbox_pad=.1,bbox_inches='tight',dpi=600)
+        fig_omni.savefig('../plots/omni_pred_{0:%Y%m%d_%H%M%S}.eps'.format(pd.to_datetime(self.start_t)),bbox_pad=.1,bbox_inches='tight',dpi=600)
