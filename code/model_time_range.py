@@ -739,17 +739,19 @@ class dtw_plane:
         
         #Plot the top shock values
         #fax[2,0].scatter(t_mat.loc[top_vs.index,:].index,t_mat.loc[top_vs.index,:].SPEED,color='purple',marker='X',s=150)
-        for j,i in enumerate(top_vs.index):
+        #for j,i in enumerate(top_vs.index):
         #try producing continous plot 2018/05/17 J. Prchlik
         #This method did not work
-        #for j,i in enumerate(t_mat.index):
+        #Trying again with multi parameter approach 2018/07/26 J. Prchlik
+        for j,i in enumerate(t_mat.index):
             yval = t_mat.loc[i,:].SPEED
             yvalb = 0.
             xval = mdates.date2num(i)
 
             #try producing continous plot 2018/05/17 J. Prchlik
-            fax[2,0].annotate('Event {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
-                              arrowprops=dict(facecolor='purple',shrink=0.005))
+            #Removing 2017/07/26 J. Prchlk
+            #fax[2,0].annotate('Event {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
+            #                  arrowprops=dict(facecolor='purple',shrink=0.005))
             #fax[2,1].annotate('Event {0:1d}'.format(j+1),xy=(xval,yvalb),xytext=(xval,yvalb+2.),
             #                  arrowprops=dict(facecolor='purple',shrink=0.005))
 
@@ -914,8 +916,9 @@ class dtw_plane:
 
                 #change to line at wind 2018/05/17
                 #Add predicted THEMIS plot
-                ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
-                          arrowprops=dict(facecolor='purple',shrink=0.005))
+                #Remove 2018/07/26 J. Prchlik
+                #ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(th_xval,th_yval),xytext=(th_xval,th_yval+50.),
+                #          arrowprops=dict(facecolor='purple',shrink=0.005))
                 ###Add Actual to THEMIS plot 2018/05/03 J. Prchlik
                 ##ax_th.annotate('Event {0:1d} at {1}'.format(j+1,esp.upper()),xy=(rl_xval,th_yval),xytext=(rl_xval,th_yval-50.),
                 ##          arrowprops=dict(facecolor='red',shrink=0.005))
@@ -1333,6 +1336,11 @@ class dtw_plane:
             #create box like plot
             pre_x = np.array([pre_x,pre_x]).T.flatten()[1:]
             pre_y = np.array([pre_y,pre_y]).T.flatten()[:-1]
+
+            #remove nans
+            good, = np.where((np.isfinite(pre_x) & (np.isfinite(pre_y))))
+            pre_x = pre_x[good]
+            pre_y = pre_y[good]
 
             #sort argument in time
             srt_x = np.argsort(pre_x)
