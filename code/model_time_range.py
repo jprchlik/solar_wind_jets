@@ -1368,6 +1368,343 @@ class dtw_plane:
         fig_omni.savefig('../plots/omni_pred_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(self.start_t)),bbox_pad=.1,bbox_inches='tight',dpi=600)
         fig_omni.savefig('../plots/omni_pred_{0:%Y%m%d_%H%M%S}.eps'.format(pd.to_datetime(self.start_t)),bbox_pad=.1,bbox_inches='tight',dpi=600)
 
+    def dtw_multi_parm(self,twind):
+        """
+        Finds planar solution to 4 L1 spacecraft
+     
+        Parameters
+        ----------
+ 
+        self: Class
+        twind: datetime object
+             The rough time of discontinuity in the Trainer Spacecraft, which is used to time weight the fit
+
+ 
+        """
+        from tslearn import metrics
+
+        #Creating modular solution for DTW 2018/03/21 J. Prchlik
+        ##set the Start and end time
+        #start_t = "2016/12/21 07:00:00"
+        #end_t = "2016/12/21 13:00:00"
+        #center = True
+        #reset variables to local variables
+        Re = self.Re # Earth radius
+        start_t  = self.start_t 
+        end_t    = self.end_t   
+        center   = self.center  
+        par      = self.par     
+        justparm = self.justparm
+        marker   = self.marker
+        color    = self.color
+        
+        #set use to use all spacecraft
+        craft = self.craft #['Wind','DSCOVR','ACE','SOHO']
+        col   = self.col   #['blue','black','red','teal']
+        mar   = self.mar   #['D','o','s','<']
+        trainer = self.trainer
+        
+        #range to find the best maximum value
+        maxrang = pd.to_timedelta('3 minutes')
+        
+        
+        #create new plasma dictory which is a subset of the entire file readin
+        plsm = {}
+        for i in craft:
+             plsm[i] = self.plsm[i] #[start_t:end_t] Cutting not required because already using a small sample 2018/05/03 J. Prchlik
+             #remove duplicates
+             plsm[i] = plsm[i][~plsm[i].index.duplicated(keep='first')]
+
+        #get all values at full resolution for dynamic time warping
+        t_mat  = plsm[trainer] #.loc[trainer_t-t_rgh_wid:trainer_t+t_rgh_wid]
+  
+        #add trainer matrix to self
+        self.t_mat = t_mat
+
+
+        #parameters to replace bad values
+        par = ['SPEED','Np','Vth','Bx','By','Bz']
+
+        #fill all Nans in data series with forward values first and then back fill the first times
+        #ffil inf values
+        t_mat.replace(to_replace=np.inf,value=np.nan,inplace=True)
+        t_mat.replace(to_replace=-np.inf,value=np.nan,inplace=True)
+        #ffil bad values
+        for p in par:
+            bad=((t_mat[p] > 80000.) | (t_mat[p] < -80000.))
+            t_mat.loc[bad,p] = np.nan
+    
+        #fill bad values first forward then backward for the starting time
+        t_mat = t_mat.ffill().bfill()
+
+
+        #Find points with the largest speed differences in wind
+        top_vs = (t_mat.SPEED.dropna().diff().abs()/t_mat.SPEED.dropna()).nlargest(self.events)
+        
+        #sort by time for event number
+        top_vs.sort_index(inplace=True)
+        
+        #add to self
+        self.top_vs = top_vs
+
+        #plot with the best timing solution
+        self.fig, self.fax = plt.subplots(ncols=2,nrows=3,sharex=True,figsize=(18,18))
+        fig, fax = self.fig,self.fax
+
+       
+        #set range to include all top events (prevents window too large error
+        self.pad = pd.to_timedelta('30 minutes')
+        pad = self.pad
+        fax[0,0].set_xlim([top_vs.index.min()-pad,top_vs.index.max()+pad])
+        
+        #loop over all other craft
+        for k in craft[1:]:
+            print('###########################################')
+            print(k)
+            p_mat  = plsm[k] #.loc[i_min-t_rgh_wid:i_min+t_rgh_wid]
+        
+            #use speed for rough esimation if possible
+            if  ((k.lower() == 'soho') ): par = ['SPEED','Np','Vth']
+            elif (((par is None) | (isinstance(par,float))) & (k.lower() != 'soho')): par = ['SPEED','Np','Vth','Bx','By','Bz']
+            elif isinstance(par,str): par = [par]
+            else: par = par
+
+            print(par)
+
+            #Get and record differences and add to x_vals
+            t_mat,x_vals = get_x_difference(t_mat,par)       
+
+            #set up variables for training set
+            X_train = t_mat[x_vals].values
+
+            #Include a time normalization
+            normer_train = t_mat.index.values.astype('float64')
+
+            min_train = normer_train.min()
+            max_train = normer_train.max()
+
+            #create normalization values
+            normer_train = dtw_wei(normer_train,twind,b=5./((max_train-min_train)/2.)**2.,c=1.)
+
+            #expand array so you can simply multiply
+            normer_train = np.outer(normer_train,np.ones(X_train.shape[1]))
+
+            #include a time normalization factor
+            X_train *= normer_train
+
+            #time values trying to match
+            y_train = t_mat.index.values
+        
+            #get the median slope and offset
+            #J. Prchlik (2017/11/20)
+            #Dont use interpolated time for solving dynamic time warp (J. Prchlik 2017/12/15)
+            #only try SPEED corrections for SOHO observations
+            #Only apply speed correction after 1 iteration (J. Prchlik 2017/12/18)
+            if (('themis' in k.lower())):
+                try:
+                    #create copy of p_mat
+                    c_mat = p_mat.copy()
+                    #resample the matching (nontrained spacecraft to the trained spacecraft's timegrid to correct offset (2017/12/15 J. Prchlik)
+                    c_mat = c_mat.reindex(t_mat.index,method='nearest').interpolate('time')
+         
+                    #only comoare no NaN values
+                    good, = np.where(((np.isfinite(t_mat.SPEED.values)) & (np.isfinite(c_mat.SPEED.values))))
+         
+                    #if few points for comparison only used baseline offset
+                    if ((good.size < 1E36) & (par[0] == 'SPEED')):
+                        med_m,med_i = 1.0,0.0
+                        off_speed = p_mat.SPEED.median()-t_mat.SPEED.median()
+                        p_mat.SPEED = p_mat.SPEED-off_speed
+                        if med_m > 0: p_mat.SPEED = p_mat.SPEED*med_m+med_i
+                    else:
+                        off_speed = p_mat.SPEED.nsmallest(100).median()-t_mat.SPEED.nsmallest(20).median()
+                        p_mat.SPEED = p_mat.SPEED-off_speed
+                    #only apply slope if greater than 0
+                except IndexError:
+                #get median offset to apply to match spacecraft
+                    off_speed = p_mat.SPEED.nsmallest(100).median()-t_mat.SPEED.nsmallest(20).median()
+                    p_mat.SPEED = p_mat.SPEED-off_speed
+         
+         
+            #ffil inf values
+            p_mat.replace(to_replace=np.inf,value=np.nan,inplace=True)
+            p_mat.replace(to_replace=-np.inf,value=np.nan,inplace=True)
+            #ffil bad values
+            for p in par:
+                bad=((p_mat[p] > 80000.) | (p_mat[p] < -80000.))
+                p_mat.loc[bad,p] = np.nan
+
+            #fill all Nans in data series with forward values first and then back fill the first times
+            p_mat = p_mat.ffill().bfill()
+            #Get and record differences and add to x_vals
+            p_mat,x_vals = get_x_difference(p_mat,par)
+
+
+
+            #set up variables for test set
+            X_tests = p_mat[x_vals].values
+
+            #Include a time normalization
+            normer_tests = p_mat.index.values.astype('float64')
+
+
+            #create normalization values
+            normer_tests = dtw_wei(normer_tests,twind,b=5./((max_train-min_train)/2.)**2.,c=1.)
+            normer_tests = np.outer(normer_tests,np.ones(X_tests.shape[1]))
+
+            #include a time normalization factor
+            X_tests *= normer_tests
+
+            y_tests = p_mat.index.values
+         
+            #get dynamic time warping value   
+            print('WARPING TIME')
+            #get multi-parameter dtw solution
+            path, sim = metrics.dtw_path(X_train, X_tests)
+            #convert path into a numpy array
+            path = np.array(zip(*path))
+            print('STOP WARPING TIME')
+        
+            #get full offsets for dynamic time warping
+            off_sol = (p_mat.iloc[path[1],:].index - t_mat.iloc[path[0],:].index)
+            print('REINDEXED')
+        
+            #get a region around one of the best fit times
+            b_mat = p_mat.copy()
+        
+            #update the time index of the match array for comparision with training spacecraft (i=training spacecraft time)
+            b_mat = b_mat.reindex(b_mat.iloc[path[1],:].index) #.interpolate('time')
+            b_mat.index = b_mat.index-off_sol
+            b_mat['offsets'] = off_sol
+        
+            #Add offset data frame to plasma diction
+            plsm[k+'_offset'] = b_mat
+            #plot plasma parameters
+            #fax[0,0].scatter(b_mat[b_mat['Np'   ] > -9990.0].index,b_mat[b_mat['Np'   ] > -9990.0].Np   ,marker=marker[k],color=color[k],label=k.upper())         
+            if len(b_mat[b_mat['Np'   ] > -9990.0]) > 0:
+                fax[0,0].scatter(b_mat[b_mat['Np'   ] > -9990.0].index,b_mat[b_mat['Np'   ] > -9990.0].Np   ,marker=marker[k],color=color[k],label=k)
+                fax[0,0].plot(b_mat[b_mat['Np'   ] > -9990.0].index,b_mat[b_mat['Np'   ] > -9990.0].Np   ,color=color[k],linewidth=2,label='')
+        
+            if len(b_mat[b_mat['Vth'  ] > -9990.0]) > 0:
+                fax[1,0].scatter(b_mat[b_mat['Vth'  ] > -9990.0].index,b_mat[b_mat['Vth'  ] > -9990.0].Vth  ,marker=marker[k],color=color[k],label=k)
+                fax[1,0].plot(b_mat[b_mat['Vth'  ] > -9990.0].index,b_mat[b_mat['Vth'  ] > -9990.0].Vth  ,color=color[k],linewidth=2,label='')
+        
+            if len(b_mat[b_mat['SPEED'] > -9990.0]) > 0:
+                fax[2,0].scatter(b_mat[b_mat['SPEED'] > -9990.0].index,b_mat[b_mat['SPEED'] > -9990.0].SPEED,marker=marker[k],color=color[k])
+                fax[2,0].plot(b_mat[b_mat['SPEED'] > -9990.0].index,b_mat[b_mat['SPEED'] > -9990.0].SPEED,color=color[k],linewidth=2)
+        
+        
+            #plot mag. parameters
+            if k.lower() != 'soho':
+                if len(b_mat[b_mat['Bx']    > -9990.0]) > 0:
+                    fax[0,1].scatter(b_mat[b_mat['Bx']    > -9990.0].index,b_mat[b_mat['Bx']    > -9990.0].Bx,marker=marker[k],color=color[k])
+                    fax[0,1].plot(b_mat[b_mat['Bx']    > -9990.0].index,b_mat[b_mat['Bx']    > -9990.0].Bx,color=color[k],linewidth=2)
+        
+                if len(b_mat[b_mat['By']    > -9990.0]) > 0:
+                    fax[1,1].scatter(b_mat[b_mat['By']    > -9990.0].index,b_mat[b_mat['By']    > -9990.0].By,marker=marker[k],color=color[k])
+                    fax[1,1].plot(b_mat[b_mat['By']    > -9990.0].index,b_mat[b_mat['By']    > -9990.0].By,color=color[k],linewidth=2)
+        
+                if len(b_mat[b_mat['Bz']    > -9990.0]) > 0:
+                    fax[2,1].scatter(b_mat[b_mat['Bz']    > -9990.0].index,b_mat[b_mat['Bz']    > -9990.0].Bz,marker=marker[k],color=color[k])
+                    fax[2,1].plot(b_mat[b_mat['Bz']    > -9990.0].index,b_mat[b_mat['Bz']    > -9990.0].Bz,color=color[k],linewidth=2)
+        
+        
+            print('###########################################')
+        
+        
+        #set 0 offsets for training spacecraft
+        t_mat['offsets'] = pd.to_timedelta(0) 
+        plsm[trainer+'_offset'] = t_mat
+        
+        
+        #plot plasma parameters for Wind
+        if len(t_mat[t_mat['Np'   ] > -9990.0]) > 0:
+            fax[0,0].scatter(t_mat[t_mat['Np'   ] > -9990.0].index,t_mat[t_mat['Np'   ] > -9990.0].Np   ,marker=marker[trainer],color=color[trainer],label=trainer.upper())
+            fax[0,0].plot(t_mat[t_mat['Np'   ] > -9990.0].index,t_mat[t_mat['Np'   ] > -9990.0].Np   ,color=color[trainer],linewidth=2,label='')
+        
+        if len(t_mat[t_mat['Vth'  ] > -9990.0]) > 0:
+            fax[1,0].scatter(t_mat[t_mat['Vth'  ] > -9990.0].index,t_mat[t_mat['Vth'  ] > -9990.0].Vth  ,marker=marker[trainer],color=color[trainer],label=trainer)
+            fax[1,0].plot(t_mat[t_mat['Vth'  ] > -9990.0].index,t_mat[t_mat['Vth'  ] > -9990.0].Vth  ,color=color[trainer],linewidth=2,label='')
+        
+        if len(t_mat[t_mat['SPEED'] > -9990.0]) > 0:
+            fax[2,0].scatter(t_mat[t_mat['SPEED'] > -9990.0].index,t_mat[t_mat['SPEED'] > -9990.0].SPEED,marker=marker[trainer],color=color[trainer])
+            fax[2,0].plot(t_mat[t_mat['SPEED'] > -9990.0].index,t_mat[t_mat['SPEED'] > -9990.0].SPEED,color=color[trainer],linewidth=2)
+        
+        
+        #plot mag. parameters
+        if len(t_mat[t_mat['Bx']    > -9990.0]) > 0:
+            fax[0,1].scatter(t_mat[t_mat['Bx'   ] > -9990.0].index,t_mat[t_mat['Bx']    > -9990.0].Bx,marker=marker[trainer],color=color[trainer])
+            fax[0,1].plot(t_mat[t_mat['Bx'   ] > -9990.0].index,t_mat[t_mat['Bx']    > -9990.0].Bx,color=color[trainer],linewidth=2)
+        
+        if len(t_mat[t_mat['By']    > -9990.0]) > 0:
+            fax[1,1].scatter(t_mat[t_mat['By'   ] > -9990.0].index,t_mat[t_mat['By']    > -9990.0].By,marker=marker[trainer],color=color[trainer])
+            fax[1,1].plot(t_mat[t_mat['By'   ] > -9990.0].index,t_mat[t_mat['By']    > -9990.0].By,color=color[trainer],linewidth=2)
+        
+        if len(t_mat[t_mat['Bz']    > -9990.0]) > 0:
+            fax[2,1].scatter(t_mat[t_mat['Bz'   ] > -9990.0].index,t_mat[t_mat['Bz']    > -9990.0].Bz,marker=marker[trainer],color=color[trainer])
+            fax[2,1].plot(t_mat[t_mat['Bz'   ] > -9990.0].index,t_mat[t_mat['Bz']    > -9990.0].Bz,color=color[trainer],linewidth=2)
+        
+        
+        fancy_plot(fax[0,0])
+        fancy_plot(fax[1,0])
+        fancy_plot(fax[2,0])
+        fancy_plot(fax[0,1])
+        fancy_plot(fax[1,1])
+        fancy_plot(fax[2,1])
+        #i = pd.to_datetime("2016/12/21 08:43:12") 
+        fax[0,0].set_xlim([start_t,end_t])
+        
+        fax[0,0].set_ylabel('Np [cm$^{-3}$]',fontsize=20)
+        fax[1,0].set_ylabel('Th. Speed [km/s]',fontsize=20)
+        fax[2,0].set_ylabel('Flow Speed [km/s]',fontsize=20)
+        fax[2,0].set_xlabel('Time [UTC]',fontsize=20)
+        
+        fax[0,1].set_ylabel('Bx [nT]',fontsize=20)
+        fax[1,1].set_ylabel('By [nT]',fontsize=20)
+        fax[2,1].set_ylabel('Bz [nT]',fontsize=20)
+        fax[2,1].set_xlabel('Time [UTC]',fontsize=20)
+        
+        fax[1,0].set_ylim([0.,100.])
+        
+        
+        #turn into data frame 
+        frm_vs = pd.DataFrame(top_vs)
+        #add columns
+        col_add = ['X','Y','Z','Vx','Vy','Vz']
+        for i in col_add: frm_vs[i] = -9999.9
+
+
+
+        #Updated self plasma dictionary
+        self.plsm = plsm
+
+
+#get difference in parameter values for DTW
+def get_x_difference(df,diff_v):
+    """
+    df: pandas data frame of solar wind observations
+    diff_v: list of parameters to compute the difference for
+
+    """
+
+    #Get difference values and stor
+    new = ['diff_'+i for i in diff_v]
+    df[new] = df[diff_v].diff().bfill()
+    diff_v = diff_v+new
+
+    return df,diff_v
+
+#create an equation to wieght the observation of the form y = b*(x-a)^2+c
+def dtw_wei(x,t0,b=0.3,c=1):
+    """
+    x: a time range in nanoseconds
+    t0: the central time point in nanoseconds
+    """
+    return b*(x-t0.value)**2+c
+
+
+
+
 #add small tick marks to plots
 def fancy_plot_small(ax):
     #Turn minor ticks on
