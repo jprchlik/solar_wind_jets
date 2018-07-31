@@ -739,11 +739,11 @@ class dtw_plane:
         
         #Plot the top shock values
         #fax[2,0].scatter(t_mat.loc[top_vs.index,:].index,t_mat.loc[top_vs.index,:].SPEED,color='purple',marker='X',s=150)
-        for j,i in enumerate(top_vs.index):
+        #for j,i in enumerate(top_vs.index):
         #try producing continous plot 2018/05/17 J. Prchlik
         #This method did not work
         #Trying again with multi parameter approach 2018/07/26 J. Prchlik
-        #for j,i in enumerate(t_mat.index):
+        for j,i in enumerate(t_mat.index):
             yval = t_mat.loc[i,:].SPEED
             yvalb = 0.
             xval = mdates.date2num(i)
