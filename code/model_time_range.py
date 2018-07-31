@@ -1482,7 +1482,8 @@ class dtw_plane:
             print(par)
 
             #Get and record differences and add to x_vals
-            t_mat,x_vals = get_x_difference(t_mat,par)       
+            #t_mat,x_vals = get_x_difference(t_mat,par)       
+            x_vals = par
 
             #set up variables for training set
             X_train = t_mat[x_vals].values
@@ -1550,7 +1551,8 @@ class dtw_plane:
             #fill all Nans in data series with forward values first and then back fill the first times
             p_mat = p_mat.ffill().bfill()
             #Get and record differences and add to x_vals
-            p_mat,x_vals = get_x_difference(p_mat,par)
+            #p_mat,x_vals = get_x_difference(p_mat,par)
+            x_vals = par
 
 
 
@@ -1702,6 +1704,51 @@ class dtw_plane:
         #Updated self plasma dictionary
         self.plsm = plsm
 
+#plot distribution of time offsets as a function of time in wind of SOHO, ACE, DSCVOR
+def plot_time_dis(self):
+
+    #get DTW offset keys from plasma dictionary
+    off_keys = [i for i in self.plsm.keys() if (('offset' in i) & (i.replace('_offset','') 
+                not in self.earth_craft) & (i.replace('_offset','') != self.trainer))]
+
+    #time range
+    time = self.plsm[off_keys[0]].index.values.astype(float)*1e-9
+    #Set up bins for Heat map
+    resx = int(6e1) #1 minutes
+    resy = int(1e1) #10 seconds
+    xbins = np.arange(time.min(),time.max(),resx)
+    ybins = np.arange(-int(3.6e3),int(3.6e3),resy)#1 hour around time offset
+
+    #set up color map
+    ccmap = plt.cm.viridis.reversed()
+    ccmap.set_under('1.00')
+    #create a figure with as many columns as off_keys 
+    fig, fax = plt.subplots(ncols=len(off_keys),figsize=(6*len(off_keys),6),sharex=True,sharey=True)
+    fax = fax.flatten()
+
+
+    #loop over all keys
+    for j,i in enumerate(off_keys):
+
+        #convert from ns to s
+        xvals = self.plsm[i].index.values.astype(float)*1e-9
+        yvals = self.plsm[i]['offsets'].values.astype(float)*1e-9
+
+        #create two D histogram
+        H,xedges,yedges = np.histogram2d(xvals,yvals,bins=(xbins,ybins))
+        H = H.T #transpose for plotting
+
+        X, Y = np.meshgrid(xedges, yedges)
+        plotc = fax[j].pcolormesh(X,Y,H,label=None,cmap=ccmap,vmin=1,vmax=50)
+        fax[j].set_title(i.replace('_offset','').upper())
+        fax[j].set_xlabel('Time [UTC]')
+        fax[j].set_ylabel('Offset from Wind [s]')
+        fancy_plot(fax[j])
+
+
+    fig.savefig('../plots/two_d_his.png',bbox_pad=.1,bbox_inches='tight')
+#    fig.savefig('../plots/two_d_his.eps',bbox_pad=.1,bbox_inches='tight')
+    plt.close(fig)
 
 #get difference in parameter values for DTW
 def get_x_difference(df,diff_v):
