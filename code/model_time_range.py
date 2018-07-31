@@ -739,11 +739,11 @@ class dtw_plane:
         
         #Plot the top shock values
         #fax[2,0].scatter(t_mat.loc[top_vs.index,:].index,t_mat.loc[top_vs.index,:].SPEED,color='purple',marker='X',s=150)
-        #for j,i in enumerate(top_vs.index):
+        for j,i in enumerate(top_vs.index):
         #try producing continous plot 2018/05/17 J. Prchlik
         #This method did not work
         #Trying again with multi parameter approach 2018/07/26 J. Prchlik
-        for j,i in enumerate(t_mat.index):
+        #for j,i in enumerate(t_mat.index):
             yval = t_mat.loc[i,:].SPEED
             yvalb = 0.
             xval = mdates.date2num(i)
@@ -1390,6 +1390,8 @@ class dtw_plane:
  
         """
         from tslearn import metrics
+        from tslearn.preprocessing import TimeSeriesScalerMinMax,TimeSeriesScalerMeanVariance
+
 
         #Creating modular solution for DTW 2018/03/21 J. Prchlik
         ##set the Start and end time
@@ -1498,7 +1500,7 @@ class dtw_plane:
             normer_train = np.outer(normer_train,np.ones(X_train.shape[1]))
 
             #include a time normalization factor
-            X_train *= normer_train
+            #X_train *= normer_train
 
             #time values trying to match
             y_train = t_mat.index.values
@@ -1508,6 +1510,9 @@ class dtw_plane:
             #Dont use interpolated time for solving dynamic time warp (J. Prchlik 2017/12/15)
             #only try SPEED corrections for SOHO observations
             #Only apply speed correction after 1 iteration (J. Prchlik 2017/12/18)
+   
+            #Switched to standardized variables 2018/07/31 J. Prchlik
+            #Turned back on 
             if (('themis' in k.lower())):
                 try:
                     #create copy of p_mat
@@ -1525,12 +1530,12 @@ class dtw_plane:
                         p_mat.SPEED = p_mat.SPEED-off_speed
                         if med_m > 0: p_mat.SPEED = p_mat.SPEED*med_m+med_i
                     else:
-                        off_speed = p_mat.SPEED.nsmallest(100).median()-t_mat.SPEED.nsmallest(20).median()
+                        off_speed = p_mat.SPEED.nsmallest(20).median()-t_mat.SPEED.nsmallest(20).median()
                         p_mat.SPEED = p_mat.SPEED-off_speed
                     #only apply slope if greater than 0
                 except IndexError:
                 #get median offset to apply to match spacecraft
-                    off_speed = p_mat.SPEED.nsmallest(100).median()-t_mat.SPEED.nsmallest(20).median()
+                    off_speed = p_mat.SPEED.nsmallest(20).median()-t_mat.SPEED.nsmallest(20).median()
                     p_mat.SPEED = p_mat.SPEED-off_speed
          
          
@@ -1561,13 +1566,24 @@ class dtw_plane:
             normer_tests = np.outer(normer_tests,np.ones(X_tests.shape[1]))
 
             #include a time normalization factor
-            X_tests *= normer_tests
+            #X_tests *= normer_tests
 
             y_tests = p_mat.index.values
          
+
+            #Scale the parameter to have a mean of 0 and a varience of 1
+            scaler = TimeSeriesScalerMeanVariance(mu=0.,std=1.)
+            #scaler = TimeSeriesScalerMinMax(min=0., max=1.)  # Rescale time series
+            for kk in range(X_train.shape[1]):
+                X_train[:,kk] = scaler.fit_transform(X_train[:,kk])[0].ravel()
+                X_tests[:,kk] = scaler.fit_transform(X_tests[:,kk])[0].ravel()
+
+
+
             #get dynamic time warping value   
             print('WARPING TIME')
             #get multi-parameter dtw solution
+            #path, sim = metrics.dtw_path(X_train, X_tests)
             path, sim = metrics.dtw_path(X_train, X_tests)
             #convert path into a numpy array
             path = np.array(zip(*path))
