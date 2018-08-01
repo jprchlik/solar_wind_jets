@@ -891,18 +891,18 @@ class dtw_plane:
                 #big_lis.append(add_lis)
                 #Wind Themis B distance difference from plane at wind
                 themis_d = float(vn.T.dot((np.matrix([axval,ayval,azval])-np.matrix([px,py,pz])).T))
-                print(vm)
-                print(themis_d)
                 themis_dt = float(themis_d)/vm
                 themis_pr = i+pd.to_timedelta(themis_dt,unit='s')
 
                 #Try to print prediction, but if it fails just move on 2018/05/17 J. Prchlik
                 try:
-                    print('Arrival Time {0:%Y/%m/%d %H:%M:%S} at Wind'.format(i))
-                    print('Predicted Arrival Time at {2} {0:%Y/%m/%d %H:%M:%S}, Distance = {1:4.1f}km'.format(themis_pr,themis_d,esp.upper()))
-                    print('Actual Arrival Time at {2} {0:%Y/%m/%d %H:%M:%S}, Offset (Pred.-Act.) = {1:4.2f}s'.format(itind,themis_dt-atval,esp.upper()))
+                   # print('Arrival Time {0:%Y/%m/%d %H:%M:%S} at Wind'.format(i))
+                   test = 'Arrival Time {0:%Y/%m/%d %H:%M:%S} at Wind'.format(i)
+                   test = ('Predicted Arrival Time at {2} {0:%Y/%m/%d %H:%M:%S}, Distance = {1:4.1f}km'.format(themis_pr,themis_d,esp.upper()))
+                   test = ('Actual Arrival Time at {2} {0:%Y/%m/%d %H:%M:%S}, Offset (Pred.-Act.) = {1:4.2f}s'.format(itind,themis_dt-atval,esp.upper()))
                 except:
                     continue
+                
 
                 #Use wind parameters to predict shock location 2018/04/25 J. Prchlik
                 th_yval = t_mat.loc[i,:].SPEED
@@ -1505,7 +1505,7 @@ class dtw_plane:
             print('WARPING TIME')
             #get multi-parameter dtw solution
             #path, sim = metrics.dtw_path(X_train, X_tests)
-            path, sim = metrics.dtw_path(X_train, X_tests)
+            path, sim = metrics.dtw_path(X_train, X_tests,global_constraint='itakura')
             #convert path into a numpy array
             path = np.array(zip(*path))
             print('STOP WARPING TIME')
@@ -1739,32 +1739,34 @@ def omni_plot(self):
     #loop over all earth space craft to plot
     for esp in self.earth_craft:
         #Plot predictions at themis
-        pre_x = self.event_dict[esp+'_time']
-        pre_y = self.event_dict[esp+'_plsm']
-        pre_v = self.event_dict[esp+'_velo']
-        pre_d = self.event_dict[esp+'_dist']
+        pre_x = np.array(self.event_dict[esp+'_time'])
+        pre_y = np.array(self.event_dict[esp+'_plsm'])
+        pre_v = np.array(self.event_dict[esp+'_velo'])
+        pre_d = np.array(self.event_dict[esp+'_dist'])
+
+        #remove nans and bad velocities and distances (2018/08/01)
+        good, = np.where((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (pre_v < 2.E3)  & (pre_d < 3.E6 ) & (pre_v > 150.) )#)))
+        pre_x = np.array(pre_x)[good]
+        pre_y = np.array(pre_y)[good]
 
         #insert start and end times
         #x-values
-        pre_x.insert(0,pre_x[0])
-        pre_x.insert(0,mdates.date2num(start))
-        pre_x.append(mdates.date2num(end))
+        #pre_x.insert(0,pre_x[0])
+        #pre_x.insert(0,mdates.date2num(start))
+        #pre_x.append(mdates.date2num(end))
         #y-values
         #get value before first shock
-        init_idx = self.plsm['Wind'].index.get_loc(self.top_vs.index[0])-1
-        init_val = self.plsm['Wind'].ffill().iloc[init_idx].SPEED
-        pre_y.insert(0,init_val)
-        pre_y.insert(0,init_val)
-        pre_y.append(pre_y[-1])
+        #init_idx = self.plsm['Wind'].index.get_loc(self.top_vs.index[0])-1
+        #init_val = self.plsm['Wind'].ffill().iloc[init_idx].SPEED
+        #pre_y.insert(0,init_val)
+        #pre_y.insert(0,init_val)
+        #pre_y.append(pre_y[-1])
+
+
 
         #create box like plot
         pre_x = np.array([pre_x,pre_x]).T.flatten()[1:]
         pre_y = np.array([pre_y,pre_y]).T.flatten()[:-1]
-
-        #remove nans and bad velocities and distances (2018/08/01)
-        good, = np.where((np.isfinite(pre_x) & (np.isfinite(pre_y) & (pre_v > 200.))))
-        pre_x = pre_x[good]
-        pre_y = pre_y[good]
 
         #sort argument in time
         #remove out of order arrive fronts
@@ -1776,7 +1778,7 @@ def omni_plot(self):
         
         #Add plot with just the THEMIS plasma data
         slicer = np.isfinite(plsm[esp].SPEED)
-        ax_omni.plot(plsm[esp].loc[slicer,:].index,pd.rolling_mean(plsm[esp].loc[slicer,:].SPEED,25),color=self.color[esp],label=esp.upper().replace('_',' '),zorder=100,linewidth=1)
+        ax_omni.plot(plsm[esp].loc[slicer,:].index,pd.rolling_mean(plsm[esp].loc[slicer,:].SPEED,25,center=True),color=self.color[esp],label=esp.upper().replace('_',' '),zorder=100,linewidth=1)
 
 
     #ax_omni.locator_params(axis='x', nbins=4)
