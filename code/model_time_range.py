@@ -733,9 +733,13 @@ class dtw_plane:
         for esp in self.earth_craft:
             self.event_dict[esp+'_time'] = []
             self.event_dict[esp+'_plsm'] = []
+            self.event_dict[esp+'_velo'] = []
+            self.event_dict[esp+'_dist'] = []
 
         #List of time and Speed value of events J. Prchlik
         event_plot = []
+
+
         
         #Plot the top shock values
         #fax[2,0].scatter(t_mat.loc[top_vs.index,:].index,t_mat.loc[top_vs.index,:].SPEED,color='purple',marker='X',s=150)
@@ -911,6 +915,8 @@ class dtw_plane:
                 #Store the prediction in array for plotting and comparing to omni
                 self.event_dict[esp+'_time'].append(th_xval)
                 self.event_dict[esp+'_plsm'].append(th_yval)
+                self.event_dict[esp+'_velo'].append(vm)
+                self.event_dict[esp+'_dist'].append(themis_d)
 
 
 
@@ -1288,93 +1294,6 @@ class dtw_plane:
             plt.close()
     
 
-    def omni_plot(self):
-        """
-        Function to plot 4-spacecraft plane solution at L1 compared to omni prediciton
- 
-        """
-        from matplotlib.ticker import MaxNLocator
-
-        #Create omni figure
-        fig_omni, ax_omni = plt.subplots(figsize=(2,2),dpi=600)
- 
-        #local plsm variable to skip self
-        plsm = self.plsm
-
-        #Read and store omni observations
-        start = pd.to_datetime(self.start_t)+self.pad_earth
-        end   = pd.to_datetime(self.end_t)+self.pad_earth
-        omni = lcf.main(start,end,scrf=['omni'],pls=True,mag=False,orb=False)
-        omni = omni['omni']['pls']
-        omni['time_dt'] = pd.to_datetime(omni.Time)
-        omni.set_index(omni.time_dt,inplace=True)
-        self.plsm['omni'] = omni
-
-        #plot omni parameters
-        slicer = ((omni.SPEED < 10000.) & (omni.time_dt > start) & (omni.time_dt < end))
-        ax_omni.plot(omni.loc[slicer,:].index,omni.loc[slicer,:].SPEED,linestyle='--',color='grey',label='OMNI')
-
-        #loop over all earth space craft to plot
-        for esp in self.earth_craft:
-            #Plot predictions at themis
-            pre_x = self.event_dict[esp+'_time']
-            pre_y = self.event_dict[esp+'_plsm']
-
-            #insert start and end times
-            #x-values
-            pre_x.insert(0,pre_x[0])
-            pre_x.insert(0,mdates.date2num(start))
-            pre_x.append(mdates.date2num(end))
-            #y-values
-            #get value before first shock
-            init_idx = self.plsm['Wind'].index.get_loc(self.top_vs.index[0])-1
-            init_val = self.plsm['Wind'].ffill().iloc[init_idx].SPEED
-            pre_y.insert(0,init_val)
-            pre_y.insert(0,init_val)
-            pre_y.append(pre_y[-1])
-
-            #create box like plot
-            pre_x = np.array([pre_x,pre_x]).T.flatten()[1:]
-            pre_y = np.array([pre_y,pre_y]).T.flatten()[:-1]
-
-            #remove nans
-            good, = np.where((np.isfinite(pre_x) & (np.isfinite(pre_y))))
-            pre_x = pre_x[good]
-            pre_y = pre_y[good]
-
-            #sort argument in time
-            srt_x = np.argsort(pre_x)
- 
-            #Plot plane prediction
-            ax_omni.plot(pre_x[srt_x],pre_y[srt_x],color='black',linestyle='-.',label='Plane Pred.')
-            
-            #Add plot with just the THEMIS plasma data
-            slicer = np.isfinite(plsm[esp].SPEED)
-            ax_omni.plot(plsm[esp].loc[slicer,:].index,pd.rolling_mean(plsm[esp].loc[slicer,:].SPEED,25),color=self.color[esp],label=esp.upper().replace('_',' '),zorder=100,linewidth=1)
-
-
-        #ax_omni.locator_params(axis='x', nbins=4)
-        # format the ticks
-        hours = mdates.HourLocator()   # every hour
-        hoursFmt = mdates.DateFormatter('%H')
-        ax_omni.xaxis.set_major_locator(hours)
-        ax_omni.xaxis.set_major_formatter(hoursFmt)
-
-        #ax_omni.format_xdata = mdates.DateFormatter('%H:%M')
-        #ax_omni.xaxis.set_major_locator(MaxNLocator(4))
-        ax_omni.set_title(self.start_t[:10],fontsize=6)
-        ax_omni.legend(loc='upper left',frameon=False,fontsize=4)
-        #set axis labels
-        ax_omni.set_xlabel("Time [UTC]",fontsize=8)
-        ax_omni.set_ylabel("Flow Speed [km/s]",fontsize=8)
-        fancy_plot_small(ax_omni)
-        #rotate y,z y axis tick labels
-        #for tick in ax_omni.get_xticklabels():
-        #    tick.set_rotation(15)
-        
-
-        fig_omni.savefig('../plots/omni_pred_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(self.start_t)),bbox_pad=.1,bbox_inches='tight',dpi=600)
-        fig_omni.savefig('../plots/omni_pred_{0:%Y%m%d_%H%M%S}.eps'.format(pd.to_datetime(self.start_t)),bbox_pad=.1,bbox_inches='tight',dpi=600)
 
     def dtw_multi_parm(self,twind):
         """
@@ -1790,3 +1709,95 @@ def fancy_plot_small(ax):
     ax.tick_params(which='minor',length=1.5,direction='in')
     ax.tick_params(direction='in')
     return ax
+
+def omni_plot(self):
+    """
+    Function to plot 4-spacecraft plane solution at L1 compared to omni prediciton
+
+    """
+    from matplotlib.ticker import MaxNLocator
+
+    #Create omni figure
+    fig_omni, ax_omni = plt.subplots(figsize=(2,2),dpi=600)
+
+    #local plsm variable to skip self
+    plsm = self.plsm
+
+    #Read and store omni observations
+    start = pd.to_datetime(self.start_t)+self.pad_earth
+    end   = pd.to_datetime(self.end_t)+self.pad_earth
+    omni = lcf.main(start,end,scrf=['omni'],pls=True,mag=False,orb=False)
+    omni = omni['omni']['pls']
+    omni['time_dt'] = pd.to_datetime(omni.Time)
+    omni.set_index(omni.time_dt,inplace=True)
+    self.plsm['omni'] = omni
+
+    #plot omni parameters
+    slicer = ((omni.SPEED < 10000.) & (omni.time_dt > start) & (omni.time_dt < end))
+    ax_omni.plot(omni.loc[slicer,:].index,omni.loc[slicer,:].SPEED,linestyle='--',color='grey',label='OMNI')
+
+    #loop over all earth space craft to plot
+    for esp in self.earth_craft:
+        #Plot predictions at themis
+        pre_x = self.event_dict[esp+'_time']
+        pre_y = self.event_dict[esp+'_plsm']
+        pre_v = self.event_dict[esp+'_velo']
+        pre_d = self.event_dict[esp+'_dist']
+
+        #insert start and end times
+        #x-values
+        pre_x.insert(0,pre_x[0])
+        pre_x.insert(0,mdates.date2num(start))
+        pre_x.append(mdates.date2num(end))
+        #y-values
+        #get value before first shock
+        init_idx = self.plsm['Wind'].index.get_loc(self.top_vs.index[0])-1
+        init_val = self.plsm['Wind'].ffill().iloc[init_idx].SPEED
+        pre_y.insert(0,init_val)
+        pre_y.insert(0,init_val)
+        pre_y.append(pre_y[-1])
+
+        #create box like plot
+        pre_x = np.array([pre_x,pre_x]).T.flatten()[1:]
+        pre_y = np.array([pre_y,pre_y]).T.flatten()[:-1]
+
+        #remove nans and bad velocities and distances (2018/08/01)
+        good, = np.where((np.isfinite(pre_x) & (np.isfinite(pre_y) & (pre_v > 200.))))
+        pre_x = pre_x[good]
+        pre_y = pre_y[good]
+
+        #sort argument in time
+        #remove out of order arrive fronts
+        srt_x = np.argsort(pre_x)
+        #srt_x, = np.where(np.diff(pre_x) > 0.)
+
+        #Plot plane prediction
+        ax_omni.plot(pre_x[srt_x],pre_y[srt_x],color='black',linestyle='-.',label='Plane Pred.')
+        
+        #Add plot with just the THEMIS plasma data
+        slicer = np.isfinite(plsm[esp].SPEED)
+        ax_omni.plot(plsm[esp].loc[slicer,:].index,pd.rolling_mean(plsm[esp].loc[slicer,:].SPEED,25),color=self.color[esp],label=esp.upper().replace('_',' '),zorder=100,linewidth=1)
+
+
+    #ax_omni.locator_params(axis='x', nbins=4)
+    # format the ticks
+    hours = mdates.HourLocator()   # every hour
+    hoursFmt = mdates.DateFormatter('%H')
+    ax_omni.xaxis.set_major_locator(hours)
+    ax_omni.xaxis.set_major_formatter(hoursFmt)
+
+    #ax_omni.format_xdata = mdates.DateFormatter('%H:%M')
+    #ax_omni.xaxis.set_major_locator(MaxNLocator(4))
+    ax_omni.set_title(self.start_t[:10],fontsize=6)
+    ax_omni.legend(loc='upper left',frameon=False,fontsize=4)
+    #set axis labels
+    ax_omni.set_xlabel("Time [UTC]",fontsize=8)
+    ax_omni.set_ylabel("Flow Speed [km/s]",fontsize=8)
+    fancy_plot_small(ax_omni)
+    #rotate y,z y axis tick labels
+    #for tick in ax_omni.get_xticklabels():
+    #    tick.set_rotation(15)
+    
+
+    fig_omni.savefig('../plots/omni_pred_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(self.start_t)),bbox_pad=.1,bbox_inches='tight',dpi=600)
+    fig_omni.savefig('../plots/omni_pred_{0:%Y%m%d_%H%M%S}.eps'.format(pd.to_datetime(self.start_t)),bbox_pad=.1,bbox_inches='tight',dpi=600)
