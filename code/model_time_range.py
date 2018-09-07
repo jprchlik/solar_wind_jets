@@ -93,7 +93,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
             orb_fmt='{0}_orb_2015_2017_formatted.txt',
             start_t='2016/12/01',end_t='2017/09/24',center=False):
     """
-    A function to read in text files for a given spacecraft
+    A function to read in text files for a given spacecraft. Also replaces out of range and flagged values.
 
     Parameters
     ----------
@@ -128,6 +128,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
     #Read in plasma and magnetic field data from full res
     if k.lower() == 'soho':
         pls = pd.read_csv(arch+pls_fmt.format(k.lower()),delim_whitespace=True)
+        pls['Bt'] = 0.
     #Change to function that reads cdf files for less data intense loads 2018/05/17 J. Prchlik
     else:
         outp = lcf.main(pd.to_datetime(start_t),pd.to_datetime(end_t),scrf=[k.lower()],pls=True,mag=True,orb=True)
@@ -174,6 +175,15 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
             mag.loc[:,'By'] *= -1
             mag.loc[:,'Bz'] *= -1
 
+        #Add total magnetic field 2018/09/07 J. Prchlik
+        mag['Bt'] = np.sqrt((mag.Bx**2+mag.By**2+mag.Bz**2).values.astype('float'))
+
+        #replace bad values in thermal velocity
+        pls.loc[pls.Vth.between(0,8000) == False,'Vth']  = np.nan
+        #replace bad values in density
+        pls.loc[pls.Np.between(0,8000) == False,'Np']  = np.nan
+        #replace bad values in Speed
+        pls.loc[pls.SPEED.between(0,8000) == False,'SPEED']  = np.nan
 
         #cut for testing reasons
         pls = pls[start_t:end_t]
@@ -189,7 +199,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
         com_df  = pd.merge(mag,pls,how='outer',left_index=True,right_index=True,suffixes=('_mag','_pls'),sort=True)
 
         #make sure data columns are numeric
-        cols = ['SPEED','Np','Vth','Bx','By','Bz']
+        cols = ['SPEED','Np','Vth','Bx','By','Bz','Bt']
         com_df[cols] = com_df[cols].apply(pd.to_numeric, errors='coerce')
 
         #add Time string
@@ -214,12 +224,12 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
     else:
         plsm = pls   
         #work around for no Mag data in SOHO
-        pls.loc[:,['Bx','By','Bz']] = 0.0
+        pls.loc[:,['Bx','By','Bz','Bt']] = 0.0
         pls['time_dt_pls'] = pd.to_datetime(pls['Time'])
         pls['time_dt_mag'] = pd.to_datetime(pls['Time'])
         pls.set_index(pls.time_dt_pls,inplace=True)
         plsm = pls[start_t:end_t]
-        plsm.loc[:,['Bx','By','Bz']] = -9999.0
+        plsm.loc[:,['Bx','By','Bz','Bt']] = -9999.0
 
         Re = 6371.0 # Earth radius
 
@@ -1505,7 +1515,7 @@ class dtw_plane:
             print('WARPING TIME')
             #get multi-parameter dtw solution
             #path, sim = metrics.dtw_path(X_train, X_tests)
-            path, sim = metrics.dtw_path(X_train, X_tests,global_constraint='itakura')
+            path, sim = metrics.dtw_path(X_train, X_tests,global_constraint='sakoe_chiba',sakoe_chiba_radius=1550)
             #convert path into a numpy array
             path = np.array(zip(*path))
             print('STOP WARPING TIME')
@@ -1745,7 +1755,7 @@ def omni_plot(self):
         pre_d = np.array(self.event_dict[esp+'_dist'])
 
         #remove nans and bad velocities and distances (2018/08/01)
-        good, = np.where((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (pre_v < 2.E3)  & (pre_d < 3.E6 ) & (pre_v > 150.) )#)))
+        good, = np.where((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (pre_v < 2.E4)  & (pre_d < 3.E9 ) & (pre_v > 220.) & (pre_d > 1.E5))#)))
         pre_x = np.array(pre_x)[good]
         pre_y = np.array(pre_y)[good]
 
