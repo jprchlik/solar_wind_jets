@@ -1362,7 +1362,8 @@ class dtw_plane:
 
 
         #parameters to replace bad values
-        par = ['SPEED','Np','Vth','Bx','By','Bz']
+        #par = ['SPEED','Np','Vth','Bx','By','Bz']
+        par = ['SPEED','Bt']
 
         #fill all Nans in data series with forward values first and then back fill the first times
         #ffil inf values
@@ -1403,8 +1404,11 @@ class dtw_plane:
             p_mat  = plsm[k] #.loc[i_min-t_rgh_wid:i_min+t_rgh_wid]
         
             #use speed for rough esimation if possible
-            if  ((k.lower() == 'soho') ): par = ['SPEED','Np','Vth']
-            elif (((par is None) | (isinstance(par,float))) & (k.lower() != 'soho')): par = ['SPEED','Np','Vth','Bx','By','Bz']
+            #if  ((k.lower() == 'soho') ): par = ['SPEED','Np','Vth']
+            #elif (((par is None) | (isinstance(par,float))) & (k.lower() != 'soho')): par = ['SPEED','Np','Vth','Bx','By','Bz','Bt'] #Add Total magnetic field 2018/09/07 J. Prchlik
+            #Try just speed and magnetic field 2108/09/07 J. Prchlik
+            if  ((k.lower() == 'soho') ): par = ['SPEED']
+            elif (((par is None) | (isinstance(par,float))) & (k.lower() != 'soho')): par = ['SPEED','Bt'] #Add Total magnetic field 2018/09/07 J. Prchlik
             elif isinstance(par,str): par = [par]
             else: par = par
 
@@ -1757,6 +1761,7 @@ def omni_plot(self):
 
         #range of velocities to consider 2018/09/07 J. Prchlik
         min_v, max_v = np.nanpercentile(pre_v,(20,98))
+#        min_v, max_v = np.nanpercentile(pre_v,(65,98))
         #remove nans and bad velocities and distances (2018/08/01)
         #good, = np.where((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (pre_v < 2.E4)  & (pre_d < 3.E9 ) & (pre_v > 220.) & (pre_d > 1.E5))#)))
         #1.5E6 is the approximate distance to L1 only use attack angles near radially propogating
