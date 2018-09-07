@@ -1743,6 +1743,7 @@ def omni_plot(self):
     self.plsm['omni'] = omni
 
     #plot omni parameters
+    #slicer = ((omni.SPEED < 10000.) & (omni.time_dt > start) & (omni.time_dt < end))
     slicer = ((omni.SPEED < 10000.) & (omni.time_dt > start) & (omni.time_dt < end))
     ax_omni.plot(omni.loc[slicer,:].index,omni.loc[slicer,:].SPEED,linestyle='--',color='grey',label='OMNI')
 
@@ -1754,10 +1755,18 @@ def omni_plot(self):
         pre_v = np.array(self.event_dict[esp+'_velo'])
         pre_d = np.array(self.event_dict[esp+'_dist'])
 
+        #range of velocities to consider 2018/09/07 J. Prchlik
+        min_v, max_v = np.nanpercentile(pre_v,(20,98))
         #remove nans and bad velocities and distances (2018/08/01)
-        good, = np.where((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (pre_v < 2.E4)  & (pre_d < 3.E9 ) & (pre_v > 220.) & (pre_d > 1.E5))#)))
+        #good, = np.where((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (pre_v < 2.E4)  & (pre_d < 3.E9 ) & (pre_v > 220.) & (pre_d > 1.E5))#)))
+        #1.5E6 is the approximate distance to L1 only use attack angles near radially propogating
+        #good, = np.where((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (np.abs(pre_d-1.5E6)/1.5e6 < 0.65) & (pre_v > min_v) & (pre_v < max_v))#)))
+        good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (np.abs(pre_d-1.5E6)/1.5e6 < 0.65) & (pre_v > min_v) & (pre_v < max_v))#)))
         pre_x = np.array(pre_x)[good]
         pre_y = np.array(pre_y)[good]
+        #replace bad values with nan
+        #pre_x[good == False] = np.nan
+        #pre_y[good == False] = np.nan
 
         #insert start and end times
         #x-values
