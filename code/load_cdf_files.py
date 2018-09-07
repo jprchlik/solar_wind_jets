@@ -143,6 +143,8 @@ def looper(sc1,pls,mag,orb,lstr,brchive='../cdf/'):
     #Commented to fix time error J. Prchlik 2017/11/14
     #creating logic switches 
     print(fpls)
+    print(fmag)
+    print(forb)
     if pls:
         ret_df['pls'] = cdf_to_pandas(fpls,pls_key,sc1,'pls')
     ##commented out J. Prchlik 2017/11/14 to fix wrong Vth in ACE
@@ -323,7 +325,7 @@ def day_list(sday,eday):
     dates: list
         list of days from sday to eday
     """
-    dates = [(sday+timedelta(n)).strftime('%Y%m%d')  for n in range(int((eday-sday).days+1))]
+    dates = [(sday+timedelta(n)).strftime('%Y%m%d')  for n in range(0,int((eday.date()-sday.date()).days)+1)]
     return dates
 
 
