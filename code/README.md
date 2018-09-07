@@ -145,7 +145,8 @@ Find continuos DTW solution over a given time range.
         import model_time_range as mtr
         plane = mtr.dtw_plane('2016/07/19 21:00:00','2016/07/20 01:00:00',earth_craft=['THEMIS_B'],penalty=False)
         plane.init_read()
-        plane.main()
+        plane.dtw()
+        plane.pred_earth()
        
         """
 
