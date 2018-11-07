@@ -561,9 +561,15 @@ class dtw_plane:
             b_mat = b_mat.reindex(b_mat.iloc[path[1],:].index) #.interpolate('time')
             b_mat.index = b_mat.index-off_sol
             b_mat['offsets'] = off_sol
+
+            #Add the indices for path1 and path2 2018/11/07 J. Prchlik
+            b_mat['train_ind'] = path[0]
+            b_mat['match_ind'] = path[1]
         
             #Add offset data frame to plasma diction
             plsm[k+'_offset'] = b_mat
+
+           
             #plot plasma parameters
             #fax[0,0].scatter(b_mat[b_mat['Np'   ] > -9990.0].index,b_mat[b_mat['Np'   ] > -9990.0].Np   ,marker=marker[k],color=color[k],label=k.upper())         
             if len(b_mat[b_mat['Np'   ] > -9990.0]) > 0:
@@ -1706,7 +1712,71 @@ def dtw_wei(x,t0,b=0.3,c=1):
     """
     return b*(x-t0.value)**2+c
 
+def plot_dtw_example(self,c_time,compare=['DSCOVR'],pad=pd.to_timedelta('30m'),parm='Bz'):
+    """
+    A function to create an example of how DTW works
 
+    Parameters
+    ----------
+    self: class
+        The class object created in the code after running .init_read() and .dtw() 
+    c_time: pd.datetime object
+        The central panda datetime object to plot around
+    compare: list, optional
+        List of two space craft to use to compare DTW solution (Default = ['DSCOVR'])
+    pd: pd.timedelta object
+        Time around c_time to plot (Defatult = 30 minutes, pd.to_timedelta('30m'))
+    
+    """
+
+    #Create figure
+    fig, ax = plt.subplots(figsize=(2,2),dpi=600)
+ 
+    #The reference or "trainer" space craft
+    traft =  self.plsm[self.trainer]
+
+
+    for i in compare:
+        #What the spacecraft observed
+        craft =  self.plsm[i]
+        #Offsets applied to the spacecraft observations
+        oraft =  self.plsm[i+'_offset']
+
+ 
+
+
+        #plot nicely
+        #ax.scatter(oraft[oraft['SPEED'] > -9990.0].index,oraft[oraft['SPEED'] > -9990.0].SPEED,color=self.color[i],marker=self.marker[i])
+        ax.plot(craft[craft[parm] > -9990.0].index,craft[craft[parm] > -9990.0][parm]+5.,linewidth=2,color=self.color[i])
+
+        xvals = np.array([craft.iloc[oraft.match_ind,:].index     ,traft.iloc[oraft.train_ind,:].index])
+        yvals = np.array([craft.iloc[oraft.match_ind,:][parm]+5.,traft.iloc[oraft.train_ind,:][parm]])
+
+        #only get keep finite values
+        #good = np.isfinite(yvals)
+        #allgood = ((good[0]) & (good[1]))
+        #xvals=xvals[allgood]
+        #yvals=yvals[allgood]
+
+        ax.plot(xvals,yvals,'--',color=self.color[i],linewidth=.11)
+
+
+   
+
+    #plot the trainer space craft (i.e. the spacecraft which we are referencing for the DTW
+    ax.plot(traft[traft[parm] > -9990.0].index,traft[traft[parm] > -9990.0][parm],linewidth=2,color=self.color[self.trainer])
+
+    ax.set_xlim([c_time-pad,c_time+pad])
+
+    #rotate  x axis tick labels
+    for tick in ax.get_xticklabels():
+        tick.set_rotation(45)
+
+    ax.set_xlabel('Time [UTC]')
+    ax.set_ylabel(parm+' [nT]')
+
+    fancy_plot_small(ax)
+    plt.show()
 
 
 #add small tick marks to plots
