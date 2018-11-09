@@ -656,6 +656,10 @@ class dtw_plane:
         fax[2,1].set_xlabel('Time [UTC]',fontsize=20)
         
         fax[1,0].set_ylim([0.,100.])
+
+
+        #add legend to plot
+        fax[0,0].legend(loc='upper right',frameon=False)
         
         
         #turn into data frame 
@@ -759,11 +763,11 @@ class dtw_plane:
         
         #Plot the top shock values
         #fax[2,0].scatter(t_mat.loc[top_vs.index,:].index,t_mat.loc[top_vs.index,:].SPEED,color='purple',marker='X',s=150)
-        #for j,i in enumerate(top_vs.index):
+        for j,i in enumerate(top_vs.index):
         #try producing continous plot 2018/05/17 J. Prchlik
         #This method did not work
         #Trying again with multi parameter approach 2018/07/26 J. Prchlik
-        for j,i in enumerate(t_mat.index):
+        #for j,i in enumerate(t_mat.index):
             yval = t_mat.loc[i,:].SPEED
             yvalb = 0.
             xval = mdates.date2num(i)
@@ -1369,7 +1373,8 @@ class dtw_plane:
 
         #parameters to replace bad values
         #par = ['SPEED','Np','Vth','Bx','By','Bz']
-        par = ['SPEED','Bt']
+        par = ['SPEED','Bx','By','Bz']
+        #par = ['SPEED','Bt']
 
         #fill all Nans in data series with forward values first and then back fill the first times
         #ffil inf values
@@ -1413,10 +1418,14 @@ class dtw_plane:
             #if  ((k.lower() == 'soho') ): par = ['SPEED','Np','Vth']
             #elif (((par is None) | (isinstance(par,float))) & (k.lower() != 'soho')): par = ['SPEED','Np','Vth','Bx','By','Bz','Bt'] #Add Total magnetic field 2018/09/07 J. Prchlik
             #Try just speed and magnetic field 2108/09/07 J. Prchlik
-            if  ((k.lower() == 'soho') ): par = ['SPEED']
-            elif (((par is None) | (isinstance(par,float))) & (k.lower() != 'soho')): par = ['SPEED','Bt'] #Add Total magnetic field 2018/09/07 J. Prchlik
-            elif isinstance(par,str): par = [par]
-            else: par = par
+            if  ((k.lower() == 'soho') ): 
+                par = ['SPEED']
+            elif (((par is None) | (isinstance(par,float))) & (k.lower() != 'soho')):
+                par = ['Bx','By','Bz'] #Add Total magnetic field 2018/09/07 J. Prchlik
+            elif isinstance(par,str):
+                par = [par]
+            else:
+                 par = par
 
             print(par)
 
@@ -1712,7 +1721,7 @@ def dtw_wei(x,t0,b=0.3,c=1):
     """
     return b*(x-t0.value)**2+c
 
-def plot_dtw_example(self,c_time,compare=['DSCOVR'],pad=pd.to_timedelta('30m'),parm='Bz'):
+def plot_dtw_example(self,c_time,compare=['DSCOVR'],pad=pd.to_timedelta('30m'),parm='Bz',subsamp=10,offset=10.,leg_loc='lower right'):
     """
     A function to create an example of how DTW works
 
@@ -1724,8 +1733,16 @@ def plot_dtw_example(self,c_time,compare=['DSCOVR'],pad=pd.to_timedelta('30m'),p
         The central panda datetime object to plot around
     compare: list, optional
         List of two space craft to use to compare DTW solution (Default = ['DSCOVR'])
-    pd: pd.timedelta object
+    pd: pd.timedelta object, optional
         Time around c_time to plot (Defatult = 30 minutes, pd.to_timedelta('30m'))
+    parm: str, optional
+        Parameter to plot on the y-axis (Default = 'Bz')
+    subsamp: int, optional
+        Subsampling parameter, so that plot does not show the full range of values (Default = 10).
+    offset: float, optional
+        Value to offset the unwarped time value solution (Default = 10.)
+    leg_loc: string or int
+        Location of the matplotlib legend (Default = 'lower right').
     
     """
 
@@ -1745,12 +1762,17 @@ def plot_dtw_example(self,c_time,compare=['DSCOVR'],pad=pd.to_timedelta('30m'),p
  
 
 
-        #plot nicely
-        #ax.scatter(oraft[oraft['SPEED'] > -9990.0].index,oraft[oraft['SPEED'] > -9990.0].SPEED,color=self.color[i],marker=self.marker[i])
-        ax.plot(craft[craft[parm] > -9990.0].index,craft[craft[parm] > -9990.0][parm]+5.,linewidth=2,color=self.color[i])
+        #good parameters
+        good_parm = ((oraft[parm] > -9990.0) & (traft[parm] > -9999.0))
 
-        xvals = np.array([craft.iloc[oraft.match_ind,:].index     ,traft.iloc[oraft.train_ind,:].index])
-        yvals = np.array([craft.iloc[oraft.match_ind,:][parm]+5.,traft.iloc[oraft.train_ind,:][parm]])
+        #plot nicely
+        #ax.scatter(craft[craft['SPEED'] > -9990.0].index,craft[craft['SPEED'] > -9990.0].SPEED,color=self.color[i],marker=self.marker[i])
+
+        xvals = np.array([craft.iloc[oraft.match_ind[good_parm],:].index   ,traft.iloc[oraft.train_ind[good_parm],:].index])[:,::subsamp]
+        yvals = np.array([craft.iloc[oraft.match_ind[good_parm],:][parm]+offset,traft.iloc[oraft.train_ind[good_parm],:][parm]])[:,::subsamp]
+
+
+        ax.plot(xvals[0],yvals[0],linewidth=1,color=self.color[i],label=i)
 
         #only get keep finite values
         #good = np.isfinite(yvals)
@@ -1764,19 +1786,28 @@ def plot_dtw_example(self,c_time,compare=['DSCOVR'],pad=pd.to_timedelta('30m'),p
    
 
     #plot the trainer space craft (i.e. the spacecraft which we are referencing for the DTW
-    ax.plot(traft[traft[parm] > -9990.0].index,traft[traft[parm] > -9990.0][parm],linewidth=2,color=self.color[self.trainer])
+    ax.plot(xvals[1],yvals[1],linewidth=1,color=self.color[self.trainer],label=self.trainer)
 
     ax.set_xlim([c_time-pad,c_time+pad])
 
     #rotate  x axis tick labels
     for tick in ax.get_xticklabels():
-        tick.set_rotation(45)
+        tick.set_rotation(25)
 
+    ax.legend(loc=leg_loc,frameon=False,fontsize=6)
     ax.set_xlabel('Time [UTC]')
     ax.set_ylabel(parm+' [nT]')
+    ax.set_title('{0:%Y/%m/%d}'.format(c_time.to_pydatetime()),fontsize=8)
+
+    # format the ticks
+    mins = mdates.MinuteLocator(interval=10)  #every x minutes 
+    minsFmt = mdates.DateFormatter('%H:%M')
+    ax.xaxis.set_major_locator(mins)
+    ax.xaxis.set_major_formatter(minsFmt)
 
     fancy_plot_small(ax)
-    plt.show()
+    fig.savefig('../plots/example_dtw_{0:%Y%m%d_%H%M%S}.png'.format(c_time.to_pydatetime()),bbox_pad=0.1,bbox_inches='tight')
+    fig.savefig('../plots/example_dtw_{0:%Y%m%d_%H%M%S}.eps'.format(c_time.to_pydatetime()),bbox_pad=0.1,bbox_inches='tight')
 
 
 #add small tick marks to plots
@@ -1836,7 +1867,7 @@ def omni_plot(self):
         #good, = np.where((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (pre_v < 2.E4)  & (pre_d < 3.E9 ) & (pre_v > 220.) & (pre_d > 1.E5))#)))
         #1.5E6 is the approximate distance to L1 only use attack angles near radially propogating
         #good, = np.where((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (np.abs(pre_d-1.5E6)/1.5e6 < 0.65) & (pre_v > min_v) & (pre_v < max_v))#)))
-        good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (np.abs(pre_d-1.5E6)/1.5e6 < 0.65) & (pre_v > min_v) & (pre_v < max_v))#)))
+        good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (np.abs(pre_d-1.5E6)/1.5e6 < 1.50))# & (pre_v > min_v) & (pre_v < max_v))#)))
         pre_x = np.array(pre_x)[good]
         pre_y = np.array(pre_y)[good]
         #replace bad values with nan
@@ -1845,16 +1876,16 @@ def omni_plot(self):
 
         #insert start and end times
         #x-values
-        #pre_x.insert(0,pre_x[0])
-        #pre_x.insert(0,mdates.date2num(start))
-        #pre_x.append(mdates.date2num(end))
+        pre_x = np.insert(pre_x,0,pre_x[0])
+        pre_x = np.insert(pre_x,0,mdates.date2num(start))
+        pre_x = np.insert(pre_x,-1,mdates.date2num(end))
         #y-values
         #get value before first shock
-        #init_idx = self.plsm['Wind'].index.get_loc(self.top_vs.index[0])-1
-        #init_val = self.plsm['Wind'].ffill().iloc[init_idx].SPEED
-        #pre_y.insert(0,init_val)
-        #pre_y.insert(0,init_val)
-        #pre_y.append(pre_y[-1])
+        init_idx = self.plsm['Wind'].index.get_loc(self.top_vs.index[0])-1
+        init_val = self.plsm['Wind'].ffill().iloc[init_idx].SPEED
+        pre_y = np.insert(pre_y,0,init_val)
+        pre_y = np.insert(pre_y,0,init_val)
+        pre_y = np.insert(pre_y,-1,pre_y[-1])
 
 
 
