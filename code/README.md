@@ -20,6 +20,13 @@ matching_event.py
 ----------------
 Old, Match L1 spacecraft time for 1 instance over multiple events and write out to html file. Used load plasma data (under sampled)
 
+
+multi_dtw.pyx
+--------------
+Python written by me to do DTW and only apply a penalty outside a certain radius. This is writted in Cython, so it needs to
+be complied by the following command.   
+tcsh>python setup.py build_ext --inplace
+
 matching_event_full_res.py
 ----------------
 Match L1 spacecraft time for 1 instance over multiple events and write out to html file. Uses cdftotxt files (full resolution).
