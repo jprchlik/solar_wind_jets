@@ -9,6 +9,7 @@ from fancy_plot import fancy_plot
 from datetime import datetime
 from multiprocessing import Pool
 from functools import partial
+import multi_dtw as md
 import os
 import threading
 import sys
@@ -540,11 +541,45 @@ class dtw_plane:
                     penalty = self.mag_pen
  
                 print('Penalty = {0:4.3f}'.format(penalty))
-                path = dtw.warping_path(t_mat[par[0]].ffill().bfill().values,
-                                        p_mat[par[0]].ffill().bfill().values,
-                                        penalty=penalty)
-                #reformat in old format 2018/04/20 J. Prchlik
-                path = np.array(path).T
+                #Switching to my code for penalty (Faster and I have more control)
+                ###path = dtw.warping_path(t_mat[par[0]].ffill().bfill().values,
+                ###                        p_mat[par[0]].ffill().bfill().values,
+                ###                        penalty=penalty)
+                x1 = np.array(t_mat[par[0]].ffill().bfill().values,dtype=np.double)
+                x2 = np.array(p_mat[par[0]].ffill().bfill().values,dtype=np.double)
+
+                #regularize x1 and x2 using 5 and 95 percentiles
+                x1_05,x1_95 = np.percentile(x1,[5,95])
+                x2_05,x2_95 = np.percentile(x2,[5,95])
+
+                #regularlize data
+                #x1 = (x1-x1_05)/(x1_95-x1_05)
+                #x2 = (x2-x2_05)/(x2_95-x2_05)
+                
+                #did I flip x1 and x2
+                flipped =False
+
+                #flip x1 and x2 if x1 is small than x2
+                if x2.size > x1.size:
+                    x2,x1 = x1,x2
+                    flipped =True
+                
+   
+                #Get average time difference
+                dt1 = float(np.median(np.diff(t_mat.index))*1.e-9) #seconds
+                dt2 = float(np.median(np.diff(p_mat.index))*1.e-9) #seconds
+               
+
+                #make the penalty kick in at the 10% level
+                penalty_r1 = 60.*65./np.min([dt1,dt2]) #number of pixels in 65 minutes ((s/m}*(m)/(s)))
+                penalty_r2 = 60.*65./np.max([dt1,dt2]) #number of pixels in 65 minutes ((s/m}*(m)/(s)))
+                #penalty = 50.
+                path = md.dtw_path_single(x1,x2,penalty_r1,penalty_r2,0.0,1.10,1.0,0)
+                #unflip if flipped
+                if flipped:
+                    path = path[::-1]
+                ####reformat in old format 2018/04/20 J. Prchlik
+                ###path = np.array(path).T
             #Otherwise you quick DTW solution
             else:
                 dist, cost, path = mlpy.dtw_std(t_mat[par[0]].ffill().bfill().values,p_mat[par[0]].ffill().bfill().values,dist_only=False)
@@ -1260,7 +1295,7 @@ class dtw_plane:
         
                 #plot 2d plot
                 oax[0,0].plot(counter/Re,zvalsx/Re,color=cin,
-                              label='Shock {0:1d}, N$_p$ = {1:3.2f} cc, t$_W$={2:%H:%M:%S}, $|$V$|$={3:4.2f} km/s, {5} = {4:3.2f}'.format(p+1,np_op,l,vm,-theta,r'$\theta_\mathrm{Bn}$').replace('cc','cm$^{-3}$'))
+                              label='Event {0:1d}, N$_p$ = {1:3.2f} cc, t$_W$={2:%H:%M:%S}, $|$V$|$={3:4.2f} km/s, {5} = {4:3.2f}'.format(p+1,np_op,l,vm,-theta,r'$\theta_\mathrm{Bn}$').replace('cc','cm$^{-3}$'))
                 oax[1,0].plot(counter/Re,yvalsx/Re,color=cin,label=None)
                 oax[0,1].plot(counter/Re,zvalsy/Re,color=cin,label=None)
         
@@ -1920,6 +1955,8 @@ def omni_plot(self):
     #set axis labels
     ax_omni.set_xlabel("Time [UTC]",fontsize=8)
     ax_omni.set_ylabel("Flow Speed [km/s]",fontsize=8)
+    #Add limit to be only THEMIS region
+    ax_omni.set_xlim((plsm[esp].loc[slicer,:].index.min(),plsm[esp].loc[slicer,:].index.max()))
     fancy_plot_small(ax_omni)
     #rotate y,z y axis tick labels
     #for tick in ax_omni.get_xticklabels():
