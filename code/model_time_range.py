@@ -47,6 +47,28 @@ def solve_plane(p,t):
     vm  = 1./np.linalg.norm(vna) #get velocity magnitude
     return vna,vn,vm
 
+
+def solve_plane_cadence(p,t,dt):
+    """
+    Velocity plane for given time and position of spacecraft
+    
+    Parameters:
+    ---------
+    p: np.array or np.matrix
+        Position vectors in x,y,z for three spacecraft with respect to wind
+        The First row is the X,Y,Z values for spacecraft 1
+        The Second row is the X,Y,Z values for spacecraft 2
+        The Thrid row is the X,Y,Z values for spacecraft 3
+    t: np.array or np.matrix
+        Time offset array from Wind for three spacecraft
+    dt: np.array or np.matrix
+        The limiting time cadence for each observation
+    """
+    vna = np.linalg.solve(p,t) #solve for the velocity vectors normal
+    vn  = vna/np.linalg.norm(vna)
+    vm  = 1./np.linalg.norm(vna) #get velocity magnitude
+    return vna,vn,vm
+
 def solve_coeff(pi,vn):
     """
     Plane coefficients for given time and position of spacecraft
@@ -409,16 +431,74 @@ class dtw_plane:
             #set readin to first attempt to false
             #prevent multiple readin of big files
 
+    def iterate_dtw(self):
+        """
+        Iteratively find the best DTW solution. In the first iteration get the best time offset between spacecraft.
+        In the second iteration find the best DTW solution.
+  
+        """
+
+        #run the initial DTW solution
+        self.dtw()
+        #get DTW offset keys from plasma dictionary
+        off_keys = [i for i in self.plsm.keys() if (('offset' in i) & (i.replace('_offset','') 
+                    not in self.earth_craft) & (i.replace('_offset','') != self.trainer))]
+
+
+        #pandas start and end times as datetime objects
+        pd_s = pd.to_datetime(self.start_t)
+        pd_e = pd.to_datetime(self.end_t)
+        pd_p = pd.to_timedelta('30m')
+        #get middle point of DTW range
+        pd_m = (pd_e-pd_s)/2.+pd_s
+
+
+        #loop over all keys of offset non-trainer/non-earth spacecraft
+        for j,i in enumerate(off_keys):
+            #get average offset between Trainer craft and specific space craft in the core hour of the observations
+            self.plsm['ave_offset_'+i.replace('_offset','')] = self.plsm[i].loc[pd_m-pd_p:pd_m+pd_p]['offsets'].median() #.values.astype(float)*1e-9
+
+        #datetime format to write string out
+        dfmt = '{0:%Y/%m/%d %H:%M:%S}'
+        #recreate global plasma key
+        for j in off_keys:
+            #Need to repopulate the non-offset plasma values
+            i = i.replace('_offset','') 
+            new_start_t = dfmt.format(pd_s+self.plsm['ave_offset_'+i])
+            new_end_t   = dfmt.format(pd_e+self.plsm['ave_offset_'+i])
+            par_read_in = partial(read_in,start_t=new_start_t,end_t=new_end_t,center=self.center)
+            self.plsm[i] = par_read_in(i)
+
+        
+        #Do one at a time for now 2018/11/19 J. Prchlik
+        #####Parameters for file read in and parsing
+        #####Could be an issue with downwind THEMIS craft 2018/04/25 J. Prchlik
+        ####par_read_in = partial(read_in,start_t=self.start_t,end_t=self.end_t,center=self.center)
+        #####read in and format spacecraft in parallel
+        #####Switched to single loop solution 2018/03/24 J. Prchlik 
+        ####if self.first: #only do read in on the first pass
+        ####    if self.nproc > 1.5:
+        ####        pool = Pool(processes=len(self.craft))
+        ####        outp = pool.map(par_read_in,self.craft)
+        ####        pool.terminate()
+        ####        pool.close()
+        ####        pool.join()
+
+        ####        self.plsm = {}
+        ####        #create global plasma key
+        ####        for i in outp:
+        ####            self.plsm[i.craft.values[0]] = i
+        ####    else:
+        
+
+        #recompute DTW solution with new time offsets
+        self.dtw()
+
+
     def dtw(self):
         """
-        Finds planar solution to 4 L1 spacecraft
+        Finds DTW solution to 4 L1 spacecraft, whose later time offsets may be used to predict solar wind conditions at Earth
      
-        Parameters
-        ----------
- 
-        self: Class
-
- 
         """
         #Creating modular solution for DTW 2018/03/21 J. Prchlik
         ##set the Start and end time
@@ -574,7 +654,7 @@ class dtw_plane:
                 penalty_r1 = 60.*65./np.min([dt1,dt2]) #number of pixels in 65 minutes ((s/m}*(m)/(s)))
                 penalty_r2 = 60.*65./np.max([dt1,dt2]) #number of pixels in 65 minutes ((s/m}*(m)/(s)))
                 #penalty = 50.
-                path = md.dtw_path_single(x1,x2,penalty_r1,penalty_r2,0.0,1.10,1.0,0)
+                path = md.dtw_path_single(x1,x2,penalty_r1,penalty_r2,0.0,1.10,1.10,0)
                 #unflip if flipped
                 if flipped:
                     path = path[::-1]
@@ -729,9 +809,9 @@ class dtw_plane:
     def pred_earth(self):
         """
         Create prediction for Earth and create corresponding plots
-
+    
         """
-
+    
         #Use common names for self variables
         t_mat = self.t_mat
         plsm  = self.plsm
@@ -754,7 +834,7 @@ class dtw_plane:
         
         #range to find the best maximum value
         maxrang = pd.to_timedelta('3 minutes')
-
+    
         #Find points with the largest speed differences in wind
         #Allow dyanic allocation of top events 2018/05/17 J. Prchlik
         top_vs = (plsm[trainer].SPEED.dropna().diff().abs()/plsm[trainer].SPEED.dropna()).nlargest(self.events)
@@ -762,25 +842,25 @@ class dtw_plane:
         
         #sort by time for event number
         top_vs.sort_index(inplace=True)
-
-
-
+    
+    
+    
         
-
-
+    
+    
         #Add plot for prediction on THEMIS
         fig_th,ax_th = plt.subplots()
         #Add plot with just the THEMIS plasma data
         for esp in self.earth_craft:
             slicer = np.isfinite(plsm[esp].SPEED)
             ax_th.plot(plsm[esp].loc[slicer,:].index,pd.rolling_mean(plsm[esp].loc[slicer,:].SPEED,25),color=color[esp],label=esp.upper(),zorder=100,linewidth=2)
-
+    
         ax_th.set_xlim([pd.to_datetime(self.start_t)-pad,pd.to_datetime(self.end_t)+pad])
         ax_th.set_xlabel('Time [UTC]')
         ax_th.set_ylabel('Flow Speed [km/s]')
         fancy_plot(ax_th)
-
-
+    
+    
         #create dictionary of values for each event 2018/04/24 J. Prchlik
         self.event_dict = {}
         #Store arrival times and plasma parameters in seperate array
@@ -790,31 +870,43 @@ class dtw_plane:
             self.event_dict[esp+'_plsm'] = []
             self.event_dict[esp+'_velo'] = []
             self.event_dict[esp+'_dist'] = []
-
+            self.event_dict[esp+'_nvec'] = []
+    
         #List of time and Speed value of events J. Prchlik
         event_plot = []
-
-
+    
+        #time delta to skip at the beginning and end due to compression in DTW
+        dtw_skp = pd.to_timedelta('45m')
+        dtw_stt = pd.to_datetime(self.start_t) 
+        dtw_end = pd.to_datetime(self.end_t) 
+    
         
         #Plot the top shock values
         #fax[2,0].scatter(t_mat.loc[top_vs.index,:].index,t_mat.loc[top_vs.index,:].SPEED,color='purple',marker='X',s=150)
-        for j,i in enumerate(top_vs.index):
+        #for j,i in enumerate(top_vs.index):
         #try producing continous plot 2018/05/17 J. Prchlik
         #This method did not work
         #Trying again with multi parameter approach 2018/07/26 J. Prchlik
-        #for j,i in enumerate(t_mat.index):
+        #Trying everytin again using the core of the observation 
+        #And my new DTW alogrithm
+        for j,i in enumerate(t_mat.index):
+            #skip the first and last 45 minutes for removing compression artifacts
+            if ((i-dtw_stt < dtw_skp) | (dtw_end-i < dtw_skp)):
+                continue
+    
+            #get particular speed value
             yval = t_mat.loc[i,:].SPEED
             yvalb = 0.
             xval = mdates.date2num(i)
-
+    
             #try producing continous plot 2018/05/17 J. Prchlik
             #Removing 2017/07/26 J. Prchlk
             #fax[2,0].annotate('Event {0:1d}'.format(j+1),xy=(xval,yval),xytext=(xval,yval+50.),
             #                  arrowprops=dict(facecolor='purple',shrink=0.005))
             #fax[2,1].annotate('Event {0:1d}'.format(j+1),xy=(xval,yvalb),xytext=(xval,yvalb+2.),
             #                  arrowprops=dict(facecolor='purple',shrink=0.005))
-
-
+    
+    
             #computer surface for events
             #tvals = -np.array([np.mean(plsm[c+'_offset'].loc[i,'offsets']).total_seconds() for c in craft])
             #xvals = np.array([np.mean(plsm[c].loc[i,'GSEx']) for c in craft])
@@ -843,19 +935,22 @@ class dtw_plane:
                     it = plsm[c+'_offset'].GSEx.dropna().index[check]
                     itval = plsm[c+'_offset'].loc[it,:].offsets
                     
+                #Switch to first value to have a matched time if multiple values
+                #map to the "trainer" space craft time 2018/11/19 J. Prchlik
+                #Previously idd closest to 0
                 if isinstance(itval,pd._libs.tslib.Timedelta):
                     off_cor = itval.total_seconds()
                     tvals.append(itval.total_seconds())
                 elif isinstance(itval,pd.Series):
-                    tvals.append(min(itval,key=abs).total_seconds())
-                    off_cor = min(itval,key=abs).total_seconds()
-
+                    off_cor = min(itval).total_seconds()
+                    tvals.append(min(itval).total_seconds())
+    
                 #Get closest index value location
                 #Update with time offset implimented
                 ii = plsm[c].GSEx.dropna().index.get_loc(i+pd.to_timedelta(off_cor,unit='s'),method='nearest')
                 #convert index location back to time index
                 it = plsm[c].GSEx.dropna().index[ii]
-
+    
                 #Use offset pandas DF position 2018/04/25 J. Prchlik
                 xvals.append(np.mean(plsm[c].iloc[ii,:].GSEx))
                 yvals.append(np.mean(plsm[c].iloc[ii,:].GSEy))
@@ -898,12 +993,12 @@ class dtw_plane:
             self.event_dict[cur]['wind_px'] = xvals[0]
             self.event_dict[cur]['wind_py'] = yvals[0]
             self.event_dict[cur]['wind_pz'] = zvals[0]
-
+    
             #Wind position to determine starting point  2018/05/24 J. Prchlik
             px = xvals[0]
             py = yvals[0]
             pz = zvals[0]
-
+    
             for esp in self.earth_craft:
                 ################################################################
                 #Get THEMIS B location and compare arrival times
@@ -924,22 +1019,22 @@ class dtw_plane:
                     itval = plsm[esp+'_offset'].loc[it,:].offsets
                     #Get time of observation in THEMIS B
                     itind = pd.to_datetime(plsm[esp+'_offset'].loc[it,'Time'])
-
+    
                 #Get first match if DTW produces more than one
                 if isinstance(itind,pd.Series): itind = itind.dropna()[1]
                 if isinstance(itval,pd._libs.tslib.Timedelta):
                     atval = itval.total_seconds()
                 elif isinstance(itval,pd.Series):
                     atval = np.mean(itval).total_seconds() #,key=abs).total_seconds()
-
+    
                 #Store THEMIS position
                 axval = np.mean(plsm[esp+'_offset'].loc[it,'GSEx'])
                 ayval = np.mean(plsm[esp+'_offset'].loc[it,'GSEy'])
                 azval = np.mean(plsm[esp+'_offset'].loc[it,'GSEz'])
-
+    
                 ################################################################
                 ################################################################
-
+    
                 #parameters to add
                 #Switched to dictionary 2018/04/24 J. Prchlik
                 #add_lis = [vx,vy,vz,tvals,vm,vn,px,py,pz]
@@ -948,7 +1043,7 @@ class dtw_plane:
                 themis_d = float(vn.T.dot((np.matrix([axval,ayval,azval])-np.matrix([px,py,pz])).T))
                 themis_dt = float(themis_d)/vm
                 themis_pr = i+pd.to_timedelta(themis_dt,unit='s')
-
+    
                 #Try to print prediction, but if it fails just move on 2018/05/17 J. Prchlik
                 try:
                    # print('Arrival Time {0:%Y/%m/%d %H:%M:%S} at Wind'.format(i))
@@ -958,7 +1053,7 @@ class dtw_plane:
                 except:
                     continue
                 
-
+    
                 #Use wind parameters to predict shock location 2018/04/25 J. Prchlik
                 th_yval = t_mat.loc[i,:].SPEED
                 th_xval = mdates.date2num(themis_pr)
@@ -966,15 +1061,16 @@ class dtw_plane:
                     
                 #plot parameters from wind prediction 2018/05/17 J. Prchlik
                 ax_th.scatter(th_xval,th_yval,color='blue',label=None)
-
+    
                 #Store the prediction in array for plotting and comparing to omni
                 self.event_dict[esp+'_time'].append(th_xval)
                 self.event_dict[esp+'_plsm'].append(th_yval)
                 self.event_dict[esp+'_velo'].append(vm)
+                self.event_dict[esp+'_nvec'].append(vn.ravel())
                 self.event_dict[esp+'_dist'].append(themis_d)
-
-
-
+    
+    
+    
                 #change to line at wind 2018/05/17
                 #Add predicted THEMIS plot
                 #Remove 2018/07/26 J. Prchlik
@@ -986,7 +1082,7 @@ class dtw_plane:
                 #store speed and time values
                 event_plot.append([th_xval,th_yval])
                 event_plot.append([rl_xval,th_yval])
-
+    
             #put values in new dataframe
             #for l in range(len(col_add)):
             #    frm_vs.loc[i,col_add[l]] = add_lis[l] 
@@ -1003,7 +1099,7 @@ class dtw_plane:
         #if ylim min less than 0 set to 250
         if ylims[0] < 0:
             ylims[0] = 250. 
-
+    
         yrang = abs(ylims[1]-ylims[0])
         fax[2,0].set_ylim([ylims[0],ylims[1]+.1*yrang])
         #Save time warping plot
@@ -1019,10 +1115,10 @@ class dtw_plane:
         #save resulting THEMIS plot 2018/04/25 J. Prchlik
         xlims = np.array(ax_th.get_xlim())
         ax_th.set_ylim([ylims[0],ylims[1]+.1*yrang])
-
+    
         #include earth pad offset in time range 2018/05/04 J. Prchlik 
         xlims += self.pad_earth.total_seconds()/24./3600.
-
+    
         #Add 10% padding around plot time window for events
         #increase time range if needed
         test_xmin = min_val[0]-.1*rng_val[0]
@@ -1031,8 +1127,8 @@ class dtw_plane:
             xlims[0] = test_xmin
         if test_xmax > xlims[1]:
             xlims[1] = test_xmax
-
-
+    
+    
         #use pretty axis and save
         ax_th.set_xlim(xlims)
         ax_th.legend(loc='best',frameon=False)
@@ -1041,10 +1137,8 @@ class dtw_plane:
         andir = '../plots/boutique_ana/'
         
         
-        
-
-
-
+    
+    
         #Do not run animation sequence if asked to stop and return with just parameters
         #Returns vx,vy,vz,tvals,Vmag,Vnoraml,X,Y,Z
         #Switched to self.event_dict dictionary 2018/04/24 J. Prchlik
@@ -1189,8 +1283,8 @@ class dtw_plane:
                 pz = self.event_dict[cur]['wind_pz']
                 #timeself.event_dict difference between now and event
                 dt = (i-l.to_pydatetime()).total_seconds()
-
-
+    
+    
                 #theta normal angle
                 theta = float(np.arctan(vn[2]/np.sqrt(vn[0]**2+vn[1]**2)))*180./np.pi
         
@@ -1710,12 +1804,21 @@ def plot_time_dis(self):
     fax = fax.flatten()
 
 
+    #pandas start and end times as datetime objects
+    pd_s = pd.to_datetime(self.start_t)
+    pd_e = pd.to_datetime(self.end_t)
+    pd_p = pd.to_timedelta('30m')
+    #get middle point of DTW range
+    pd_m = (pd_e-pd_s)/2.+pd_s
+
+
     #loop over all keys
     for j,i in enumerate(off_keys):
 
         #convert from ns to s
-        xvals = self.plsm[i].index.values.astype(float)*1e-9
-        yvals = self.plsm[i]['offsets'].values.astype(float)*1e-9
+        xvals = self.plsm[i].loc[pd_m-pd_p:pd_m+pd_p].index.values.astype(float)*1e-9
+        yvals = self.plsm[i].loc[pd_m-pd_p:pd_m+pd_p]['offsets'].values.astype(float)*1e-9
+        print(np.median(yvals),i)
 
         #create two D histogram
         H,xedges,yedges = np.histogram2d(xvals,yvals,bins=(xbins,ybins))
@@ -1891,18 +1994,38 @@ def omni_plot(self):
     for esp in self.earth_craft:
         #Plot predictions at themis
         pre_x = np.array(self.event_dict[esp+'_time'])
+        pre_t = np.array(self.event_dict[esp+'_time'])
         pre_y = np.array(self.event_dict[esp+'_plsm'])
         pre_v = np.array(self.event_dict[esp+'_velo'])
+        pre_n = np.array(self.event_dict[esp+'_nvec'])
         pre_d = np.array(self.event_dict[esp+'_dist'])
 
-        #range of velocities to consider 2018/09/07 J. Prchlik
-        min_v, max_v = np.nanpercentile(pre_v,(20,98))
+
+        #Average velocties
+        smt_v = movingaverage (pre_v, 5)
+        #difference between smooth ando measured
+        err_v = (smt_v-pre_v)/smt_v
+
+      
 #        min_v, max_v = np.nanpercentile(pre_v,(65,98))
         #remove nans and bad velocities and distances (2018/08/01)
         #good, = np.where((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (pre_v < 2.E4)  & (pre_d < 3.E9 ) & (pre_v > 220.) & (pre_d > 1.E5))#)))
         #1.5E6 is the approximate distance to L1 only use attack angles near radially propogating
         #good, = np.where((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (np.abs(pre_d-1.5E6)/1.5e6 < 0.65) & (pre_v > min_v) & (pre_v < max_v))#)))
-        good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (np.abs(pre_d-1.5E6)/1.5e6 < 1.50))# & (pre_v > min_v) & (pre_v < max_v))#)))
+        #good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (np.abs(pre_d-1.5E6)/1.5e6 < 1.50) & (pre_v > min_v) & (pre_v < max_v))#)))
+        good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)) )#& (np.abs(pre_d-1.5E6)/1.5e6 < 1.50) & (abs(err_v) < 0.05))#(pre_v > min_v) & (pre_v < max_v))#)))
+        #range of velocities to consider 2018/09/07 J. Prchlik
+        min_v, max_v = np.nanpercentile(pre_v[good],(2,98))
+        min_v, max_v = np.nanpercentile(pre_d[good],(10,100))#-1.5e6
+        
+        if min_v < 0.:
+            min_v = 0.
+        print(min_v,max_v,pre_d[good].max())
+
+        #iterate on what is a good velocity 2018/11/16 J. Prchlik 
+        #good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (np.abs(pre_d-1.5E6)/1.5e6 > 0.50))# & (abs(err_v) < 0.05) & (pre_v > min_v) & (pre_v < max_v))#)))
+        good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (pre_d > min_v) & (pre_d < max_v))# & (abs(err_v) < 0.05) & (pre_v > min_v) & (pre_v < max_v))#)))
+
         pre_x = np.array(pre_x)[good]
         pre_y = np.array(pre_y)[good]
         #replace bad values with nan
@@ -1928,13 +2051,46 @@ def omni_plot(self):
         pre_x = np.array([pre_x,pre_x]).T.flatten()[1:]
         pre_y = np.array([pre_y,pre_y]).T.flatten()[:-1]
 
+        
+
+
         #sort argument in time
         #remove out of order arrive fronts
         srt_x = np.argsort(pre_x)
         #srt_x, = np.where(np.diff(pre_x) > 0.)
 
+        #create pandas df and get rolling median value to plot
+        window = '90s'
+        pre_df = pd.DataFrame(np.array([pre_x[srt_x],pre_y[srt_x]]).T,columns=['time','SPEED'])
+        pre_df.set_index(pd.to_datetime(pre_df.time),inplace=True)
+
+        #smooth array for prediction plotting
+        pre_df['med_SPEED'] = pre_df.SPEED.rolling(window,min_periods=0,closed='both').median()
+        #pre_df['std_SPEED'] = pre_df.SPEED.rolling(window,min_periods=0,closed='both').std()
+        pre_df['std_SPEED'] = (pre_df.SPEED-pre_df.med_SPEED).abs().rolling(window,min_periods=0,closed='both').median()
+        pre_df['cnt_SPEED'] = pre_df.SPEED.rolling(window,min_periods=0,closed='both').count()
+
+        #get the core 1sigma uncert
+        sig_min,sig_max = np.nanpercentile(pre_df.std_SPEED,[32,68])
+
+        #replace values less than the min with the 1sigma value
+        pre_df.loc[pre_df.std_SPEED < sig_min,'std_SPEED'] = sig_min
+        pre_df.loc[pre_df.std_SPEED > sig_max,'std_SPEED'] = sig_max
+
+
+        #compute # of sigma away from median
+        pre_df['sig_SPEED'] = np.abs(pre_df.SPEED-pre_df.med_SPEED)/(pre_df.std_SPEED)
+
+        #replace bad SPEED values with last previous measurement
+        repl_pred = pre_df.sig_SPEED > 3.
+        pre_df.loc[repl_pred,'SPEED'] = np.nan
+        pre_df.ffill(inplace=True)
+
+
         #Plot plane prediction
         ax_omni.plot(pre_x[srt_x],pre_y[srt_x],color='black',linestyle='-.',label='Plane Pred.')
+        #ax_omni.plot(pre_df.time,pre_df.SPEED,color='black',linestyle='-.',label='Plane Pred.')
+        #ax_omni.plot(pre_df.time,pre_df.med_SPEED,color='teal',linestyle='-.',label='Plane Pred.')
         
         #Add plot with just the THEMIS plasma data
         slicer = np.isfinite(plsm[esp].SPEED)
@@ -1965,3 +2121,54 @@ def omni_plot(self):
 
     fig_omni.savefig('../plots/omni_pred_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(self.start_t)),bbox_pad=.1,bbox_inches='tight',dpi=600)
     fig_omni.savefig('../plots/omni_pred_{0:%Y%m%d_%H%M%S}.eps'.format(pd.to_datetime(self.start_t)),bbox_pad=.1,bbox_inches='tight',dpi=600)
+
+    #Also plot distances and vn values
+    fig_test,ax_test = plt.subplots(nrows=3,sharex=True)
+
+    ax_test[0].plot(pre_t,np.array(pre_d)*1.5e-6)
+    ax_test[1].plot(pre_t,np.array(pre_v))
+    ax_test[2].plot(pre_t,np.array(pre_n)[:,0])
+
+    ax_test[0].set_ylabel('Distance')
+    ax_test[1].set_ylabel('Velocity')
+    
+    ax_test[0].set_xlim(ax_omni.get_xlim())
+
+    for iax in ax_test.ravel():
+        fancy_plot(iax)
+
+
+def delay_plot(self):
+    """
+    Plot the time delay between spacecraft as a function of time for the spacecraft used in the analysis.
+
+    Parameters
+    -----------
+    self: dtw class instance
+
+    """
+
+
+
+def movingaverage (values, window):
+    """
+    Calculate moving average
+    
+    Parameters
+    ----------
+    values: np.array
+         Value to compute movie average over
+    window: int
+         Length of window to compute moving averages over
+
+    Returns
+    -----------
+    sma: np.array
+        Smoothed running average
+
+    """
+    weights = np.repeat(1.0, window)/window
+    sma = np.convolve(values, weights, 'valid')
+    #extapolate to start to keep sma the same size as values
+    sma = np.insert(sma,0,(window-1)*[sma[0]])
+    return sma
