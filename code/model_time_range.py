@@ -110,6 +110,39 @@ def solve_coeff(pi,vn):
     
     return [a,b,c,d]
 
+def arb_rotation_matrix(a,b):
+    """
+    Creates a rotation matrix between two unit vectors a and b.
+    U.dot(a) = b
+ 
+    Parameters
+    ------------
+    a,b: np.array
+        Two 3 element numpy array unit vectors
+
+    Returns
+    -----------
+    rot_mat: np.array
+        3x3 rotation matrix between unit vectors
+    
+    """
+
+    v = np.cross(a,b)
+    s = np.linalg.norm(v)
+    c = np.dot(a,b)
+
+    I = np.identity(3)
+
+    #skew-symmetric cross product of matrix v
+    vx = np.array([[0,-v[2],v[1]],
+                   [v[2],0,-v[0]],
+                   [-v[1],v[0],0]])
+
+    rot_mat = I+vx+vx.dot(vx)/(1+c)
+    return rot_mat
+
+
+
 #Function to read in spacecraft
 def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
             mag_fmt='{0}_mag_2015_2017_formatted.txt',pls_fmt='{0}_pls_2015_2017_formatted.txt',
@@ -470,6 +503,10 @@ class dtw_plane:
             self.plsm[i] = par_read_in(i)
 
         
+
+        #recompute DTW solution with new time offsets
+        self.dtw(pr=10.)
+
         #Do one at a time for now 2018/11/19 J. Prchlik
         #####Parameters for file read in and parsing
         #####Could be an issue with downwind THEMIS craft 2018/04/25 J. Prchlik
@@ -491,13 +528,15 @@ class dtw_plane:
         ####    else:
         
 
-        #recompute DTW solution with new time offsets
-        self.dtw()
 
-
-    def dtw(self):
+    def dtw(self,pr=85.):
         """
         Finds DTW solution to 4 L1 spacecraft, whose later time offsets may be used to predict solar wind conditions at Earth
+
+        Parameters
+        -----------------
+        pr: float, optional
+            Number of minutes allowed when scanning for a DTW solution (Default = 85.)
      
         """
         #Creating modular solution for DTW 2018/03/21 J. Prchlik
@@ -651,10 +690,10 @@ class dtw_plane:
                
 
                 #make the penalty kick in at the 10% level
-                penalty_r1 = 60.*65./np.min([dt1,dt2]) #number of pixels in 65 minutes ((s/m}*(m)/(s)))
-                penalty_r2 = 60.*65./np.max([dt1,dt2]) #number of pixels in 65 minutes ((s/m}*(m)/(s)))
-                #penalty = 50.
-                path = md.dtw_path_single(x1,x2,penalty_r1,penalty_r2,0.0,1.10,1.10,0)
+                penalty_r1 = 60.*pr/np.min([dt1,dt2]) #number of pixels in 65 minutes ((s/m}*(m)/(s)))
+                penalty_r2 = 60.*pr/np.max([dt1,dt2]) #number of pixels in 65 minutes ((s/m}*(m)/(s)))
+                #find DTW path with some restriction on the allowed time offset 
+                path = md.dtw_path_single(x1,x2,penalty_r1,penalty_r2,500.0,100.00,1.10,0)
                 #unflip if flipped
                 if flipped:
                     path = path[::-1]
