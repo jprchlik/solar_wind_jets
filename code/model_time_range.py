@@ -464,15 +464,22 @@ class dtw_plane:
             #set readin to first attempt to false
             #prevent multiple readin of big files
 
-    def iterate_dtw(self):
+    def iterate_dtw(self,pr_1=85.,pr_2=30.):
         """
         Iteratively find the best DTW solution. In the first iteration get the best time offset between spacecraft.
         In the second iteration find the best DTW solution.
+
+        Parameters
+        -----------------
+        pr_1: float, optional
+            Number of minutes allowed when scanning for a DTW solution in the first iteration (Default = 85.)
+        pr_2: float, optional
+            Number of minutes allowed when scanning for a DTW solution in the second iteration (Default = 30.)
   
         """
 
         #run the initial DTW solution
-        self.dtw()
+        self.dtw(pr_1)
         #get DTW offset keys from plasma dictionary
         off_keys = [i for i in self.plsm.keys() if (('offset' in i) & (i.replace('_offset','') 
                     not in self.earth_craft) & (i.replace('_offset','') != self.trainer))]
@@ -505,7 +512,7 @@ class dtw_plane:
         
 
         #recompute DTW solution with new time offsets
-        self.dtw(pr=10.)
+        self.dtw(pr=pr_2)
 
         #Do one at a time for now 2018/11/19 J. Prchlik
         #####Parameters for file read in and parsing
@@ -845,9 +852,15 @@ class dtw_plane:
         #big list of velocities
         #big_lis = []
 
-    def pred_earth(self):
+    def pred_earth(self,cut_deg=70.):
         """
         Create prediction for Earth and create corresponding plots
+    
+        Parmeters
+        -------------
+        cut_deg: float
+            Cut calculated normal vectors more than cut_deg away from [-1.,0.,0.]
+             GSE to removed from the prediction (Default = 70, Weimer et al. 2003).
     
         """
     
@@ -1014,6 +1027,20 @@ class dtw_plane:
             #vna = np.linalg.solve(pm,tm) #solve for the velocity vectors normal
             #vn  = vna/np.linalg.norm(vna)
             #vm  = 1./np.linalg.norm(vna) #get velocity magnitude
+
+
+            #Check that angle is less than 70 deg. from -X GSE following Weimer et al (2003)
+            #2018/11/20 J. Prchlik
+            theta = np.degrees(np.arccos(float(vn.T.dot([-1.,0.,0.]))))
+
+            #replace vn,vm with the previous value if theta is greater than 70 degree
+            if ((theta > cut_deg) & (len(self.event_dict[esp+'_velo']) > 0)):
+                vm = self.event_dict[esp+'_velo'][-1]
+                vn = np.matrix(self.event_dict[esp+'_nvec'][-1]).T
+            #Skip the prediction if there are no good previous values
+            elif ((theta > cut_deg) & (len(self.event_dict[esp+'_velo']) < 1)):
+                continue
+            
             
             #store vx,vy,vz values
             self.event_dict[cur]['vx'],self.event_dict[cur]['vy'],self.event_dict[cur]['vz'] = vm*np.array(vn).ravel()
@@ -2052,18 +2079,21 @@ def omni_plot(self):
         #1.5E6 is the approximate distance to L1 only use attack angles near radially propogating
         #good, = np.where((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (np.abs(pre_d-1.5E6)/1.5e6 < 0.65) & (pre_v > min_v) & (pre_v < max_v))#)))
         #good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (np.abs(pre_d-1.5E6)/1.5e6 < 1.50) & (pre_v > min_v) & (pre_v < max_v))#)))
-        good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)) )#& (np.abs(pre_d-1.5E6)/1.5e6 < 1.50) & (abs(err_v) < 0.05))#(pre_v > min_v) & (pre_v < max_v))#)))
-        #range of velocities to consider 2018/09/07 J. Prchlik
-        min_v, max_v = np.nanpercentile(pre_v[good],(2,98))
-        min_v, max_v = np.nanpercentile(pre_d[good],(10,100))#-1.5e6
-        
-        if min_v < 0.:
-            min_v = 0.
-        print(min_v,max_v,pre_d[good].max())
 
-        #iterate on what is a good velocity 2018/11/16 J. Prchlik 
-        #good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (np.abs(pre_d-1.5E6)/1.5e6 > 0.50))# & (abs(err_v) < 0.05) & (pre_v > min_v) & (pre_v < max_v))#)))
-        good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (pre_d > min_v) & (pre_d < max_v))# & (abs(err_v) < 0.05) & (pre_v > min_v) & (pre_v < max_v))#)))
+
+        #No longer needed after making cut on normal vector
+        ####good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)) )#& (np.abs(pre_d-1.5E6)/1.5e6 < 1.50) & (abs(err_v) < 0.05))#(pre_v > min_v) & (pre_v < max_v))#)))
+        #range of velocities to consider 2018/09/07 J. Prchlik
+        ###min_v, max_v = np.nanpercentile(pre_v[good],(2,98))
+        ###min_v, max_v = np.nanpercentile(pre_d[good],(10,100))#-1.5e6
+        ###
+        ###if min_v < 0.:
+        ###    min_v = 0.
+        ###print(min_v,max_v,pre_d[good].max())
+
+        ####iterate on what is a good velocity 2018/11/16 J. Prchlik 
+        ####good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)) & (np.abs(pre_d-1.5E6)/1.5e6 > 0.50))# & (abs(err_v) < 0.05) & (pre_v > min_v) & (pre_v < max_v))#)))
+        good = ((np.isfinite(pre_x)) & (np.isfinite(pre_y)))# & (pre_d > min_v) & (pre_d < max_v))# & (abs(err_v) < 0.05) & (pre_v > min_v) & (pre_v < max_v))#)))
 
         pre_x = np.array(pre_x)[good]
         pre_y = np.array(pre_y)[good]
@@ -2071,24 +2101,6 @@ def omni_plot(self):
         #pre_x[good == False] = np.nan
         #pre_y[good == False] = np.nan
 
-        #insert start and end times
-        #x-values
-        pre_x = np.insert(pre_x,0,pre_x[0])
-        pre_x = np.insert(pre_x,0,mdates.date2num(start))
-        pre_x = np.insert(pre_x,-1,mdates.date2num(end))
-        #y-values
-        #get value before first shock
-        init_idx = self.plsm['Wind'].index.get_loc(self.top_vs.index[0])-1
-        init_val = self.plsm['Wind'].ffill().iloc[init_idx].SPEED
-        pre_y = np.insert(pre_y,0,init_val)
-        pre_y = np.insert(pre_y,0,init_val)
-        pre_y = np.insert(pre_y,-1,pre_y[-1])
-
-
-
-        #create box like plot
-        pre_x = np.array([pre_x,pre_x]).T.flatten()[1:]
-        pre_y = np.array([pre_y,pre_y]).T.flatten()[:-1]
 
         
 
@@ -2097,43 +2109,70 @@ def omni_plot(self):
         #remove out of order arrive fronts
         srt_x = np.argsort(pre_x)
         #srt_x, = np.where(np.diff(pre_x) > 0.)
+        pre_x = pre_x[srt_x]
+        pre_y = pre_y[srt_x]
 
-        #create pandas df and get rolling median value to plot
-        window = '90s'
-        pre_df = pd.DataFrame(np.array([pre_x[srt_x],pre_y[srt_x]]).T,columns=['time','SPEED'])
+        #create box like plot
+        pre_x = np.array([pre_x,pre_x]).T.flatten()[1:]
+        pre_y = np.array([pre_y,pre_y]).T.flatten()[:-1]
+
+        #insert start and end times
+        #x-values
+        pre_x = np.insert(pre_x,0,pre_x[0])
+        pre_x = np.insert(pre_x,0,mdates.date2num(start))
+        pre_x = np.insert(pre_x,-1,mdates.date2num(end))
+        #y-values
+        #get value before first shock
+        #init_idx = self.plsm['Wind'].index.get_loc(self.top_vs.index[0])-1
+        init_val = pre_y[0] #self.plsm['Wind'].ffill().iloc[init_idx].SPEED
+        pre_y = np.insert(pre_y,0,init_val)
+        pre_y = np.insert(pre_y,0,init_val)
+        pre_y = np.insert(pre_y,-1,pre_y[-1])
+
+
+
+
+        #No longer need with restriction in theta angle 2018/11/20 J. Prchlik
+        ######create pandas df and get rolling median value to plot
+        #####window = '90s'
+        pre_df = pd.DataFrame(np.array([pre_x,pre_y]).T,columns=['time','SPEED'])
         pre_df.set_index(pd.to_datetime(pre_df.time),inplace=True)
+        #resample at a 2minute cadence
+        #pre_df = pre_df.drop_duplicates('time').reindex(plsm[esp].index.drop_duplicates(),method='nearest').interpolate('time')
+        #pre_df.drop_duplicates('time',keep='first',inplace=True) 
 
-        #smooth array for prediction plotting
-        pre_df['med_SPEED'] = pre_df.SPEED.rolling(window,min_periods=0,closed='both').median()
-        #pre_df['std_SPEED'] = pre_df.SPEED.rolling(window,min_periods=0,closed='both').std()
-        pre_df['std_SPEED'] = (pre_df.SPEED-pre_df.med_SPEED).abs().rolling(window,min_periods=0,closed='both').median()
-        pre_df['cnt_SPEED'] = pre_df.SPEED.rolling(window,min_periods=0,closed='both').count()
+        ######smooth array for prediction plotting
+        #####pre_df['med_SPEED'] = pre_df.SPEED.rolling(window,min_periods=0,closed='both').median()
+        ######pre_df['std_SPEED'] = pre_df.SPEED.rolling(window,min_periods=0,closed='both').std()
+        #####pre_df['std_SPEED'] = (pre_df.SPEED-pre_df.med_SPEED).abs().rolling(window,min_periods=0,closed='both').median()
+        #####pre_df['cnt_SPEED'] = pre_df.SPEED.rolling(window,min_periods=0,closed='both').count()
 
-        #get the core 1sigma uncert
-        sig_min,sig_max = np.nanpercentile(pre_df.std_SPEED,[32,68])
+        ######get the core 1sigma uncert
+        #####sig_min,sig_max = np.nanpercentile(pre_df.std_SPEED,[32,68])
 
-        #replace values less than the min with the 1sigma value
-        pre_df.loc[pre_df.std_SPEED < sig_min,'std_SPEED'] = sig_min
-        pre_df.loc[pre_df.std_SPEED > sig_max,'std_SPEED'] = sig_max
-
-
-        #compute # of sigma away from median
-        pre_df['sig_SPEED'] = np.abs(pre_df.SPEED-pre_df.med_SPEED)/(pre_df.std_SPEED)
-
-        #replace bad SPEED values with last previous measurement
-        repl_pred = pre_df.sig_SPEED > 3.
-        pre_df.loc[repl_pred,'SPEED'] = np.nan
-        pre_df.ffill(inplace=True)
+        ######replace values less than the min with the 1sigma value
+        #####pre_df.loc[pre_df.std_SPEED < sig_min,'std_SPEED'] = sig_min
+        #####pre_df.loc[pre_df.std_SPEED > sig_max,'std_SPEED'] = sig_max
 
 
-        #Plot plane prediction
-        ax_omni.plot(pre_x[srt_x],pre_y[srt_x],color='black',linestyle='-.',label='Plane Pred.')
-        #ax_omni.plot(pre_df.time,pre_df.SPEED,color='black',linestyle='-.',label='Plane Pred.')
-        #ax_omni.plot(pre_df.time,pre_df.med_SPEED,color='teal',linestyle='-.',label='Plane Pred.')
+        ######compute # of sigma away from median
+        #####pre_df['sig_SPEED'] = np.abs(pre_df.SPEED-pre_df.med_SPEED)/(pre_df.std_SPEED)
+
+        ######replace bad SPEED values with last previous measurement
+        #####repl_pred = pre_df.sig_SPEED > 3.
+        #####pre_df.loc[repl_pred,'SPEED'] = np.nan
+        #####pre_df.ffill(inplace=True)
+
+
         
         #Add plot with just the THEMIS plasma data
         slicer = np.isfinite(plsm[esp].SPEED)
         ax_omni.plot(plsm[esp].loc[slicer,:].index,pd.rolling_mean(plsm[esp].loc[slicer,:].SPEED,25,center=True),color=self.color[esp],label=esp.upper().replace('_',' '),zorder=100,linewidth=1)
+
+        #ax_omni.plot(pre_df.time,pre_df.med_SPEED,color='teal',linestyle='-.',label='Plane Pred.')
+        #Plot plane prediction
+        ax_omni.plot(pre_x,pre_y,color='black',linestyle='-.',label='Plane Pred.')
+        #ax_omni.plot(pre_df.time,pre_df.SPEED,color='black',linestyle='-.',label='Plane Pred.',zorder=500)
 
 
     #ax_omni.locator_params(axis='x', nbins=4)
@@ -2146,7 +2185,7 @@ def omni_plot(self):
     #ax_omni.format_xdata = mdates.DateFormatter('%H:%M')
     #ax_omni.xaxis.set_major_locator(MaxNLocator(4))
     ax_omni.set_title(self.start_t[:10],fontsize=6)
-    ax_omni.legend(loc='upper left',frameon=False,fontsize=4)
+    ax_omni.legend(loc='best',frameon=False,fontsize=4)
     #set axis labels
     ax_omni.set_xlabel("Time [UTC]",fontsize=8)
     ax_omni.set_ylabel("Flow Speed [km/s]",fontsize=8)
@@ -2154,27 +2193,28 @@ def omni_plot(self):
     ax_omni.set_xlim((plsm[esp].loc[slicer,:].index.min(),plsm[esp].loc[slicer,:].index.max()))
     fancy_plot_small(ax_omni)
     #rotate y,z y axis tick labels
-    #for tick in ax_omni.get_xticklabels():
-    #    tick.set_rotation(15)
+    for tick in ax_omni.get_xticklabels():
+        tick.set_rotation(-35)
     
 
     fig_omni.savefig('../plots/omni_pred_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(self.start_t)),bbox_pad=.1,bbox_inches='tight',dpi=600)
     fig_omni.savefig('../plots/omni_pred_{0:%Y%m%d_%H%M%S}.eps'.format(pd.to_datetime(self.start_t)),bbox_pad=.1,bbox_inches='tight',dpi=600)
 
+    #REMOVED TEST 2018/11/20 J. Prchlik
     #Also plot distances and vn values
-    fig_test,ax_test = plt.subplots(nrows=3,sharex=True)
+    ####fig_test,ax_test = plt.subplots(nrows=3,sharex=True)
 
-    ax_test[0].plot(pre_t,np.array(pre_d)*1.5e-6)
-    ax_test[1].plot(pre_t,np.array(pre_v))
-    ax_test[2].plot(pre_t,np.array(pre_n)[:,0])
+    ####ax_test[0].plot(pre_t,np.array(pre_d)*1.5e-6)
+    ####ax_test[1].plot(pre_t,np.array(pre_v))
+    ####ax_test[2].plot(pre_t,np.array(pre_n)[:,0])
 
-    ax_test[0].set_ylabel('Distance')
-    ax_test[1].set_ylabel('Velocity')
-    
-    ax_test[0].set_xlim(ax_omni.get_xlim())
+    ####ax_test[0].set_ylabel('Distance')
+    ####ax_test[1].set_ylabel('Velocity')
+    ####
+    ####ax_test[0].set_xlim(ax_omni.get_xlim())
 
-    for iax in ax_test.ravel():
-        fancy_plot(iax)
+    ####for iax in ax_test.ravel():
+    ####    fancy_plot(iax)
 
 
 def delay_plot(self):
