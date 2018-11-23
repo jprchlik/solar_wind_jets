@@ -246,7 +246,8 @@ def cdf_to_pandas(f_list,keys,craft,context):
             #Update to do without looping  2018/05/17 J. Prchlik
             #loopers = range(0,len(cdf[keys[0]][...]),10) 
             #for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
-            temp = pd.DataFrame(np.array([cdf[keys[0]][...],cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2],cdf[keys[2]][...]]).T,columns=header)
+            ##cut the DSCOVR Mag. Time sampling down to 10s 2018/11/23 J. Prchlik 
+            temp = pd.DataFrame(np.array([cdf[keys[0]][...],cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2],cdf[keys[2]][...]]).T[::10],columns=header)
             tab = tab.append(temp,ignore_index=True) 
         elif ((context == 'mag') & (craft == 'ace')):
             #for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]
