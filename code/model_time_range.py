@@ -2112,9 +2112,6 @@ def omni_plot(self):
         pre_x = pre_x[srt_x]
         pre_y = pre_y[srt_x]
 
-        #create box like plot
-        pre_x = np.array([pre_x,pre_x]).T.flatten()[1:]
-        pre_y = np.array([pre_y,pre_y]).T.flatten()[:-1]
 
         #insert start and end times
         #x-values
@@ -2129,6 +2126,17 @@ def omni_plot(self):
         pre_y = np.insert(pre_y,0,init_val)
         pre_y = np.insert(pre_y,-1,pre_y[-1])
 
+
+        #create box like plot
+        pre_x = np.array([pre_x,pre_x]).T.flatten()[1:]
+        pre_y = np.array([pre_y,pre_y]).T.flatten()[:-1]
+
+        #sort argument in time
+        #remove out of order arrive fronts
+        srt_x = np.argsort(pre_x)
+        #srt_x, = np.where(np.diff(pre_x) > 0.)
+        pre_x = pre_x[srt_x]
+        pre_y = pre_y[srt_x]
 
 
 
