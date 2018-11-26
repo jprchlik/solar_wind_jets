@@ -1200,7 +1200,6 @@ class dtw_plane:
         ax_th.legend(loc='best',frameon=False)
         fig_th.savefig('../plots/themis_pred_{0:%Y%m%d_%H%M%S}.png'.format(pd.to_datetime(start_t)),bbox_pad=.1,bbox_inches='tight')
         
-        andir = '../plots/boutique_ana/'
         
         
     
@@ -1209,306 +1208,6 @@ class dtw_plane:
         #Returns vx,vy,vz,tvals,Vmag,Vnoraml,X,Y,Z
         #Switched to self.event_dict dictionary 2018/04/24 J. Prchlik
         if justparm: return 
-        
-        
-        #sim_date =  pd.date_range(start=start_t,end=end_t,freq='60S')
-        #switched to Wind index for looping and creating figures 2018/03/15
-        sim_date = plsm['Wind'][start_t:end_t].index[::10]
-        
-        for i in sim_date:
-            #list of colors
-            cycol = cycle(['blue','green','red','cyan','magenta','black','teal','orange'])
-        
-            #Create figure showing space craft orientation
-            ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(18,18))
-            tfig =  plt.figure(figsize=(18,18))
-            tax = tfig.add_subplot(111, projection='3d')
-            
-            #set orientation lables
-            oax[1,1].axis('off')
-            oax[0,0].set_title('{0:%Y/%m/%d %H:%M:%S}'.format(i),fontsize=20)
-            oax[0,0].set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
-            oax[0,0].set_ylabel('Z(GSE) [R$_\oplus$]',fontsize=20)
-            oax[0,1].set_xlabel('Y(GSE) [R$_\oplus$]',fontsize=20)
-            oax[0,1].set_ylabel('Z(GSE) [R$_\oplus$]',fontsize=20)
-            oax[1,0].set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
-            oax[1,0].set_ylabel('Y(GSE) [R$_\oplus$]',fontsize=20)
-        
-            #set 3d axis label 2018/03/13
-            tax.set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
-            tax.set_ylabel('Y(GSE) [R$_\oplus$]',fontsize=20)
-            tax.set_zlabel('Z(GSE) [R$_\oplus$]',fontsize=20)
-           
-        
-            ###########################################################
-            ###########################################################
-            #Added to get current plane orientation for Wind 2018/03/05
-            tvals = [] 
-            xvals = [] 
-            yvals = [] 
-            zvals = [] 
-        
-            #loop over all craft and populate time and position arrays
-            for c in craft:
-                #Get closest index value location
-                ii = plsm[c].GSEx.dropna().index.get_loc(i,method='nearest')
-        
-                #convert index location back to time index
-                it = plsm[c].GSEx.dropna().index[ii]
-        
-                #append craft values onto time and position arrays
-                #changed to min values 2018/03/12 J. Prchlik
-                itval = plsm[c+'_offset'].loc[i,'offsets']
-                if isinstance(itval,pd._libs.tslib.Timedelta):
-                    tvals.append(itval.total_seconds())
-                elif isinstance(itval,pd.Series):
-                    tvals.append(min(itval,key=abs).total_seconds())
-                xvals.append(np.mean(plsm[c].loc[it,'GSEx']))
-                yvals.append(np.mean(plsm[c].loc[it,'GSEy']))
-                zvals.append(np.mean(plsm[c].loc[it,'GSEz']))
-        
-            #Covert arrays into numpy arrays and flip sign of offset
-            tvals = np.array(tvals)
-            xvals = np.array(xvals) 
-            yvals = np.array(yvals) 
-            zvals = np.array(zvals) 
-        
-            #use positions and vectors to get a solution for plane velocity
-            pm  = np.matrix([xvals[1:]-xvals[0],yvals[1:]-yvals[0],zvals[1:]-zvals[0]]).T #coordinate of craft 1 in top row
-            tm  = np.matrix(tvals[1:]).T # 1x3 matrix of time (wind-spacecraft)
-            vna,vn,vm = solve_plane(pm,tm)
-            #vna = np.linalg.solve(pm,tm) #solve for the velocity vectors normal
-            #vn  = vna/np.linalg.norm(vna)
-            #vm  = 1./np.linalg.norm(vna) #get velocity magnitude
-            
-            #store vx,vy,vz values
-            vx,vy,vz = vm*np.array(vn).ravel()
-        
-            px = xvals[0]
-            py = yvals[0]
-            pz = zvals[0]
-            #solve for the plane at time l
-            #first get the points
-            ps = np.matrix([[px],[py],[pz]])
-        
-        
-            #switched to solve_coeff function 2018/04/24 J. Prchlik
-            #solve the plane equation for d
-            #d = float(vn.T.dot(ps))
-            #print('###################################################')
-            #print('NEW solution')
-            #scale the coefficiecnts of the normal matrix for distance
-            a,b,c,d = solve_coeff(ps,vn)
-            #coeff = vn*pm
-            #a = float(coeff[0])
-            #b = float(coeff[1])
-            #c = float(coeff[2])
-            #d = float(coeff.T.dot(ps))
-            #print(a,b,c,d)
-            #print('###################################################')
-            #get the wind plane values for given x, y, or z
-            counter = np.linspace(-1e10,1e10,5)
-            windloc = np.zeros(counter.size)
-        
-            #+/- range for plane
-            rng = np.linspace(-1.e10,1.e10,100)
-        
-            #set off axis values to 0
-            zvalsx = -(a*(px+rng)+b*(py+rng)-d)/c
-            zvalsy = -(a*(px+rng)+b*(py+rng)-d)/c
-            yvalsx = -(a*(px+rng)+c*(pz+rng)-d)/b
-            #plot 2d plot
-            oax[0,0].plot((px+rng)/Re,zvalsx/Re,color='gray',label="Current")
-            oax[1,0].plot((px+rng)/Re,yvalsx/Re,color='gray',label=None)
-            oax[0,1].plot((py+rng)/Re,zvalsy/Re,color='gray',label=None)
-        
-        
-            ###########################################################
-            ###########################################################
-        
-            #add fancy_plot to 2D plots
-            for pax in oax.ravel(): fancy_plot(pax)
-        
-            #set labels for 3D plot
-            tax.set_title('{0:%Y/%m/%d %H:%M:%S}'.format(i),fontsize=20)
-        
-        
-            #Add radially propogating CME shock front    
-            for p,l in enumerate(top_vs.index):
-                #color to use
-                cin = next(cycol)
-                cur = 'event_{0:1d}'.format(p+1)
-                vx = self.event_dict[cur]['vx']
-                vy = self.event_dict[cur]['vy']
-                vz = self.event_dict[cur]['vz']
-                vm = self.event_dict[cur]['vm']
-                vn = self.event_dict[cur]['vn']
-                #Wind coordinates
-                px = self.event_dict[cur]['wind_px']
-                py = self.event_dict[cur]['wind_py']
-                pz = self.event_dict[cur]['wind_pz']
-                #timeself.event_dict difference between now and event
-                dt = (i-l.to_pydatetime()).total_seconds()
-    
-    
-                #theta normal angle
-                theta = float(np.arctan(vn[2]/np.sqrt(vn[0]**2+vn[1]**2)))*180./np.pi
-        
-                #leave loop if shock is not within 2 hours therefore do not plot
-                if np.abs(dt) > 2.*60.*60: continue
-        
-        
-                #solve for the plane at time l
-                #first get the points
-                ps = np.matrix([[vx],[vy],[vz]])*dt+np.matrix([[px],[py],[pz]])
-        
-                #get the magentiude of the position
-                pm  = float(np.linalg.norm(ps))
-                
-        
-                #Switched to solve_coeff function 2018/04/24 J. Prchlik
-                a,b,c,d = solve_coeff(ps,vn)
-                #solve the plane equation for d
-                #d = float(vn.T.dot(ps))
-                ##print('###################################################')
-                ##print('NEW solution')
-                ##scale the coefficiecnts of the normal matrix for distance
-                #coeff = vn*pm
-                #a = float(coeff[0])
-                #b = float(coeff[1])
-                #c = float(coeff[2])
-                #d = float(coeff.T.dot(ps))
-                #print(a,b,c,d)
-                #print('###################################################')
-        
-                #Switch to line 2018/03/15 J. 4rchlik
-                ##set up arrays of values
-                ##xvals = vx*dt+px
-                ##yvals = vy*dt+py
-                ##zvals = vz*dt+pz
-        
-                ##get sorted value array
-                ##xsort = np.argsort(xvals)
-                ##ysort = np.argsort(yvals)
-                ##zsort = np.argsort(zvals)
-        
-                #get the plane values for given x, y, or z
-                counter = np.linspace(-1e10,1e10,5)
-                windloc = np.zeros(counter.size)
-        
-                #set off axis values to 0
-                zvalsx = -(a*counter-d)/c
-                zvalsy = -(b*counter-d)/c
-                yvalsx = -(a*counter-d)/b
-        
-        
-                #get shock Np value (use bfill to get values from the next good Np value) 
-                np_df = plsm[trainer+'_offset'].Np.dropna()
-                np_vl = np_df.index.get_loc(l,method='bfill')
-                np_op = np_df.iloc[np_vl]
-                
-        
-                #oax[0,0].text((vx*dt+px)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
-                #oax[1,0].text((vx*dt+px)[0],(vy*dt+py)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
-                #oax[0,1].text((vy*dt+py)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
-                #No need to solve for plane because I have values from the normal vector 2018/03/15 J. Prchlik
-                #####plot 3d plot
-                #####fit plane
-                #####c, normal = fitPlaneLTSQ(xvals,yvals,zvals)
-                #####try different way to fit plane
-                ####A = np.c_[xvals,yvals,np.ones(xvals.size)]
-                #####get cooefficience
-                ####C,_,_,_ = scipy.linalg.lstsq(A,zvals)
-                #create center point (use Wind)
-                #point = np.array([xvals[0], yvals[0], zvals[0]])
-                ##solve for d in a*x+b*y+c*z+d = 0
-                #d = -point.dot(normal) #create normal surface
-                #create mesh grid
-                #Get max and min values
-                maxx = 1900000.
-                maxy = 300000.
-                minx = 1200000.
-                miny = -600000.
-        
-                #make x and y grids
-                xg = np.array([minx,maxx])
-                yg = np.array([miny,maxy])
-        
-                # compute needed points for plane plotting
-                xt, yt = np.meshgrid(xg, yg)
-                #zt = (-normal[0]*xt - normal[1]*yt - d)*1. / normal[2]
-                #create z surface
-                #switched to exact a,b,c from above 2018/03/15
-                zt = -(a*xt+d*yt-d)/c
-        
-                #plot surface
-                tax.plot_surface(xt/Re,yt/Re,zt/Re,color=cin,alpha=.5)
-        
-                #get sorted value array
-                #xvals = xt.ravel()
-                #yvals = yt.ravel()
-                #zvals = zt.ravel()
-                #zvals = xvals*C[0]+yvals*C[1]+C[2]
-                xsort = np.argsort(xvals)
-                ysort = np.argsort(yvals)
-                zsort = np.argsort(zvals)
-        
-                #plot 2d plot
-                oax[0,0].plot(counter/Re,zvalsx/Re,color=cin,
-                              label='Event {0:1d}, N$_p$ = {1:3.2f} cc, t$_W$={2:%H:%M:%S}, $|$V$|$={3:4.2f} km/s, {5} = {4:3.2f}'.format(p+1,np_op,l,vm,-theta,r'$\theta_\mathrm{Bn}$').replace('cc','cm$^{-3}$'))
-                oax[1,0].plot(counter/Re,yvalsx/Re,color=cin,label=None)
-                oax[0,1].plot(counter/Re,zvalsy/Re,color=cin,label=None)
-        
-        
-            #get array of x,y,z spacecraft positions
-            #spacraft positions
-            for k in craft:
-                #Get closest index value location
-                ii = plsm[k].GSEx.dropna().index.get_loc(i,method='nearest')
-                #convert index location back to time index
-                it = plsm[k].GSEx.dropna().index[ii]
-        
-                oax[0,0].scatter(plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEz']/Re,marker=marker[k],s=80,color=color[k],label=k)
-                oax[1,0].scatter(plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEy']/Re,marker=marker[k],s=80,color=color[k],label=None)
-                oax[0,1].scatter(plsm[k].loc[it,'GSEy']/Re,plsm[k].loc[it,'GSEz']/Re,marker=marker[k],s=80,color=color[k],label=None)
-                tax.scatter(plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEy']/Re,plsm[k].loc[it,'GSEz']/Re,
-                            marker=marker[k],s=80,color=color[k],label=None)
-        
-        
-            #set static limits from orbit maximum from SOHO file in Re
-            #z limits
-            z_lim = np.array([-1.,1])*240.
-            oax[0,0].set_ylim(z_lim)
-            oax[0,1].set_ylim(z_lim)
-            tax.set_zlim(z_lim)
-            #xlimits
-            x_lim = np.array([-1.,1])*240.0+225.
-            oax[0,0].set_xlim(x_lim)
-            oax[1,0].set_xlim(x_lim)
-            tax.set_xlim(x_lim)
-            #y limits
-            y_lim = np.array([-1.,1])*120.0
-            oax[0,1].set_xlim(y_lim)
-            oax[1,0].set_ylim(y_lim)
-            tax.set_ylim(y_lim)
-            
-            oax[0,0].legend(loc='upper right',frameon=False,scatterpoints=1)
-        
-        
-            #rotate y,z y axis tick labels
-            for tick in oax[0,1].get_xticklabels():
-                tick.set_rotation(45)
-        
-            #Save spacecraft orientation plots
-            ofig.savefig(andir+'event_orientation_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
-            ofig.clf()
-            #save 3d spacecraft positions
-            tfig.savefig(andir+'d3/event_orientation_3d_{0:%Y%m%d_%H%M%S}.png'.format(i.to_pydatetime()),bbox_pad=.1,bbox_inches='tight')
-            tfig.clf()
-            plt.close()
-            plt.close()
-    
-
 
     def dtw_multi_parm(self,twind):
         """
@@ -2029,9 +1728,20 @@ def fancy_plot_small(ax):
     ax.tick_params(direction='in')
     return ax
 
-def omni_plot(self):
+def omni_plot(self,hours=mdates.HourLocator()):
     """
-    Function to plot 4-spacecraft plane solution at L1 compared to omni prediciton
+    Function to plot 4-spacecraft plane solution at L1 compared to omni prediciton. This function
+    was used to make the plots for AGU Fall 2018.
+
+    Parameters
+    -------------
+    self: Class
+        A dtw_plane class instance after the pred_earth function is already ran. 
+    hours: matplotlib.dates.HourLocator object, optional
+        The frequency which to label the time axis in the plots (Default =  mdates.HourLocator(), which is every hour).
+    Returns
+    ------------
+    None
 
     """
     from matplotlib.ticker import MaxNLocator
@@ -2143,8 +1853,8 @@ def omni_plot(self):
         #No longer need with restriction in theta angle 2018/11/20 J. Prchlik
         ######create pandas df and get rolling median value to plot
         #####window = '90s'
-        pre_df = pd.DataFrame(np.array([pre_x,pre_y]).T,columns=['time','SPEED'])
-        pre_df.set_index(pd.to_datetime(pre_df.time),inplace=True)
+        #pre_df = pd.DataFrame(np.array([pre_x,pre_y]).T,columns=['time','SPEED'])
+        #pre_df.set_index(pd.to_datetime(pre_df.time),inplace=True)
         #resample at a 2minute cadence
         #pre_df = pre_df.drop_duplicates('time').reindex(plsm[esp].index.drop_duplicates(),method='nearest').interpolate('time')
         #pre_df.drop_duplicates('time',keep='first',inplace=True) 
@@ -2185,7 +1895,7 @@ def omni_plot(self):
 
     #ax_omni.locator_params(axis='x', nbins=4)
     # format the ticks
-    hours = mdates.HourLocator()   # every hour
+    #hours =   # every hour
     hoursFmt = mdates.DateFormatter('%H')
     ax_omni.xaxis.set_major_locator(hours)
     ax_omni.xaxis.set_major_formatter(hoursFmt)
@@ -2259,3 +1969,245 @@ def movingaverage (values, window):
     #extapolate to start to keep sma the same size as values
     sma = np.insert(sma,0,(window-1)*[sma[0]])
     return sma
+
+
+
+        
+        
+def plane_animation(self,andir = '../plots/boutique_ana/'):
+        
+    """
+    Creates a series of plots that can be used for a movie showing successively propogation solar wind planes.
+
+    Parameters
+    -------------
+    self: Class
+        A dtw_plane class instance after the pred_earth function is already ran. 
+    andir: string, optional
+        String value to plotting directory for the animation. Directory must already exist (Default = '../plots/boutique_ana/').
+    """
+    #reset variables to local variables
+    Re = self.Re # Earth radius in km
+    start_t  = self.start_t 
+    end_t    = self.end_t   
+    center   = self.center  
+    par      = self.par     
+    justparm = self.justparm
+    marker   = self.marker
+    color    = self.color
+    plsm     = self.plsm
+    
+    #set use to use all spacecraft
+    craft = self.craft #['Wind','DSCOVR','ACE','SOHO']
+    col   = self.col   #['blue','black','red','teal']
+    mar   = self.mar   #['D','o','s','<']
+    trainer = self.trainer
+    #sim_date =  pd.date_range(start=start_t,end=end_t,freq='60S')
+    #switched to Wind index for looping and creating figures 2018/03/15
+    sim_date = plsm[trainer][start_t:end_t].index[::100]
+
+
+    #get data from THEMIS prediction
+    esp = self.earth_craft[0]
+    #time "event" is observed at Wind
+    pre_t = mdates.num2date(np.array(self.event_dict[esp+'_time']))[::1000]
+    #pre_t = np.array(self.event_dict[esp+'_time'])
+    #The velocity of the propograting vector 
+    pre_v = np.array(self.event_dict[esp+'_velo'])[::1000]
+    #The normal of the propogating vector
+    pre_n = np.array(self.event_dict[esp+'_nvec'])[::1000]
+    #pre_d = np.array(self.event_dict[esp+'_dist'])
+
+    
+
+    for p,l in enumerate(sim_date):
+        #list of colors
+        cycol = cycle(['blue','green','red','cyan','magenta','black','teal','orange'])
+    
+        #Create figure showing space craft orientation
+        ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(18,18))
+        
+        #set orientation lables
+        oax[1,1].axis('off')
+        oax[0,0].set_title('{0:%Y/%m/%d %H:%M:%S}'.format(l),fontsize=20)
+        oax[0,0].set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
+        oax[0,0].set_ylabel('Z(GSE) [R$_\oplus$]',fontsize=20)
+        oax[0,1].set_xlabel('Y(GSE) [R$_\oplus$]',fontsize=20)
+        oax[0,1].set_ylabel('Z(GSE) [R$_\oplus$]',fontsize=20)
+        oax[1,0].set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
+        oax[1,0].set_ylabel('Y(GSE) [R$_\oplus$]',fontsize=20)
+    
+       
+    
+        
+        #get the wind plane values for given x, y, or z
+        counter = np.linspace(-1e10,1e10,5)
+        windloc = np.zeros(counter.size)
+    
+        #+/- range for plane
+        rng = np.linspace(-1.e10,1.e10,100)
+    
+        #set off axis values to 0
+        ##zvalsx = -(a*(px+rng)+b*(py+rng)-d)/c
+        ##zvalsy = -(a*(px+rng)+b*(py+rng)-d)/c
+        ##yvalsx = -(a*(px+rng)+c*(pz+rng)-d)/b
+        ###plot 2d plot
+        ##oax[0,0].plot((px+rng)/Re,zvalsx/Re,color='gray',label="Current")
+        ##oax[1,0].plot((px+rng)/Re,yvalsx/Re,color='gray',label=None)
+        ##oax[0,1].plot((py+rng)/Re,zvalsy/Re,color='gray',label=None)
+    
+    
+        ###########################################################
+        ###########################################################
+    
+        #add fancy_plot to 2D plots
+        for pax in oax.ravel(): fancy_plot(pax)
+    
+        #Wind coordinates
+        px = float(self.plsm[trainer].loc[l,'GSEx'])
+        py = float(self.plsm[trainer].loc[l,'GSEy'])
+        pz = float(self.plsm[trainer].loc[l,'GSEz'])
+    
+    
+        #Add radially propogating CME shock front    
+        for j,i in enumerate(pre_t):
+            #color to use
+            cin = next(cycol)
+
+            #get variable store in large array
+            vm = pre_v[j]
+            vn = pre_n[j].ravel()
+
+            #give temp variables to some parameters
+            vx,vy,vz = vn.ravel()*float(vm)
+
+            #timeself.event_dict difference between now and event
+            fmt_i = pd.to_datetime(i)
+            #fmt_i.tz_convert(None,inplace=True)
+            fmt_l = l.tz_localize(fmt_i.tz)
+            dt = (fmt_i-fmt_l).total_seconds()
+    
+    
+          
+            #theta normal angle
+            theta = float(np.arctan(vn[2]/np.sqrt(vn[0]**2+vn[1]**2)))*180./np.pi
+    
+            #leave loop if shock is not within 00 seconds therefore do not plot
+            if np.abs(dt) > 2*3600.: continue
+    
+    
+            #solve for the plane at time l
+            #first get the points
+            ps = np.matrix([[vx],[vy],[vz]])*dt+np.matrix([[px],[py],[pz]])
+    
+            #get the magentiude of the position
+            pm  = float(np.linalg.norm(ps))
+            
+    
+            #Switched to solve_coeff function 2018/04/24 J. Prchlik
+            a,b,c,d = solve_coeff(ps,vn)
+    
+            #get the plane values for given x, y, or z
+            counter = np.linspace(-1e10,1e10,5)
+            windloc = np.zeros(counter.size)
+    
+            #set off axis values to 0
+            zvalsx = -(a*counter-d)/c
+            zvalsy = -(b*counter-d)/c
+            yvalsx = -(a*counter-d)/b
+    
+    
+            #get shock Np value (use bfill to get values from the next good Np value) 
+            np_df = plsm[trainer+'_offset'].Np.dropna()
+            np_vl = np_df.index.get_loc(l,method='bfill')
+            np_op = np_df.iloc[np_vl]
+            
+    
+            #oax[0,0].text((vx*dt+px)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
+            #oax[1,0].text((vx*dt+px)[0],(vy*dt+py)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
+            #oax[0,1].text((vy*dt+py)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
+            #No need to solve for plane because I have values from the normal vector 2018/03/15 J. Prchlik
+            #####plot 3d plot
+            #####fit plane
+            #####c, normal = fitPlaneLTSQ(xvals,yvals,zvals)
+            #####try different way to fit plane
+            ####A = np.c_[xvals,yvals,np.ones(xvals.size)]
+            #####get cooefficience
+            ####C,_,_,_ = scipy.linalg.lstsq(A,zvals)
+            #create center point (use Wind)
+            #point = np.array([xvals[0], yvals[0], zvals[0]])
+            ##solve for d in a*x+b*y+c*z+d = 0
+            #d = -point.dot(normal) #create normal surface
+            #create mesh grid
+            #Get max and min values
+            maxx = 1900000.
+            maxy = 300000.
+            minx = 1200000.
+            miny = -600000.
+    
+            #make x and y grids
+            xg = np.array([minx,maxx])
+            yg = np.array([miny,maxy])
+    
+            # compute needed points for plane plotting
+            xt, yt = np.meshgrid(xg, yg)
+            #zt = (-normal[0]*xt - normal[1]*yt - d)*1. / normal[2]
+            #create z surface
+            #switched to exact a,b,c from above 2018/03/15
+            zt = -(a*xt+d*yt-d)/c
+    
+    
+            #get sorted value array
+            #xvals = xt.ravel()
+            #yvals = yt.ravel()
+            #zvals = zt.ravel()
+            #zvals = xvals*C[0]+yvals*C[1]+C[2]
+    
+            #plot 2d plot
+            oax[0,0].plot(counter/Re,zvalsx/Re,color=cin)
+                          #label='Event {0:1d}, N$_p$ = {1:3.2f} cc, t$_W$={2:%H:%M:%S}, $|$V$|$={3:4.2f} km/s, {5} = {4:3.2f}'.format(p+1,np_op,l,vm,-theta,r'$\theta_\mathrm{Bn}$').replace('cc','cm$^{-3}$'))
+            oax[1,0].plot(counter/Re,yvalsx/Re,color=cin,label=None)
+            oax[0,1].plot(counter/Re,zvalsy/Re,color=cin,label=None)
+    
+    
+        #get array of x,y,z spacecraft positions
+        #spacraft positions
+        for k in craft:
+            #Get closest index value location
+            ii = plsm[k].GSEx.dropna().index.get_loc(l,method='nearest')
+            #convert index location back to time index
+            it = plsm[k].GSEx.dropna().index[ii]
+    
+            oax[0,0].scatter(plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEz']/Re,marker=marker[k],s=80,color=color[k],label=k)
+            oax[1,0].scatter(plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEy']/Re,marker=marker[k],s=80,color=color[k],label=None)
+            oax[0,1].scatter(plsm[k].loc[it,'GSEy']/Re,plsm[k].loc[it,'GSEz']/Re,marker=marker[k],s=80,color=color[k],label=None)
+    
+    
+        #set static limits from orbit maximum from SOHO file in Re
+        #z limits
+        z_lim = np.array([-1.,1])*240.
+        oax[0,0].set_ylim(z_lim)
+        oax[0,1].set_ylim(z_lim)
+        #xlimits
+        x_lim = np.array([-100.,450])#*300.0+200.
+        oax[0,0].set_xlim(x_lim)
+        oax[1,0].set_xlim(x_lim)
+        #y limits
+        y_lim = np.array([-1.,1])*120.0
+        oax[0,1].set_xlim(y_lim)
+        oax[1,0].set_ylim(y_lim)
+        
+        oax[0,0].legend(loc='upper right',frameon=False,scatterpoints=1)
+    
+    
+        #rotate y,z y axis tick labels
+        for tick in oax[0,1].get_xticklabels():
+            tick.set_rotation(45)
+    
+        #Save spacecraft orientation plots
+        ofig.savefig(andir+'event_orientation_{0:%Y%m%d_%H%M%S}.png'.format(l),bbox_pad=.1,bbox_inches='tight')
+        ofig.clf()
+        plt.close()
+        plt.close()
+    
+    
