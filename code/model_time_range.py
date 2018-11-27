@@ -1,5 +1,7 @@
 import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
 from itertools import cycle
 from spacepy import pycdf
 import matplotlib.dates as mdates
@@ -2010,12 +2012,12 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
     #get data from THEMIS prediction
     esp = self.earth_craft[0]
     #time "event" is observed at Wind
-    pre_t = mdates.num2date(np.array(self.event_dict[esp+'_time']))[::1000]
+    pre_t = mdates.num2date(np.array(self.event_dict[esp+'_time']))[::100]
     #pre_t = np.array(self.event_dict[esp+'_time'])
     #The velocity of the propograting vector 
-    pre_v = np.array(self.event_dict[esp+'_velo'])[::1000]
+    pre_v = np.array(self.event_dict[esp+'_velo'])[::100]
     #The normal of the propogating vector
-    pre_n = np.array(self.event_dict[esp+'_nvec'])[::1000]
+    pre_n = np.array(self.event_dict[esp+'_nvec'])[::100]
     #pre_d = np.array(self.event_dict[esp+'_dist'])
 
     
@@ -2025,15 +2027,15 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
         cycol = cycle(['blue','green','red','cyan','magenta','black','teal','orange'])
     
         #Create figure showing space craft orientation
-        ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(18,18))
+        ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(8,8))
         
         #set orientation lables
         oax[1,1].axis('off')
         oax[0,0].set_title('{0:%Y/%m/%d %H:%M:%S}'.format(l),fontsize=20)
-        oax[0,0].set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
+        #oax[0,0].set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
         oax[0,0].set_ylabel('Z(GSE) [R$_\oplus$]',fontsize=20)
         oax[0,1].set_xlabel('Y(GSE) [R$_\oplus$]',fontsize=20)
-        oax[0,1].set_ylabel('Z(GSE) [R$_\oplus$]',fontsize=20)
+       #oax[0,1].set_ylabel('Z(GSE) [R$_\oplus$]',fontsize=20)
         oax[1,0].set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
         oax[1,0].set_ylabel('Y(GSE) [R$_\oplus$]',fontsize=20)
     
@@ -2140,21 +2142,36 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
             #d = -point.dot(normal) #create normal surface
             #create mesh grid
             #Get max and min values
-            maxx = 1900000.
-            maxy = 300000.
-            minx = 1200000.
-            miny = -600000.
+            ##maxx = 1900000.
+            ##maxy = 300000.
+            ##minx = 1200000.
+            ##miny = -600000.
+
+            #Use value limits from Weimer et al. (2002)
+            maxx =  400.*Re
+            maxy =  150.*Re
+            maxz =  150.*Re
+            minx = -50.*Re
+            miny = -150.*Re
+            minz = -150.*Re
     
             #make x and y grids
             xg = np.array([minx,maxx])
             yg = np.array([miny,maxy])
+            zg = np.array([minz,maxz])
     
             # compute needed points for plane plotting
             xt, yt = np.meshgrid(xg, yg)
+            xt, yt = xt.T, yt.T
+            #simplify grid
+            xt = np.array([minx,maxx,maxx,minx])
+            yt = np.array([maxy,maxy,miny,miny])
             #zt = (-normal[0]*xt - normal[1]*yt - d)*1. / normal[2]
             #create z surface
             #switched to exact a,b,c from above 2018/03/15
-            zt = -(a*xt+d*yt-d)/c
+            zvalsx = -(a*xt+b*yt-d)/c
+            yvalsx = -(a*xt+c*yt-d)/b #works only because I set min(y), max(y) equal to min(z), max(z), respectively
+            zvalsy = -(a*xt+b*yt-d)/c
     
     
             #get sorted value array
@@ -2164,10 +2181,32 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
             #zvals = xvals*C[0]+yvals*C[1]+C[2]
     
             #plot 2d plot
-            oax[0,0].plot(counter/Re,zvalsx/Re,color=cin)
                           #label='Event {0:1d}, N$_p$ = {1:3.2f} cc, t$_W$={2:%H:%M:%S}, $|$V$|$={3:4.2f} km/s, {5} = {4:3.2f}'.format(p+1,np_op,l,vm,-theta,r'$\theta_\mathrm{Bn}$').replace('cc','cm$^{-3}$'))
-            oax[1,0].plot(counter/Re,yvalsx/Re,color=cin,label=None)
-            oax[0,1].plot(counter/Re,zvalsy/Re,color=cin,label=None)
+            ###oax[0,0].plot(counter/Re,zvalsx/Re,color=cin,label=None,linewidth=4)
+            ###oax[1,0].plot(counter/Re,yvalsx/Re,color=cin,label=None,linewidth=4)
+            ###oax[0,1].plot(counter/Re,zvalsy/Re,color=cin,label=None,linewidth=4)
+
+            #print([xt.ravel()/Re,zvalsx.ravel()/Re])
+            #print(np.array([xt.ravel()/Re,zvalsx.ravel()/Re]))
+
+            #xt_sort = np.argsort(xt.ravel())
+            #yt_sort = np.argsort(yt.ravel())
+
+            #create polygons
+            xz_poly = Polygon(np.array([xt.ravel()/Re,zvalsx.ravel()/Re]).T,True,alpha=0.4,color=cin)
+            xy_poly = Polygon(np.array([xt.ravel()/Re,yvalsx.ravel()/Re]).T,True,alpha=0.4,color=cin)
+            yz_poly = Polygon(np.array([yt.ravel()/Re,zvalsy.ravel()/Re]).T,True,alpha=0.4,color=cin)
+
+
+
+            #xz_path = Patch(xz_poly)
+            #xy_path = Patch(xy_poly)
+            #yz_path = Patch(yz_poly)
+
+
+            oax[0,0].add_patch(xz_poly)
+            oax[1,0].add_patch(xy_poly)
+            oax[0,1].add_patch(yz_poly)
     
     
         #get array of x,y,z spacecraft positions
