@@ -1,4 +1,5 @@
 import pandas as pd
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
@@ -2005,14 +2006,16 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
     mar   = self.mar   #['D','o','s','<']
     trainer = self.trainer
     #sim_date =  pd.date_range(start=start_t,end=end_t,freq='60S')
-    #switched to Wind index for looping and creating figures 2018/03/15
-    sim_date = plsm[trainer][start_t:end_t].index[::100]
 
 
     #get data from THEMIS prediction
     esp = self.earth_craft[0]
+    #switched to Wind index for looping and creating figures 2018/03/15
+    sim_date = plsm[esp][start_t:end_t].index[::100]
     #time "event" is observed at Wind
-    pre_t = mdates.num2date(np.array(self.event_dict[esp+'_time']))[::100]
+    pre_t = mdates.num2date(np.array(self.event_dict[esp+'_time']),tz=None)[::100]
+    #get a pandas formatted time
+    fmt_t =  pd.to_datetime(pre_t)
     #pre_t = np.array(self.event_dict[esp+'_time'])
     #The velocity of the propograting vector 
     pre_v = np.array(self.event_dict[esp+'_velo'])[::100]
@@ -2031,6 +2034,13 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
         
         #set orientation lables
         oax[1,1].axis('off')
+
+        #Create axes inside [1,1]
+        vec_ax_1 = inset_axes(oax[1,1], width="40%", height="40%", loc=3)
+        vec_ax_2 = inset_axes(oax[1,1], width="40%", height="40%", loc=4)
+
+
+
         oax[0,0].set_title('{0:%Y/%m/%d %H:%M:%S}'.format(l),fontsize=20)
         #oax[0,0].set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
         oax[0,0].set_ylabel('Z(GSE) [R$_\oplus$]',fontsize=20)
@@ -2066,10 +2076,18 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
         for pax in oax.ravel(): fancy_plot(pax)
     
         #Wind coordinates
-        px = float(self.plsm[trainer].loc[l,'GSEx'])
-        py = float(self.plsm[trainer].loc[l,'GSEy'])
-        pz = float(self.plsm[trainer].loc[l,'GSEz'])
+        px = float(self.plsm[esp].loc[l,'GSEx'])
+        py = float(self.plsm[esp].loc[l,'GSEy'])
+        pz = float(self.plsm[esp].loc[l,'GSEz'])
     
+        #caculate time differences between front at THEMIS and current time
+        #timeself.event_dict difference between now and event
+        #fmt_i = pd.to_datetime(i)
+        #fmt_i.tz_convert(None,inplace=True)
+        fmt_l = l.tz_localize(fmt_t[0].tz)
+        dt = (fmt_t-fmt_l).total_seconds()
+
+        
     
         #Add radially propogating CME shock front    
         for j,i in enumerate(pre_t):
@@ -2083,11 +2101,6 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
             #give temp variables to some parameters
             vx,vy,vz = vn.ravel()*float(vm)
 
-            #timeself.event_dict difference between now and event
-            fmt_i = pd.to_datetime(i)
-            #fmt_i.tz_convert(None,inplace=True)
-            fmt_l = l.tz_localize(fmt_i.tz)
-            dt = (fmt_i-fmt_l).total_seconds()
     
     
           
@@ -2095,12 +2108,12 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
             theta = float(np.arctan(vn[2]/np.sqrt(vn[0]**2+vn[1]**2)))*180./np.pi
     
             #leave loop if shock is not within 00 seconds therefore do not plot
-            if np.abs(dt) > 2*3600.: continue
+            if np.abs(dt[j]) > 2*3600.: continue
     
     
             #solve for the plane at time l
             #first get the points
-            ps = np.matrix([[vx],[vy],[vz]])*dt+np.matrix([[px],[py],[pz]])
+            ps = np.matrix([[vx],[vy],[vz]])*dt[j]+np.matrix([[px],[py],[pz]])
     
             #get the magentiude of the position
             pm  = float(np.linalg.norm(ps))
@@ -2197,6 +2210,16 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
             xy_poly = Polygon(np.array([xt.ravel()/Re,yvalsx.ravel()/Re]).T,True,alpha=0.4,color=cin)
             yz_poly = Polygon(np.array([yt.ravel()/Re,zvalsy.ravel()/Re]).T,True,alpha=0.4,color=cin)
 
+            #Add normal vector
+            #if k == esp:
+            #Plot normal vector with nearest arrive time at THEMIS
+            if np.abs(dt[j]) == np.abs(dt).min():
+            #if np.abs(dt[j]) <= 10.*60.:
+                 vec_ax_1.arrow(0,0,vn[0]                     ,vn[1],color=cin,head_width=.1,width=0.01,label=None,length_includes_head=True)
+                 vec_ax_2.arrow(0,0,np.sqrt(vn[0]**2+vn[1]**2),vn[2],color=cin,head_width=.1,width=0.01,label=None,length_includes_head=True)
+                ##oax[0,0].quiver(0,0,vn[0],vn[2],color=cin,label=None)
+                ##oax[1,0].quiver(0,0,vn[0],vn[1],color=cin,label=None)
+                ##oax[0,1].quiver(0,0,vn[1],vn[2],color=cin,label=None)
 
 
             #xz_path = Patch(xz_poly)
@@ -2207,6 +2230,7 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
             oax[0,0].add_patch(xz_poly)
             oax[1,0].add_patch(xy_poly)
             oax[0,1].add_patch(yz_poly)
+
     
     
         #get array of x,y,z spacecraft positions
@@ -2220,6 +2244,7 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
             oax[0,0].scatter(plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEz']/Re,marker=marker[k],s=80,color=color[k],label=k)
             oax[1,0].scatter(plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEy']/Re,marker=marker[k],s=80,color=color[k],label=None)
             oax[0,1].scatter(plsm[k].loc[it,'GSEy']/Re,plsm[k].loc[it,'GSEz']/Re,marker=marker[k],s=80,color=color[k],label=None)
+
     
     
         #set static limits from orbit maximum from SOHO file in Re
@@ -2238,6 +2263,27 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
         
         oax[0,0].legend(loc='upper right',frameon=False,scatterpoints=1)
     
+
+        #Set axis limits for vectors
+        vec_ax_1.set_xlim([-1,1]) 
+        vec_ax_2.set_xlim([1,-1]) 
+        vec_ax_1.set_ylim([-1,1])
+        vec_ax_2.set_ylim([-1,1])
+
+        #Set axis limits for vectors
+        fancy_plot(vec_ax_1) #.set_xlim([-1,1]) 
+        fancy_plot(vec_ax_2) #.set_xlim([-1,1]) 
+        fancy_plot(vec_ax_1) #.set_ylim([-1,1])
+        fancy_plot(vec_ax_2) #.set_ylim([-1,1])
+
+
+        #create labels
+        small_font = 16
+        vec_ax_1.set_xlabel('$n_\mathrm{X}$',fontsize=small_font)
+        vec_ax_2.set_xlabel(r'($n_\mathrm{X}^2$+$n_\mathrm{Y}^2$)$^\frac{1}{2}$',fontsize=small_font)
+        vec_ax_1.set_ylabel('$n_\mathrm{Y}$',fontsize=small_font)
+        vec_ax_2.set_ylabel('$n_\mathrm{Z}$',fontsize=small_font)
+        vec_ax_2.yaxis.set_label_position("right")       
     
         #rotate y,z y axis tick labels
         for tick in oax[0,1].get_xticklabels():
