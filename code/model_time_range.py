@@ -2296,3 +2296,28 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
         plt.close()
     
     
+def print_ave_offsets(self):
+    """
+    A simple function that prints the interesting times of prediction, the coordinates of the Earth Craft at that time,
+    and the 5th and 95th percentile of time offsets for SOHO, DSCOVR, and ACE
+
+    Parameters
+    -------------
+    self: Class
+        A dtw_plane class instance after running iterate DTW. 
+    """
+
+
+    wind = self.plsm['Wind'].index.min()
+    dscvr= np.percentile(self.plsm['DSCOVR_offset'].offsets,(5,95))*1.e-9/60.
+    ace  = np.percentile(self.plsm['ACE_offset'].offsets,(5,95))*1.e-9   /60.
+    soho = np.percentile(self.plsm['SOHO_offset'].offsets,(5,95))*1.e-9  /60.
+    print('####################################################')
+    print('DSCVOR-Wind (5%,95%) = {0:2.1f},{1:2.1f}m'.format(*dscvr))
+    print('ACE   -Wind (5%,95%) = {0:2.1f},{1:2.1f}m'.format(*ace))
+    print('SOHO  -Wind (5%,95%) = {0:2.1f},{1:2.1f}m'.format(*soho))
+
+    print('THEMIS Coordinates and Time')
+    print(self.plsm[self.earth_craft[0]].index.max())
+    print(self.plsm[self.earth_craft[0]][['GSEx','GSEy','GSEz']].mean()/self.Re)
+    print('####################################################')
