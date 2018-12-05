@@ -2262,7 +2262,36 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
         oax[1,0].set_ylim(y_lim)
         
         oax[0,0].legend(loc='upper right',frameon=False,scatterpoints=1)
+
+
+        #Add Earth's Bow Shock 2018/12/04 J. Prchlik
+        #y^2+Axy+Bx^2+Cy+Dx+E=0
+        #Assume y=z
+        #Parameters are from Fairfield et  al. 1971 Table 2 X Rotation No 4
+        A =  0.2164
+        B = -0.0986
+        C = -4.26
+        D =  44.916
+        E = -623.77
+
+        #Sample xvalue
+        y_v = np.linspace(-100,100,100)
+
+
+        #Define simplifying constants
+        F = A*y_v+D
+        G = y_v**2+C*y_v+E
+       
+        #Get positive root of solution
+        x_v = (-F+np.sqrt(F**2-4*G*B))/(2.*B)
     
+        #plot Bow shock
+        oax[0,0].plot(x_v,y_v,linewidth=2,color='black',label=None)
+        oax[1,0].plot(x_v,y_v,linewidth=2,color='black',label=None)
+  
+        #Now do it for y,z Bow shock is meaningless in this orientation (face on)
+        #oax[0,1].plot(,,linewidth=2,color='black',label=None)
+
 
         #Set axis limits for vectors
         vec_ax_1.set_xlim([-1,1]) 
@@ -2321,3 +2350,5 @@ def print_ave_offsets(self):
     print(self.plsm[self.earth_craft[0]].index.max())
     print(self.plsm[self.earth_craft[0]][['GSEx','GSEy','GSEz']].mean()/self.Re)
     print('####################################################')
+
+
