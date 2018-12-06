@@ -2274,6 +2274,15 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
         D =  44.916
         E = -623.77
 
+        #Merdian 4 deg
+        #More even so use this one 2018/12/05 J. Prchlik
+        A =  0.0296
+        B = -0.0381
+        C = -1.280
+        D =  45.664
+        E = -652.10
+
+
         #Sample xvalue
         y_v = np.linspace(-100,100,100)
 
