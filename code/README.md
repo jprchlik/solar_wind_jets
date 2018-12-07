@@ -1,5 +1,9 @@
 Directory containing programs to analyze solar wind observations.
 
+dtw_example_agu_2018.ipynb
+------------------------
+Six worked examples used for AGU 2018.
+
 bin_shock_time.py
 ----------------
 Old, just returned discontinuities as a function of time.
