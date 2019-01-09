@@ -2178,9 +2178,10 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
         #vec_xy.set_xy([[],[]],[[],[]])
         #vec_rz.set_xy([[],[]],[[],[]])
         #print('HERE')
+        title_time.set_text('') 
 
 
-        return vec_xy,vec_rz
+        return vec_xy,vec_rz,title_time
 
     #Function to run the animation (basically just runs the loop)
     def animate(k):
@@ -2199,6 +2200,10 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
         l = sim_date[k]
         #list of colors to use for the planes
         cycol = cycle(['blue','green','red','cyan','magenta','black','teal','orange'])
+
+        #set title of plot
+        title_time.set_text('{0:%Y/%m/%d %H:%M:%S}'.format(l))
+
 
         #get the wind plane values for given x, y, or z
         counter = np.linspace(-1e10,1e10,5)
