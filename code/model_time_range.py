@@ -1989,6 +1989,13 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
     andir: string, optional
         String value to plotting directory for the animation. Directory must already exist (Default = '../plots/boutique_ana/').
     """
+    #get animation function from matplotlib
+    from matplotlib import animation
+
+    #make sure andir ends with a '/'
+    if andir[-1] != '/':
+        andir += '/'
+
     #reset variables to local variables
     Re = self.Re # Earth radius in km
     start_t  = self.start_t 
@@ -2025,70 +2032,201 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
 
     
 
-    for p,l in enumerate(sim_date):
-        #list of colors
+    #SWITCH to Just creation of mp4 using animate in matplotlib
+    #Create figure showing space craft orientation
+    ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(8,8))
+    #set orientation labels
+    oax[1,1].axis('off')
+    
+    #Create axes inside [1,1] (bottom left) will be used for the vector normal
+    vec_ax_1 = inset_axes(oax[1,1], width="40%", height="40%", loc=3)
+    vec_ax_2 = inset_axes(oax[1,1], width="40%", height="40%", loc=4)
+
+ 
+    #create a title object to pass to the animation function
+    title_time = oax[0,0].set_title('{0:%Y/%m/%d %H:%M:%S}'.format(sim_date[0]),fontsize=20)
+
+    #These labels are statics, so no need to create objects for them
+    #oax[0,0].set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
+    oax[0,0].set_ylabel('Z(GSE) [R$_\oplus$]',fontsize=20)
+    oax[0,1].set_xlabel('Y(GSE) [R$_\oplus$]',fontsize=20)
+    #oax[0,1].set_ylabel('Z(GSE) [R$_\oplus$]',fontsize=20)
+    oax[1,0].set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
+    oax[1,0].set_ylabel('Y(GSE) [R$_\oplus$]',fontsize=20)
+
+    #add fancy_plot to 2D plots
+    for pax in oax.ravel():
+        fancy_plot(pax)
+
+
+
+    #set static limits from orbit maximum from SOHO file in Re
+    #z limits
+    z_lim = np.array([-1.,1])*240.
+    oax[0,0].set_ylim(z_lim)
+    oax[0,1].set_ylim(z_lim)
+    #xlimits
+    x_lim = np.array([-100.,450])#*300.0+200.
+    oax[0,0].set_xlim(x_lim)
+    oax[1,0].set_xlim(x_lim)
+    #y limits
+    y_lim = np.array([-1.,1])*120.0
+    oax[0,1].set_xlim(y_lim)
+    oax[1,0].set_ylim(y_lim)
+    
+    oax[0,0].legend(loc='upper right',frameon=False,scatterpoints=1)
+
+
+    #Add Earth's Bow Shock 2018/12/04 J. Prchlik
+    #y^2+Axy+Bx^2+Cy+Dx+E=0
+    #Assume y=z
+    #Parameters are from Fairfield et  al. 1971 Table 2 X Rotation No 4
+    A =  0.2164
+    B = -0.0986
+    C = -4.26
+    D =  44.916
+    E = -623.77
+
+    #Merdian 4 deg
+    #More even so use this one 2018/12/05 J. Prchlik
+    A =  0.0296
+    B = -0.0381
+    C = -1.280
+    D =  45.664
+    E = -652.10
+
+
+    #Sample xvalue
+    y_v = np.linspace(-100,100,100)
+
+
+    #Define simplifying constants
+    F = A*y_v+D
+    G = y_v**2+C*y_v+E
+    
+    #Get positive root of solution
+    x_v = (-F+np.sqrt(F**2-4*G*B))/(2.*B)
+    
+    #plot Bow shock
+    oax[0,0].plot(x_v,y_v,linewidth=2,color='black',label=None)
+    oax[1,0].plot(x_v,y_v,linewidth=2,color='black',label=None)
+  
+    #Now do it for y,z Bow shock is meaningless in this orientation (face on)
+    #oax[0,1].plot(,,linewidth=2,color='black',label=None)
+
+
+    #Set axis limits for vectors
+    vec_ax_1.set_xlim([-1,1]) 
+    vec_ax_2.set_xlim([1,-1]) 
+    vec_ax_1.set_ylim([-1,1])
+    vec_ax_2.set_ylim([-1,1])
+
+    #Set axis limits for vectors
+    fancy_plot(vec_ax_1)
+    fancy_plot(vec_ax_2)
+
+
+    #create labels
+    small_font = 16
+    vec_ax_1.set_xlabel('$n_\mathrm{X}$',fontsize=small_font)
+    vec_ax_2.set_xlabel(r'($n_\mathrm{X}^2$+$n_\mathrm{Y}^2$)$^\frac{1}{2}$',fontsize=small_font)
+    vec_ax_1.set_ylabel('$n_\mathrm{Y}$',fontsize=small_font)
+    vec_ax_2.set_ylabel('$n_\mathrm{Z}$',fontsize=small_font)
+    vec_ax_2.yaxis.set_label_position("right")       
+    
+    #rotate y,z y axis tick labels
+    for tick in oax[0,1].get_xticklabels():
+        tick.set_rotation(45)
+
+    #set up vector plots
+    vec_xy = vec_ax_1.arrow(0,0,1,1,color='black',head_width=.1,width=0.01,label=None,length_includes_head=True)
+    vec_rz = vec_ax_2.arrow(0,0,1,1,color='black',head_width=.1,width=0.01,label=None,length_includes_head=True)
+
+    #Dictionary for locations of the Spacecraft
+    loc_dic = {}
+    #get array of x,y,z spacecraft positions
+    #spacraft positions
+    for k in craft:
+        #Get closest index value location
+        ii = plsm[k].GSEx.dropna().index.get_loc(sim_date[0],method='nearest')
+        #convert index location back to time index
+        it = plsm[k].GSEx.dropna().index[ii]
+    
+        loc_dic[k+'_xz'] = oax[0,0].scatter(plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEz']/Re,marker=marker[k],s=80,color=color[k],label=k)
+        loc_dic[k+'_xy'] = oax[1,0].scatter(plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEy']/Re,marker=marker[k],s=80,color=color[k],label=None)
+        loc_dic[k+'_yz'] = oax[0,1].scatter(plsm[k].loc[it,'GSEy']/Re,plsm[k].loc[it,'GSEz']/Re,marker=marker[k],s=80,color=color[k],label=None)
+
+    
+    #dictionary for path objects created
+    patch_dic = {}
+
+    #Create function to initialize animation
+    def init_an():
+        """
+        Initializes variables used in the animation of the solar wind.
+
+        Returns
+        -------
+        """
+        #removed positions of the space craft
+        for k in craft:
+            loc_dic[k+'_xz'].set_offsets([[],[]])
+            loc_dic[k+'_xy'].set_offsets([[],[]])
+            loc_dic[k+'_yz'].set_offsets([[],[]])
+
+        #remove vectors from plot
+        #vec_xy.set_xy([[],[]],[[],[]])
+        #vec_rz.set_xy([[],[]],[[],[]])
+        #print('HERE')
+
+
+        return vec_xy,vec_rz
+
+    #Function to run the animation (basically just runs the loop)
+    def animate(k):
+        """
+        Animates the propogation of the solar wind using a simulated time l.
+
+        Parameters
+        ----------
+        l : pd.datetime index object
+            A pandas datatime index corresponding to a specific time in the refernce spacecraft's
+            (usually Wind) observations.
+        
+        Output
+        ------
+        """
+        l = sim_date[k]
+        #list of colors to use for the planes
         cycol = cycle(['blue','green','red','cyan','magenta','black','teal','orange'])
-    
-        #Create figure showing space craft orientation
-        ofig, oax = plt.subplots(nrows=2,ncols=2,gridspec_kw={'height_ratios':[2,1],'width_ratios':[2,1]},figsize=(8,8))
-        
-        #set orientation lables
-        oax[1,1].axis('off')
 
-        #Create axes inside [1,1]
-        vec_ax_1 = inset_axes(oax[1,1], width="40%", height="40%", loc=3)
-        vec_ax_2 = inset_axes(oax[1,1], width="40%", height="40%", loc=4)
-
-
-
-        oax[0,0].set_title('{0:%Y/%m/%d %H:%M:%S}'.format(l),fontsize=20)
-        #oax[0,0].set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
-        oax[0,0].set_ylabel('Z(GSE) [R$_\oplus$]',fontsize=20)
-        oax[0,1].set_xlabel('Y(GSE) [R$_\oplus$]',fontsize=20)
-       #oax[0,1].set_ylabel('Z(GSE) [R$_\oplus$]',fontsize=20)
-        oax[1,0].set_xlabel('X(GSE) [R$_\oplus$]',fontsize=20)
-        oax[1,0].set_ylabel('Y(GSE) [R$_\oplus$]',fontsize=20)
-    
-       
-    
-        
         #get the wind plane values for given x, y, or z
         counter = np.linspace(-1e10,1e10,5)
         windloc = np.zeros(counter.size)
-    
+
         #+/- range for plane
         rng = np.linspace(-1.e10,1.e10,100)
-    
-        #set off axis values to 0
-        ##zvalsx = -(a*(px+rng)+b*(py+rng)-d)/c
-        ##zvalsy = -(a*(px+rng)+b*(py+rng)-d)/c
-        ##yvalsx = -(a*(px+rng)+c*(pz+rng)-d)/b
-        ###plot 2d plot
-        ##oax[0,0].plot((px+rng)/Re,zvalsx/Re,color='gray',label="Current")
-        ##oax[1,0].plot((px+rng)/Re,yvalsx/Re,color='gray',label=None)
-        ##oax[0,1].plot((py+rng)/Re,zvalsy/Re,color='gray',label=None)
-    
-    
-        ###########################################################
-        ###########################################################
-    
-        #add fancy_plot to 2D plots
-        for pax in oax.ravel(): fancy_plot(pax)
-    
+
+        #remove all path objects created on the plot
+        for z in patch_dic.keys():
+            #remove patch from plot
+            patch_dic[z].remove()
+            #remove patch from dictionary
+            patch_dic.pop(z,None)
+
         #Wind coordinates
         px = float(self.plsm[esp].loc[l,'GSEx'])
         py = float(self.plsm[esp].loc[l,'GSEy'])
         pz = float(self.plsm[esp].loc[l,'GSEz'])
-    
-        #caculate time differences between front at THEMIS and current time
-        #timeself.event_dict difference between now and event
-        #fmt_i = pd.to_datetime(i)
-        #fmt_i.tz_convert(None,inplace=True)
+
+        #Get time of l in local time then find difference between the
+        #input time and the time the front is at Wind
+        #The tz_localize is a hack because pandas inherents the local
+        #time zone, which can give you incorrects results if not 
+        #accounted for 2019/01/09 J. Prchlik
         fmt_l = l.tz_localize(fmt_t[0].tz)
         dt = (fmt_t-fmt_l).total_seconds()
 
-        
-    
         #Add radially propogating CME shock front    
         for j,i in enumerate(pre_t):
             #color to use
@@ -2107,8 +2245,9 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
             #theta normal angle
             theta = float(np.arctan(vn[2]/np.sqrt(vn[0]**2+vn[1]**2)))*180./np.pi
     
-            #leave loop if shock is not within 00 seconds therefore do not plot
-            if np.abs(dt[j]) > 2*3600.: continue
+            #leave loop if event is not within 2 hours (i.e., do not plot that event)
+            if np.abs(dt[j]) > 2*3600.:
+                continue
     
     
             #solve for the plane at time l
@@ -2137,28 +2276,6 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
             np_vl = np_df.index.get_loc(l,method='bfill')
             np_op = np_df.iloc[np_vl]
             
-    
-            #oax[0,0].text((vx*dt+px)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
-            #oax[1,0].text((vx*dt+px)[0],(vy*dt+py)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
-            #oax[0,1].text((vy*dt+py)[0],(vz*dt+pz)[0],plsm[trainer+'_offset'].loc[i,'Np'].dropna().min(),color='black')
-            #No need to solve for plane because I have values from the normal vector 2018/03/15 J. Prchlik
-            #####plot 3d plot
-            #####fit plane
-            #####c, normal = fitPlaneLTSQ(xvals,yvals,zvals)
-            #####try different way to fit plane
-            ####A = np.c_[xvals,yvals,np.ones(xvals.size)]
-            #####get cooefficience
-            ####C,_,_,_ = scipy.linalg.lstsq(A,zvals)
-            #create center point (use Wind)
-            #point = np.array([xvals[0], yvals[0], zvals[0]])
-            ##solve for d in a*x+b*y+c*z+d = 0
-            #d = -point.dot(normal) #create normal surface
-            #create mesh grid
-            #Get max and min values
-            ##maxx = 1900000.
-            ##maxy = 300000.
-            ##minx = 1200000.
-            ##miny = -600000.
 
             #Use value limits from Weimer et al. (2002)
             maxx =  400.*Re
@@ -2179,57 +2296,37 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
             #simplify grid
             xt = np.array([minx,maxx,maxx,minx])
             yt = np.array([maxy,maxy,miny,miny])
-            #zt = (-normal[0]*xt - normal[1]*yt - d)*1. / normal[2]
-            #create z surface
             #switched to exact a,b,c from above 2018/03/15
             zvalsx = -(a*xt+b*yt-d)/c
             yvalsx = -(a*xt+c*yt-d)/b #works only because I set min(y), max(y) equal to min(z), max(z), respectively
             zvalsy = -(a*xt+b*yt-d)/c
     
+            #Itentifier for this plane
+            pi = str(j)
     
-            #get sorted value array
-            #xvals = xt.ravel()
-            #yvals = yt.ravel()
-            #zvals = zt.ravel()
-            #zvals = xvals*C[0]+yvals*C[1]+C[2]
-    
-            #plot 2d plot
-                          #label='Event {0:1d}, N$_p$ = {1:3.2f} cc, t$_W$={2:%H:%M:%S}, $|$V$|$={3:4.2f} km/s, {5} = {4:3.2f}'.format(p+1,np_op,l,vm,-theta,r'$\theta_\mathrm{Bn}$').replace('cc','cm$^{-3}$'))
-            ###oax[0,0].plot(counter/Re,zvalsx/Re,color=cin,label=None,linewidth=4)
-            ###oax[1,0].plot(counter/Re,yvalsx/Re,color=cin,label=None,linewidth=4)
-            ###oax[0,1].plot(counter/Re,zvalsy/Re,color=cin,label=None,linewidth=4)
-
-            #print([xt.ravel()/Re,zvalsx.ravel()/Re])
-            #print(np.array([xt.ravel()/Re,zvalsx.ravel()/Re]))
-
-            #xt_sort = np.argsort(xt.ravel())
-            #yt_sort = np.argsort(yt.ravel())
-
             #create polygons
-            xz_poly = Polygon(np.array([xt.ravel()/Re,zvalsx.ravel()/Re]).T,True,alpha=0.4,color=cin)
-            xy_poly = Polygon(np.array([xt.ravel()/Re,yvalsx.ravel()/Re]).T,True,alpha=0.4,color=cin)
-            yz_poly = Polygon(np.array([yt.ravel()/Re,zvalsy.ravel()/Re]).T,True,alpha=0.4,color=cin)
+            patch_dic[pi+'_xz'] = Polygon(np.array([xt.ravel()/Re,zvalsx.ravel()/Re]).T,True,alpha=0.4,color=cin)
+            patch_dic[pi+'_xy'] = Polygon(np.array([xt.ravel()/Re,yvalsx.ravel()/Re]).T,True,alpha=0.4,color=cin)
+            patch_dic[pi+'_yz'] = Polygon(np.array([yt.ravel()/Re,zvalsy.ravel()/Re]).T,True,alpha=0.4,color=cin)
 
             #Add normal vector
-            #if k == esp:
             #Plot normal vector with nearest arrive time at THEMIS
             if np.abs(dt[j]) == np.abs(dt).min():
-            #if np.abs(dt[j]) <= 10.*60.:
-                 vec_ax_1.arrow(0,0,vn[0]                     ,vn[1],color=cin,head_width=.1,width=0.01,label=None,length_includes_head=True)
-                 vec_ax_2.arrow(0,0,np.sqrt(vn[0]**2+vn[1]**2),vn[2],color=cin,head_width=.1,width=0.01,label=None,length_includes_head=True)
-                ##oax[0,0].quiver(0,0,vn[0],vn[2],color=cin,label=None)
-                ##oax[1,0].quiver(0,0,vn[0],vn[1],color=cin,label=None)
-                ##oax[0,1].quiver(0,0,vn[1],vn[2],color=cin,label=None)
+                 #Remove previous arrows Just a hack so animation actually works 2019/01/09 J. Prchlik
+                 vec_xy.set_visible(False)#remove()
+                 vec_rz.set_visible(False)#remove()
+                 #vec_xy.set_xy(0,0,vn[0],vn[1])
+                 #vec_rz.set_xy(0,0,np.sqrt(vn[0]**2+vn[1]**2),vn[2])
+                 patch_dic[pi+'a1'] = vec_ax_1.arrow(0,0,vn[0],vn[1],color=cin,head_width=.1,width=0.01,label=None,length_includes_head=True)
+                 patch_dic[pi+'a2'] = vec_ax_2.arrow(0,0,np.sqrt(vn[0]**2+vn[1]**2),vn[2],color=cin,head_width=.1,width=0.01,label=None,length_includes_head=True)
+                 #Hack to make animation work. Without this line it fails
+                 #vec_xy.set_color(cin)
+                 #vec_rz.set_color(cin)
 
-
-            #xz_path = Patch(xz_poly)
-            #xy_path = Patch(xy_poly)
-            #yz_path = Patch(yz_poly)
-
-
-            oax[0,0].add_patch(xz_poly)
-            oax[1,0].add_patch(xy_poly)
-            oax[0,1].add_patch(yz_poly)
+            #Add patchs corresponding to solar wind planes
+            oax[0,0].add_patch(patch_dic[pi+'_xz'])
+            oax[1,0].add_patch(patch_dic[pi+'_xy'])
+            oax[0,1].add_patch(patch_dic[pi+'_yz'])
 
     
     
@@ -2241,97 +2338,25 @@ def plane_animation(self,andir = '../plots/boutique_ana/'):
             #convert index location back to time index
             it = plsm[k].GSEx.dropna().index[ii]
     
-            oax[0,0].scatter(plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEz']/Re,marker=marker[k],s=80,color=color[k],label=k)
-            oax[1,0].scatter(plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEy']/Re,marker=marker[k],s=80,color=color[k],label=None)
-            oax[0,1].scatter(plsm[k].loc[it,'GSEy']/Re,plsm[k].loc[it,'GSEz']/Re,marker=marker[k],s=80,color=color[k],label=None)
+            #Update the plotting location of the spacecraft
+            loc_dic[k+'_xy'].set_offsets([plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEz']/Re])
+            loc_dic[k+'_xz'].set_offsets([plsm[k].loc[it,'GSEx']/Re,plsm[k].loc[it,'GSEy']/Re])
+            loc_dic[k+'_yz'].set_offsets([plsm[k].loc[it,'GSEy']/Re,plsm[k].loc[it,'GSEz']/Re])
 
+
+        return vec_xy,vec_rz
+
+
+    #Set up animation
+    anim = animation.FuncAnimation(ofig, animate, init_func=init_an,
+                                   frames=len(sim_date), interval=20, blit=True)
+    #Name of movie for the plane animation
+    movie_name = andir+'plane_ani_{0:%Y%m%d_%H%M%S}.mp4'.format(pd.to_datetime(self.start_t))
     
-    
-        #set static limits from orbit maximum from SOHO file in Re
-        #z limits
-        z_lim = np.array([-1.,1])*240.
-        oax[0,0].set_ylim(z_lim)
-        oax[0,1].set_ylim(z_lim)
-        #xlimits
-        x_lim = np.array([-100.,450])#*300.0+200.
-        oax[0,0].set_xlim(x_lim)
-        oax[1,0].set_xlim(x_lim)
-        #y limits
-        y_lim = np.array([-1.,1])*120.0
-        oax[0,1].set_xlim(y_lim)
-        oax[1,0].set_ylim(y_lim)
-        
-        oax[0,0].legend(loc='upper right',frameon=False,scatterpoints=1)
+    #save the output animation
+    anim.save(movie_name, fps=20, extra_args=['-vcodec', 'libx264'])
 
 
-        #Add Earth's Bow Shock 2018/12/04 J. Prchlik
-        #y^2+Axy+Bx^2+Cy+Dx+E=0
-        #Assume y=z
-        #Parameters are from Fairfield et  al. 1971 Table 2 X Rotation No 4
-        A =  0.2164
-        B = -0.0986
-        C = -4.26
-        D =  44.916
-        E = -623.77
-
-        #Merdian 4 deg
-        #More even so use this one 2018/12/05 J. Prchlik
-        A =  0.0296
-        B = -0.0381
-        C = -1.280
-        D =  45.664
-        E = -652.10
-
-
-        #Sample xvalue
-        y_v = np.linspace(-100,100,100)
-
-
-        #Define simplifying constants
-        F = A*y_v+D
-        G = y_v**2+C*y_v+E
-       
-        #Get positive root of solution
-        x_v = (-F+np.sqrt(F**2-4*G*B))/(2.*B)
-    
-        #plot Bow shock
-        oax[0,0].plot(x_v,y_v,linewidth=2,color='black',label=None)
-        oax[1,0].plot(x_v,y_v,linewidth=2,color='black',label=None)
-  
-        #Now do it for y,z Bow shock is meaningless in this orientation (face on)
-        #oax[0,1].plot(,,linewidth=2,color='black',label=None)
-
-
-        #Set axis limits for vectors
-        vec_ax_1.set_xlim([-1,1]) 
-        vec_ax_2.set_xlim([1,-1]) 
-        vec_ax_1.set_ylim([-1,1])
-        vec_ax_2.set_ylim([-1,1])
-
-        #Set axis limits for vectors
-        fancy_plot(vec_ax_1) #.set_xlim([-1,1]) 
-        fancy_plot(vec_ax_2) #.set_xlim([-1,1]) 
-        fancy_plot(vec_ax_1) #.set_ylim([-1,1])
-        fancy_plot(vec_ax_2) #.set_ylim([-1,1])
-
-
-        #create labels
-        small_font = 16
-        vec_ax_1.set_xlabel('$n_\mathrm{X}$',fontsize=small_font)
-        vec_ax_2.set_xlabel(r'($n_\mathrm{X}^2$+$n_\mathrm{Y}^2$)$^\frac{1}{2}$',fontsize=small_font)
-        vec_ax_1.set_ylabel('$n_\mathrm{Y}$',fontsize=small_font)
-        vec_ax_2.set_ylabel('$n_\mathrm{Z}$',fontsize=small_font)
-        vec_ax_2.yaxis.set_label_position("right")       
-    
-        #rotate y,z y axis tick labels
-        for tick in oax[0,1].get_xticklabels():
-            tick.set_rotation(45)
-    
-        #Save spacecraft orientation plots
-        ofig.savefig(andir+'event_orientation_{0:%Y%m%d_%H%M%S}.png'.format(l),bbox_pad=.1,bbox_inches='tight')
-        ofig.clf()
-        plt.close()
-        plt.close()
     
     
 def print_ave_offsets(self):
