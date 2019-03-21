@@ -1,0 +1,348 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Welcome to Solar Wind Matching’s documentation! &#8212; Solar Wind Matching 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-solar-wind-matching-s-documentation">
+<h1>Welcome to Solar Wind Matching’s documentation!<a class="headerlink" href="#welcome-to-solar-wind-matching-s-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<span class="target" id="module-model_time_range"></span><dl class="function">
+<dt id="model_time_range.arb_rotation_matrix">
+<code class="descclassname">model_time_range.</code><code class="descname">arb_rotation_matrix</code><span class="sig-paren">(</span><em>a</em>, <em>b</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/model_time_range.html#arb_rotation_matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#model_time_range.arb_rotation_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a rotation matrix between two unit vectors a and b.
+U.dot(a) = b</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>a</strong><strong>,</strong><strong>b</strong> (<em>np.array</em>) – Two 3 element numpy array unit vectors</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>rot_mat</strong> – 3x3 rotation matrix between unit vectors</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">np.array</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="model_time_range.delay_plot">
+<code class="descclassname">model_time_range.</code><code class="descname">delay_plot</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/model_time_range.html#delay_plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#model_time_range.delay_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the time delay between spacecraft as a function of time for the spacecraft used in the analysis.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>self</strong> (<em>dtw class instance</em>) – </td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="model_time_range.dtw_wei">
+<code class="descclassname">model_time_range.</code><code class="descname">dtw_wei</code><span class="sig-paren">(</span><em>x</em>, <em>t0</em>, <em>b=0.3</em>, <em>c=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/model_time_range.html#dtw_wei"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#model_time_range.dtw_wei" title="Permalink to this definition">¶</a></dt>
+<dd><p>x: a time range in nanoseconds
+t0: the central time point in nanoseconds</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="model_time_range.get_x_difference">
+<code class="descclassname">model_time_range.</code><code class="descname">get_x_difference</code><span class="sig-paren">(</span><em>df</em>, <em>diff_v</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/model_time_range.html#get_x_difference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#model_time_range.get_x_difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>df: pandas data frame of solar wind observations
+diff_v: list of parameters to compute the difference for</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="model_time_range.movingaverage">
+<code class="descclassname">model_time_range.</code><code class="descname">movingaverage</code><span class="sig-paren">(</span><em>values</em>, <em>window</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/model_time_range.html#movingaverage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#model_time_range.movingaverage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate moving average</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>values</strong> (<em>np.array</em>) – Value to compute movie average over</li>
+<li><strong>window</strong> (<em>int</em>) – Length of window to compute moving averages over</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>sma</strong> – Smoothed running average</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">np.array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="model_time_range.omni_plot">
+<code class="descclassname">model_time_range.</code><code class="descname">omni_plot</code><span class="sig-paren">(</span><em>self</em>, <em>hours=&lt;matplotlib.dates.HourLocator object&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/model_time_range.html#omni_plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#model_time_range.omni_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to plot 4-spacecraft plane solution at L1 compared to omni prediciton. This function
+was used to make the plots for AGU Fall 2018.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>self</strong> (<em>Class</em>) – A dtw_plane class instance after the pred_earth function is already ran.</li>
+<li><strong>hours</strong> (<em>matplotlib.dates.HourLocator object</em><em>, </em><em>optional</em>) – The frequency which to label the time axis in the plots (Default =  mdates.HourLocator(), which is every hour).</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="model_time_range.plane_animation">
+<code class="descclassname">model_time_range.</code><code class="descname">plane_animation</code><span class="sig-paren">(</span><em>self</em>, <em>andir='../plots/boutique_ana/'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/model_time_range.html#plane_animation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#model_time_range.plane_animation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a series of plots that can be used for a movie showing successively propogation solar wind planes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>self</strong> (<em>Class</em>) – A dtw_plane class instance after the pred_earth function is already ran.</li>
+<li><strong>andir</strong> (<em>string</em><em>, </em><em>optional</em>) – String value to plotting directory for the animation. Directory must already exist (Default = ‘../plots/boutique_ana/’).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="model_time_range.plot_dtw_example">
+<code class="descclassname">model_time_range.</code><code class="descname">plot_dtw_example</code><span class="sig-paren">(</span><em>self, c_time, compare=['DSCOVR'], pad=Timedelta('0 days 00:30:00'), parm='Bz', subsamp=10, offset=10.0, leg_loc='lower right'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/model_time_range.html#plot_dtw_example"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#model_time_range.plot_dtw_example" title="Permalink to this definition">¶</a></dt>
+<dd><p>A function to create an example of how DTW works</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>self</strong> (<em>class</em>) – The class object created in the code after running .init_read() and .dtw()</li>
+<li><strong>c_time</strong> (<em>pd.datetime object</em>) – The central panda datetime object to plot around</li>
+<li><strong>compare</strong> (<em>list</em><em>, </em><em>optional</em>) – List of two space craft to use to compare DTW solution (Default = [‘DSCOVR’])</li>
+<li><strong>pd</strong> (<em>pd.timedelta object</em><em>, </em><em>optional</em>) – Time around c_time to plot (Defatult = 30 minutes, pd.to_timedelta(‘30m’))</li>
+<li><strong>parm</strong> (<em>str</em><em>, </em><em>optional</em>) – Parameter to plot on the y-axis (Default = ‘Bz’)</li>
+<li><strong>subsamp</strong> (<em>int</em><em>, </em><em>optional</em>) – Subsampling parameter, so that plot does not show the full range of values (Default = 10).</li>
+<li><strong>offset</strong> (<em>float</em><em>, </em><em>optional</em>) – Value to offset the unwarped time value solution (Default = 10.)</li>
+<li><strong>leg_loc</strong> (<em>string</em><em> or </em><em>int</em>) – Location of the matplotlib legend (Default = ‘lower right’).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="model_time_range.print_ave_offsets">
+<code class="descclassname">model_time_range.</code><code class="descname">print_ave_offsets</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/model_time_range.html#print_ave_offsets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#model_time_range.print_ave_offsets" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple function that prints the interesting times of prediction, the coordinates of the Earth Craft at that time,
+and the 5th and 95th percentile of time offsets for SOHO, DSCOVR, and ACE</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>self</strong> (<em>Class</em>) – A dtw_plane class instance after running iterate DTW.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="model_time_range.read_in">
+<code class="descclassname">model_time_range.</code><code class="descname">read_in</code><span class="sig-paren">(</span><em>k</em>, <em>p_var='predict_shock_500'</em>, <em>arch='../cdf/cdftotxt/'</em>, <em>mag_fmt='{0}_mag_2015_2017_formatted.txt'</em>, <em>pls_fmt='{0}_pls_2015_2017_formatted.txt'</em>, <em>orb_fmt='{0}_orb_2015_2017_formatted.txt'</em>, <em>start_t='2016/12/01'</em>, <em>end_t='2017/09/24'</em>, <em>center=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/model_time_range.html#read_in"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#model_time_range.read_in" title="Permalink to this definition">¶</a></dt>
+<dd><p>A function to read in text files for a given spacecraft. Also replaces out of range and flagged values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>k</strong> (<em>string</em>) – Then name of a spacecraft so to format for file read in</li>
+<li><strong>arch</strong> (<em>string</em><em>, </em><em>optional</em>) – The archive location for the text file to read in (Default = ‘../cdf/cdftotxt/’)</li>
+<li><strong>mag_fmt</strong> (<em>string</em><em>, </em><em>optional</em>) – The file format for the magnetic field observations (Default = ‘{0}_mag_2015_2017_formatted.txt’,
+where 0 is the formatted k).</li>
+<li><strong>pls_fmt</strong> (<em>string</em><em>, </em><em>optional</em>) – The file format for the plasma observations (Default = ‘{0}_pls_2015_2017_formatted.txt’,
+where 0 is the formatted k).</li>
+<li><strong>orb_fmt</strong> (<em>string</em><em>, </em><em>optional</em>) – The file format for the orbital data (Default = ‘{0}_orb_2015_2017_formatted.txt’,
+where 0 is the formatted k).</li>
+<li><strong>= boolean</strong><strong>, </strong><strong>optional</strong> (<em>center</em>) – Whether the analyzed point to be center focused (center = True) or right focus (Default = False).
+Center focus gives you a better localized point, however, the model is trained with a right focus
+in order to reject spikes and increase S/N.</li>
+<li><strong>start_t</strong> (<em>string</em><em>, </em><em>optional</em>) – Date in YYYY/MM/DD format to start looking for events (Default = ‘2016/06/04’)</li>
+<li><strong>end_t</strong> (<em>string</em><em>, </em><em>optional</em>) – Date in YYYY/MM/DD format to stop looking for events (inclusive, Default = ‘2017/07/31’)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>plsm</strong> – A pandas dataframe with probability values and combined mag and plasma observations.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Pandas DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="model_time_range.solve_coeff">
+<code class="descclassname">model_time_range.</code><code class="descname">solve_coeff</code><span class="sig-paren">(</span><em>pi</em>, <em>vn</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/model_time_range.html#solve_coeff"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#model_time_range.solve_coeff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plane coefficients for given time and position of spacecraft</p>
+<dl class="docutils">
+<dt>pi: np.array or np.matrix</dt>
+<dd>Position of earth spacecraft in GSE corrected for time offsets
+The First row is the X,Y,Z values for spacecraft 1
+The Second row is the X,Y,Z values for spacecraft 2
+The Thrid row is the X,Y,Z values for spacecraft 3</dd>
+<dt>vn: np.array or np.matrix</dt>
+<dd>Normal vector to planar front</dd>
+</dl>
+<dl class="docutils">
+<dt>a,b,c,d: float</dt>
+<dd>Solution for a plane at time t where plane has the solution 0=a*x+b*y+c*z+d</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="model_time_range.solve_plane">
+<code class="descclassname">model_time_range.</code><code class="descname">solve_plane</code><span class="sig-paren">(</span><em>p</em>, <em>t</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/model_time_range.html#solve_plane"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#model_time_range.solve_plane" title="Permalink to this definition">¶</a></dt>
+<dd><p>Velocity plane for given time and position of spacecraft</p>
+<dl class="docutils">
+<dt>p: np.array or np.matrix</dt>
+<dd>Position vectors in x,y,z for three spacecraft with respect to wind
+The First row is the X,Y,Z values for spacecraft 1
+The Second row is the X,Y,Z values for spacecraft 2
+The Thrid row is the X,Y,Z values for spacecraft 3</dd>
+<dt>t: np.array or np.matrix</dt>
+<dd>Time offset array from Wind for three spacecraft</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="model_time_range.solve_plane_cadence">
+<code class="descclassname">model_time_range.</code><code class="descname">solve_plane_cadence</code><span class="sig-paren">(</span><em>p</em>, <em>t</em>, <em>dt</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/model_time_range.html#solve_plane_cadence"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#model_time_range.solve_plane_cadence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Velocity plane for given time and position of spacecraft</p>
+<dl class="docutils">
+<dt>p: np.array or np.matrix</dt>
+<dd>Position vectors in x,y,z for three spacecraft with respect to wind
+The First row is the X,Y,Z values for spacecraft 1
+The Second row is the X,Y,Z values for spacecraft 2
+The Thrid row is the X,Y,Z values for spacecraft 3</dd>
+<dt>t: np.array or np.matrix</dt>
+<dd>Time offset array from Wind for three spacecraft</dd>
+<dt>dt: np.array or np.matrix</dt>
+<dd>The limiting time cadence for each observation</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">Solar Wind Matching</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Jakub Prchlik.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
