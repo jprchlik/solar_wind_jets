@@ -169,7 +169,7 @@ The following modules are the primary analysis modules:
     
 
 
-The following modules are the primary analysis modules:
+The following modules are the data downloading modules:
 
 .. toctree::
     :maxdepth:1
