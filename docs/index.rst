@@ -76,7 +76,7 @@ include several hours of solar wind observations for best results.
     #Interesting feature in the solar wind at Wind
     twind1 = pd.to_datetime('2016/12/05 22:52:48')
 
-    #Set up the time range you want to predict around the intetesting features
+    #Set up the time range you want to predict around the interesting features
     start_t1 = dfmt.format(twind1-12.*window)
     end_t1 = dfmt.format(twind1+12.*window)
 
