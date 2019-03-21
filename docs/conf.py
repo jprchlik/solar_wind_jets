@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.abspath('../'))
 sys.path.insert(0, os.path.abspath('../../'))
 sys.path.insert(0, os.path.abspath('../code/'))
 sys.path.insert(0, os.path.abspath('../cdf/'))
-autodoc_mock_imports = ['spacepy','fancy_plot','multi_dtw','Cython.Build','mlpy','Cython.Build','Cython','dtaidistance','load_cdf_files']
+autodoc_mock_imports = ['spacepy','fancy_plot','multi_dtw','Cython.Build','mlpy','Cython.Build','Cython','dtaidistance','load_cdf_files','setup']
 
 
 # -- General configuration ------------------------------------------------
