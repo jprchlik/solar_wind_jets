@@ -25,7 +25,7 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
     A function to read in text files for a given spacecraft
 
     Parameters
-    ----------
+    -----------
     k: string
         Then name of a spacecraft so to format for file read in
     arch: string, optional
@@ -525,6 +525,7 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time,traine
 
     """
     return_chi_min computes the chi^2 min. time for a given set of parameters
+
     Parameters
     -----------
     rgh_chi_t: Pandas datetime delta object
@@ -546,7 +547,7 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time,traine
     trainer: string
         The spacecraft to use for X^2 comparison (Default=Wind)
 
-    RETURNS
+    Returns
     --------
     time,chisq : datetime index, calculate Chi^2
     Datetime index of  Chi^2 time and the Chi^2 value
@@ -654,6 +655,8 @@ def return_chi_min(rgh_chi_t,plsm,k,par,try_mag,try_pls,trainer_time,time,traine
 def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,ref_chi_t=pd.to_timedelta('10 minutes'),refine=True,n_fine=4,plot=True ,nproc=1,use_discon=False):
     """
     chi_min computes the chi^2 min. time for a given set of parameters
+
+
     Parameters
     -----------
     p_mat: Pandas DataFrame
@@ -687,7 +690,7 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
     use_discon : boolean,optional
         Only use discontinuity (Default = False)
 
-    RETURNS
+    Returns
     --------
     i_min : datetime index
     Datetime index of best fit Chi^2 time
@@ -895,6 +898,7 @@ def chi_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
 def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,ref_chi_t=pd.to_timedelta('10 minutes'),refine=True,n_fine=4,plot=True ,nproc=1,use_discon=False,trainer='Wind'):
     """
     dtw_min computes the average dynamic time warping value for a given set of parameters
+
     Parameters
     -----------
     p_mat: Pandas DataFrame
@@ -930,10 +934,10 @@ def dtw_min(p_mat,par,rgh_chi_t,plsm,k,window,ref_window,trainer_t,color,marker,
     trainer : string, optional
         Spacecraft to match back to in dynamic time warping (Default = 'Wind')
 
-    RETURNS
+    Returns
     --------
     i_min,i_upp,i_low : datetime index
-    Average Dynamic Time warp and its upper and lower limit standard deviation
+        Average Dynamic Time warp and its upper and lower limit standard deviation
 
     """
 

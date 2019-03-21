@@ -27,15 +27,23 @@ import scipy.optimize
 
 
 #Defination of a plane
-def plane_func(a,b,c,d,x,y,z):
-    return a*x+b*y+c*z+d
-
+#def plane_func(a,b,c,d,x,y,z):
+#    """
+#    The solution of a pl
+#
+#    Returns
+#    -------
+#    value: float
+#        The value of the plane at a given X, Y, and Z
+#    """
+#    return a*x+b*y+c*z+d
+#
 
 def solve_plane(p,t):
     """
     Velocity plane for given time and position of spacecraft
     
-    Parameters:
+    Parameters
     ---------
     p: np.array or np.matrix
         Position vectors in x,y,z for three spacecraft with respect to wind
@@ -55,7 +63,7 @@ def solve_plane_cadence(p,t,dt):
     """
     Velocity plane for given time and position of spacecraft
     
-    Parameters:
+    Parameters
     ---------
     p: np.array or np.matrix
         Position vectors in x,y,z for three spacecraft with respect to wind
@@ -76,7 +84,7 @@ def solve_coeff(pi,vn):
     """
     Plane coefficients for given time and position of spacecraft
     
-    Parameters:
+    Parameters
     ----------
     pi: np.array or np.matrix
         Position of earth spacecraft in GSE corrected for time offsets
@@ -86,8 +94,8 @@ def solve_coeff(pi,vn):
     vn: np.array or np.matrix
         Normal vector to planar front
   
-    Returns:
-    ----------
+    Returns
+    --------
     a,b,c,d: float
         Solution for a plane at time t where plane has the solution 0=a*x+b*y+c*z+d
         
@@ -311,54 +319,52 @@ def read_in(k,p_var='predict_shock_500',arch='../cdf/cdftotxt/',
 
 
 class dtw_plane:
+    """
+    Class to get planar DTW solutions for L1 spacecraft.      
+ 
+    Parameters
+    ----------
+    start_t: string
+        Any string format recongized by pd.to_datetime indicating when to start looking for events
+    end_t: string
+        Any string format recongized by pd.to_datetime indicating when to stop looking for events
+    center: boolean, optional
+        Whether to use the center pixel for a running mean (Default = True). Otherwise running mean
+        is set by preceding pixels
+    events: int,optional
+        Number of Events to find planar solution for in given time period (Default = 1)
+    par: string or list, optional
+        Parameter to use when matching via DTW (Default = None). The default solution is to use 
+        flow speed for SOHO CELIAS and maximum difference in a 3 minute window for magnetic 
+        field component for every other spacecraft.
+    justparm: boolean, optional
+        Just do DTW solution but do not create animation of solution as a funciton of time
+        (Default = True)
+    nproc: integer, optional
+        Number of processors to use for matching (Default = 1). Currently, there is no reason
+        to change this value, but is a place holder incase someday it becomes useful
+    earth_craft: list, optional 
+        Show Themis/Artemis space craft and the best solutions (Default = None). Can be 
+        any combinateion of ['THEMIS_B','THEMIS_C','THEMIS_A'] 
+    penalty: boolean, optional
+        Include a penalty in the DTW solution for compression of time (Default = True)
+    pad_earth: pandas time delta object, optional
+        Time offset to apply when reading in spacecraft data near earth (Default = pd.to_timedelta('1 hour'))
+    speed_pen: float
+        Penatly in km/s for squashing speed time in DTW (Default = 10.). Only works if penalty is set to True
+    mag_pen: float
+        Penatly in nT for squashing magnetic field time in DTW (Default = 0.2). Only works if penalty is set to True.
+
+    Example 
+    ----------
+    import model_time_range as mtr
+    plane = mtr.dtw_plane('2016/07/19 21:00:00','2016/07/20 01:00:00',earth_craft=['THEMIS_B'],penalty=False)
+    plane.init_read()
+    plane.dtw()
+    """
 
 
     def __init__(self,start_t,end_t,center=True,events=1,par=None,justparm=True,nproc=1,earth_craft=None,penalty=True,pad_earth=pd.to_timedelta('1 hour'),speed_pen=10.,mag_pen=0.2):
-        """
-        Class to get planar DTW solutions for L1 spacecraft.      
- 
-        Parameters:
-        ----------
-        start_t: string
-            Any string format recongized by pd.to_datetime indicating when to start looking for events
-        end_t: string
-            Any string format recongized by pd.to_datetime indicating when to stop looking for events
-        center: boolean, optional
-            Whether to use the center pixel for a running mean (Default = True). Otherwise running mean
-            is set by preceding pixels
-        events: int,optional
-            Number of Events to find planar solution for in given time period (Default = 1)
-        par: string or list, optional
-            Parameter to use when matching via DTW (Default = None). The default solution is to use 
-            flow speed for SOHO CELIAS and maximum difference in a 3 minute window for magnetic 
-            field component for every other spacecraft.
-        justparm: boolean, optional
-            Just do DTW solution but do not create animation of solution as a funciton of time
-            (Default = True)
-        nproc: integer, optional
-            Number of processors to use for matching (Default = 1). Currently, there is no reason
-            to change this value, but is a place holder incase someday it becomes useful
-        earth_craft: list, optional 
-            Show Themis/Artemis space craft and the best solutions (Default = None). Can be 
-            any combinateion of ['THEMIS_B','THEMIS_C','THEMIS_A'] 
-        penalty: boolean, optional
-            Include a penalty in the DTW solution for compression of time (Default = True)
-        pad_earth: pandas time delta object, optional
-            Time offset to apply when reading in spacecraft data near earth (Default = pd.to_timedelta('1 hour'))
-        speed_pen: float
-            Penatly in km/s for squashing speed time in DTW (Default = 10.). Only works if penalty is set to True
-        mag_pen: float
-            Penatly in nT for squashing magnetic field time in DTW (Default = 0.2). Only works if penalty is set to True.
-
-        Example: 
-        ----------
-        import model_time_range as mtr
-        plane = mtr.dtw_plane('2016/07/19 21:00:00','2016/07/20 01:00:00',earth_craft=['THEMIS_B'],penalty=False)
-        plane.init_read()
-        plane.dtw()
-       
-
-        """
         self.start_t = start_t
         self.end_t = end_t
         self.center = center
@@ -857,13 +863,17 @@ class dtw_plane:
 
     def pred_earth(self,cut_deg=70.):
         """
-        Create prediction for Earth and create corresponding plots
+        Create prediction for solar wind speed at near earth spacecraft and create corresponding plots
     
-        Parmeters
-        -------------
+        Parameters
+        ----------
         cut_deg: float
             Cut calculated normal vectors more than cut_deg away from [-1.,0.,0.]
-             GSE to removed from the prediction (Default = 70, Weimer et al. 2003).
+            GSE to removed from the prediction (Default = 70, Weimer et al. 2003).
+
+        Returns
+        -------
+        None
     
         """
     
@@ -1551,6 +1561,20 @@ class dtw_plane:
 
 #plot distribution of time offsets as a function of time in wind of SOHO, ACE, DSCVOR
 def plot_time_dis(self):
+    """
+    Plot the distribution of time offsets between SOHO, ACE, and DSCOVR and Wind.
+    The function creates a plot at ../plots/two_d_his.png
+
+    Parameters
+    ----------
+    self: class
+        A dtw_plane class instance after running iterate DTW.
+
+    Returns
+    -------
+    None
+
+    """
 
     #get DTW offset keys from plasma dictionary
     off_keys = [i for i in self.plsm.keys() if (('offset' in i) & (i.replace('_offset','') 

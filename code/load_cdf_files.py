@@ -20,7 +20,7 @@ def looper(sc1,pls,mag,orb,lstr,brchive='../cdf/'):
     """
     Function specifying which parameters to use when creating a formatted file
   
-    Parameters:
+    Parameters
     -----------
     sc1:  string
         List of spacecraft to created formatted text files for 
@@ -161,7 +161,7 @@ def cdf_to_pandas(f_list,keys,craft,context):
     """
     Function which creates a formatted pandas dataframe for a given spacecraft and parameter (i.e. mag. field, plasma, or orbit location)
    
-    Parameters:
+    Parameters
     ----------
     flist: list
         Full path list of cdf files
@@ -351,14 +351,14 @@ def main(sday,eday,scrf=['wind','ace','dscovr','soho','themis_a','themis_b','the
     orb: boolean, optional
         Create formatted orbit file (Default = True).
 
-    Returns:
+    Returns
     --------
     outdict: dictionary
         Dictionary of output parameters
     
 
-    Example:
-    -------
+    Example
+    --------
     import load_cdf_files as lcf
     from datetime import datetime
 
