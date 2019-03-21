@@ -46,6 +46,9 @@ We present six time periods and see qualitatively our method produces reasonable
 Code
 -----
 
+Example
+~~~~~~~
+
 Here I will breifly describe the process for using the code to make predections of the solar wind.
 First, you will need to import the modules needed to successfully call the code.
 
@@ -147,6 +150,32 @@ perhaps publication worthy, plot.
    :alt: OMNI plot
    :align: center
    :scale: 30%
+
+Modules
+~~~~~~~
+
+The following modules are the primary analysis modules:
+
+.. toctree::
+    :maxdepth:1
+
+    source/code/load_cdf_files.rst
+    source/code/matching_events_full_res.rst
+    source/code/model_time_range.rst
+    source/code/multi_dtw.rst
+    source/code/setup.rst
+    source/code/unit_test_model_time.rst
+    source/code/unit_test_my_dtw.rst
+    
+
+
+The following modules are the primary analysis modules:
+
+.. toctree::
+    :maxdepth:1
+
+    source/cdf/get_cdf_files.rst
+    source/cdf/get_soho_files.rst
 
 
 
