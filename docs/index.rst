@@ -7,7 +7,7 @@ Welcome to Solar Wind Matching's documentation!
 ===============================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
 
 
