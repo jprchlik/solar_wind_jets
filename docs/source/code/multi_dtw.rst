@@ -4,8 +4,11 @@ multi\_dtw module
 .. automodule:: multi_dtw
     :members:
     :undoc-members:
- 
+    :show-inheritance:
+
+
 .. code-block:: python
+
      def dtw_single(double [:] var_1, double [:] var_2,long lim_1, long lim_2, double pen_r):
          """
          Single value DTW cost matrix
@@ -28,7 +31,7 @@ multi\_dtw module
          Returns
          ---------
          diff_arr: np.array
-             A 2D array cost matrix with penalty included   :show-inheritance:
+             A 2D array cost matrix with penalty included   
        """
 
 
