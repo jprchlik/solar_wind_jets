@@ -1,0 +1,608 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>load_cdf_files &mdash; Solar Wind Matching 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'../',
+              VERSION:'0.1',
+              LANGUAGE:'None',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: white" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> Solar Wind Matching
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Solar Wind Matching</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>load_cdf_files</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for load_cdf_files</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">spacepy</span> <span class="k">import</span> <span class="n">pycdf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="k">import</span> <span class="n">glob</span>
+<span class="kn">import</span> <span class="nn">os</span><span class="o">,</span><span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="k">import</span> <span class="n">timedelta</span>
+
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">Pool</span>
+
+
+<div class="viewcode-block" id="wrap_looper"><a class="viewcode-back" href="../source/code/load_cdf_files.html#load_cdf_files.wrap_looper">[docs]</a><span class="k">def</span> <span class="nf">wrap_looper</span><span class="p">(</span><span class="n">inp</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper for parrallel processing</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">looper</span><span class="p">(</span><span class="o">*</span><span class="n">inp</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="looper"><a class="viewcode-back" href="../source/code/load_cdf_files.html#load_cdf_files.looper">[docs]</a><span class="k">def</span> <span class="nf">looper</span><span class="p">(</span><span class="n">sc1</span><span class="p">,</span><span class="n">pls</span><span class="p">,</span><span class="n">mag</span><span class="p">,</span><span class="n">orb</span><span class="p">,</span><span class="n">lstr</span><span class="p">,</span><span class="n">brchive</span><span class="o">=</span><span class="s1">&#39;../cdf/&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function specifying which parameters to use when creating a formatted file</span>
+<span class="sd">  </span>
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    sc1:  string</span>
+<span class="sd">        List of spacecraft to created formatted text files for </span>
+<span class="sd">        (Allow inputs are &#39;wind&#39;,&#39;ace&#39;,&#39;dscovr&#39;,&#39;soho&#39;,&#39;themis_a&#39;,&#39;themis_b&#39;,&#39;themis_c&#39;,&#39;omni&#39;)</span>
+<span class="sd">    pls: boolean</span>
+<span class="sd">        Create formatted plasma parameter file.</span>
+<span class="sd">    mag: boolean</span>
+<span class="sd">        Create formatted magnetic field file.</span>
+<span class="sd">    orb: boolean</span>
+<span class="sd">        Create formatted orbit file.</span>
+<span class="sd">    lstr: list of strings</span>
+<span class="sd">        String of input start dates in YYYYMMDD format </span>
+<span class="sd">    brchive: string,optional</span>
+<span class="sd">        Base location of cdf archives</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1">##List of possible spacecraft</span>
+    <span class="n">scrf</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;wind&#39;</span><span class="p">,</span><span class="s1">&#39;ace&#39;</span><span class="p">,</span><span class="s1">&#39;dscovr&#39;</span><span class="p">,</span><span class="s1">&#39;soho&#39;</span><span class="p">,</span><span class="s1">&#39;themis_a&#39;</span><span class="p">,</span><span class="s1">&#39;themis_b&#39;</span><span class="p">,</span><span class="s1">&#39;themis_c&#39;</span><span class="p">,</span><span class="s1">&#39;omni&#39;</span><span class="p">]</span>
+
+    <span class="c1">#exit cleanly if spacecraft is not in list of possible spacecraft</span>
+    <span class="k">if</span> <span class="n">sc1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">scrf</span><span class="p">:</span> 
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;You input &#39;</span><span class="o">+</span><span class="n">sc1</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Allowed inputs are:&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">scrf</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Skipping &#39;</span><span class="o">+</span><span class="n">sc1</span><span class="p">)</span>
+        <span class="k">return</span>
+   
+    <span class="c1">##current space craft</span>
+    <span class="c1">#sc1 = scrf[s_idx]</span>
+
+    
+    
+    <span class="c1">#archive location of all spacecraft</span>
+    <span class="n">archive</span> <span class="o">=</span> <span class="n">brchive</span><span class="o">+</span><span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="n">sc1</span><span class="o">+</span><span class="s1">&#39;/plsm/&#39;</span>
+    <span class="n">mrchive</span> <span class="o">=</span> <span class="n">brchive</span><span class="o">+</span><span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="n">sc1</span><span class="o">+</span><span class="s1">&#39;/mag/&#39;</span>
+    <span class="n">orchive</span> <span class="o">=</span> <span class="n">brchive</span><span class="o">+</span><span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="n">sc1</span><span class="o">+</span><span class="s1">&#39;/orb/&#39;</span>
+
+    
+    
+    <span class="c1">#setup keys for particular spacecraft</span>
+    <span class="k">if</span> <span class="n">sc1</span> <span class="o">==</span> <span class="s1">&#39;wind&#39;</span><span class="p">:</span>
+        <span class="n">mag_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch&#39;</span><span class="p">,</span><span class="s1">&#39;BGSE&#39;</span><span class="p">,</span><span class="s1">&#39;SPC_MODE&#39;</span><span class="p">]</span>
+        <span class="n">pls_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch&#39;</span><span class="p">,</span><span class="s1">&#39;Proton_V_nonlin&#39;</span><span class="p">,</span><span class="s1">&#39;Proton_Np_nonlin&#39;</span><span class="p">,</span><span class="s1">&#39;Proton_W_nonlin&#39;</span><span class="p">,</span><span class="s1">&#39;fit_flag&#39;</span><span class="p">]</span>
+        <span class="n">orb_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch&#39;</span><span class="p">,</span><span class="s1">&#39;GSE_POS&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">sc1</span> <span class="o">==</span> <span class="s1">&#39;ace&#39;</span><span class="p">:</span>
+        <span class="n">mag_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch&#39;</span><span class="p">,</span><span class="s1">&#39;BGSEc&#39;</span><span class="p">,</span><span class="s1">&#39;Q_FLAG&#39;</span><span class="p">]</span>
+        <span class="n">pls_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch&#39;</span><span class="p">,</span><span class="s1">&#39;SPEED&#39;</span><span class="p">,</span><span class="s1">&#39;Np&#39;</span><span class="p">,</span><span class="s1">&#39;Tpr&#39;</span><span class="p">,</span><span class="s1">&#39;alpha_ratio&#39;</span><span class="p">]</span>
+        <span class="n">orb_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch&#39;</span><span class="p">,</span><span class="s1">&#39;XYZ_GSE&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">sc1</span> <span class="o">==</span> <span class="s1">&#39;dscovr&#39;</span><span class="p">:</span>
+        <span class="n">mag_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch1&#39;</span><span class="p">,</span><span class="s1">&#39;B1GSE&#39;</span><span class="p">,</span><span class="s1">&#39;FLAG1&#39;</span><span class="p">]</span>
+        <span class="n">pls_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch&#39;</span><span class="p">,</span><span class="s1">&#39;SPEED&#39;</span><span class="p">,</span><span class="s1">&#39;Np&#39;</span><span class="p">,</span><span class="s1">&#39;THERMAL_SPD&#39;</span><span class="p">,</span><span class="s1">&#39;DQF&#39;</span><span class="p">]</span>
+        <span class="n">orb_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch&#39;</span><span class="p">,</span><span class="s1">&#39;GSE_POS&#39;</span><span class="p">]</span>
+
+    <span class="c1">#choose peir because it had the most data (~4s cadence for all parameters) 2018/04/19 J. Prchlik</span>
+    <span class="c1">#choose peem because moments because it is more complete 2018/04/19 J. Prchlik</span>
+    <span class="c1">#choose peem Removing thermal velocity for now 2018/04/19 J. Prchlik</span>
+    <span class="c1">#choose peim because that i stands for ion and e stands for electon 2018/04/20 J. Prchlik</span>
+    <span class="k">if</span> <span class="n">sc1</span> <span class="o">==</span> <span class="s1">&#39;themis_c&#39;</span><span class="p">:</span>
+        <span class="n">mag_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;thc_peim_time&#39;</span><span class="p">,</span><span class="s1">&#39;thc_peim_mag&#39;</span><span class="p">]</span>
+        <span class="n">pls_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;thc_peim_time&#39;</span><span class="p">,</span><span class="s1">&#39;thc_peim_velocity_gse&#39;</span><span class="p">,</span><span class="s1">&#39;thc_peim_density&#39;</span><span class="p">,</span><span class="s1">&#39;thc_peim_t3_mag&#39;</span><span class="p">,</span><span class="s1">&#39;thc_peim_data_quality&#39;</span><span class="p">]</span>
+        <span class="n">orb_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch&#39;</span><span class="p">,</span><span class="s1">&#39;XYZ_GSE&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">sc1</span> <span class="o">==</span> <span class="s1">&#39;themis_b&#39;</span><span class="p">:</span>
+        <span class="n">mag_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;thb_peim_time&#39;</span><span class="p">,</span><span class="s1">&#39;thb_peim_mag&#39;</span><span class="p">]</span>
+        <span class="n">pls_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;thb_peim_time&#39;</span><span class="p">,</span><span class="s1">&#39;thb_peim_velocity_gse&#39;</span><span class="p">,</span><span class="s1">&#39;thb_peim_density&#39;</span><span class="p">,</span><span class="s1">&#39;thb_peim_t3_mag&#39;</span><span class="p">,</span><span class="s1">&#39;thb_peim_data_quality&#39;</span><span class="p">]</span>
+        <span class="n">orb_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch&#39;</span><span class="p">,</span><span class="s1">&#39;XYZ_GSE&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">sc1</span> <span class="o">==</span> <span class="s1">&#39;themis_a&#39;</span><span class="p">:</span>
+        <span class="n">mag_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;tha_peim_time&#39;</span><span class="p">,</span><span class="s1">&#39;tha_peim_mag&#39;</span><span class="p">]</span>
+        <span class="n">pls_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;tha_peim_time&#39;</span><span class="p">,</span><span class="s1">&#39;tha_peim_velocity_gse&#39;</span><span class="p">,</span><span class="s1">&#39;tha_peim_density&#39;</span><span class="p">,</span><span class="s1">&#39;tha_peim_t3_mag&#39;</span><span class="p">,</span><span class="s1">&#39;tha_peim_data_quality&#39;</span><span class="p">]</span>
+        <span class="n">orb_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch&#39;</span><span class="p">,</span><span class="s1">&#39;XYZ_GSE&#39;</span><span class="p">]</span>
+
+    <span class="c1">#Omni parameters</span>
+    <span class="k">if</span> <span class="n">sc1</span> <span class="o">==</span> <span class="s1">&#39;omni&#39;</span><span class="p">:</span>
+        <span class="n">mag_key</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">pls_key</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch&#39;</span><span class="p">,</span><span class="s1">&#39;flow_speed&#39;</span><span class="p">,</span><span class="s1">&#39;proton_density&#39;</span><span class="p">,</span><span class="s1">&#39;T&#39;</span><span class="p">]</span>
+        <span class="n">orb_key</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1">#Get magnetic and plasma cdf files</span>
+    <span class="n">t_fpls</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">archive</span><span class="o">+</span><span class="s1">&#39;*cdf&#39;</span><span class="p">)</span>
+  
+    <span class="c1">#different name format for wind observations</span>
+    <span class="k">if</span> <span class="n">sc1</span> <span class="o">==</span> <span class="s1">&#39;wind&#39;</span><span class="p">:</span> 
+         <span class="n">t_fmag</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">mrchive</span><span class="o">+</span><span class="s1">&#39;*h2*cdf&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+         <span class="n">t_fmag</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">mrchive</span><span class="o">+</span><span class="s1">&#39;*h0*cdf&#39;</span><span class="p">)</span>
+    <span class="n">t_forb</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">orchive</span><span class="o">+</span><span class="s1">&#39;*or*cdf&#39;</span><span class="p">)</span>
+
+   
+    <span class="c1">#Use combined moment data because 4 second cadence is good enough time resolution 2018/04/20 J. Prchlik</span>
+    <span class="k">if</span> <span class="s1">&#39;themis&#39;</span> <span class="ow">in</span> <span class="n">sc1</span><span class="p">:</span> <span class="n">t_fmag</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">archive</span><span class="o">+</span><span class="s1">&#39;*mom*cdf&#39;</span><span class="p">)</span>
+
+    <span class="c1">#Only use files in time range</span>
+    <span class="c1">#only 1 omni file per month</span>
+    <span class="k">if</span> <span class="s1">&#39;omni&#39;</span> <span class="ow">in</span> <span class="n">sc1</span><span class="p">:</span>
+        <span class="n">cstr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">([</span><span class="n">d</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">lstr</span><span class="p">])</span> 
+        <span class="n">fpls</span> <span class="o">=</span> <span class="p">[</span> <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">t_fpls</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">cstr</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">s</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">fpls</span> <span class="o">=</span> <span class="p">[</span> <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">t_fpls</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">lstr</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">s</span><span class="p">]</span>
+
+    <span class="n">fmag</span> <span class="o">=</span> <span class="p">[</span> <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">t_fmag</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">lstr</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">s</span><span class="p">]</span>
+    <span class="c1">#check for orbital files only that  have the year</span>
+    <span class="k">if</span> <span class="n">sc1</span> <span class="o">==</span> <span class="s1">&#39;ace&#39;</span><span class="p">:</span>
+        <span class="n">cstr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">([</span><span class="n">d</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">lstr</span><span class="p">])</span> 
+        <span class="n">forb</span> <span class="o">=</span> <span class="p">[</span> <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">t_forb</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">cstr</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">s</span><span class="p">]</span>
+    <span class="c1">#Or 1 per month</span>
+    <span class="k">elif</span> <span class="s1">&#39;themis&#39;</span> <span class="ow">in</span> <span class="n">sc1</span><span class="p">:</span>
+        <span class="n">cstr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">([</span><span class="n">d</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">lstr</span><span class="p">])</span> 
+        <span class="n">forb</span> <span class="o">=</span> <span class="p">[</span> <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">t_forb</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">cstr</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">s</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">forb</span> <span class="o">=</span> <span class="p">[</span> <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">t_forb</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">lstr</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">s</span><span class="p">]</span>
+    
+
+
+    <span class="c1">#list dataframe to return</span>
+    <span class="n">ret_df</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1">#add spacecraft identification</span>
+    <span class="n">ret_df</span><span class="p">[</span><span class="s1">&#39;craft&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sc1</span>
+    
+    <span class="c1">#convert to textfile</span>
+    <span class="c1">#Commented to fix time error J. Prchlik 2017/11/14</span>
+    <span class="c1">#creating logic switches </span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">fpls</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">fmag</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">forb</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">pls</span><span class="p">:</span>
+        <span class="n">ret_df</span><span class="p">[</span><span class="s1">&#39;pls&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cdf_to_pandas</span><span class="p">(</span><span class="n">fpls</span><span class="p">,</span><span class="n">pls_key</span><span class="p">,</span><span class="n">sc1</span><span class="p">,</span><span class="s1">&#39;pls&#39;</span><span class="p">)</span>
+    <span class="c1">##commented out J. Prchlik 2017/11/14 to fix wrong Vth in ACE</span>
+    <span class="k">if</span> <span class="n">mag</span><span class="p">:</span>
+        <span class="n">ret_df</span><span class="p">[</span><span class="s1">&#39;mag&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cdf_to_pandas</span><span class="p">(</span><span class="n">fmag</span><span class="p">,</span><span class="n">mag_key</span><span class="p">,</span><span class="n">sc1</span><span class="p">,</span><span class="s1">&#39;mag&#39;</span><span class="p">)</span>
+    <span class="c1">#Add orbital files 2018/01/31 J. Prchlik</span>
+    <span class="k">if</span> <span class="n">orb</span><span class="p">:</span> 
+        <span class="n">ret_df</span><span class="p">[</span><span class="s1">&#39;orb&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cdf_to_pandas</span><span class="p">(</span><span class="n">forb</span><span class="p">,</span><span class="n">orb_key</span><span class="p">,</span><span class="n">sc1</span><span class="p">,</span><span class="s1">&#39;orb&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ret_df</span></div>
+
+<span class="c1">#function to create pandas dataframe</span>
+<div class="viewcode-block" id="cdf_to_pandas"><a class="viewcode-back" href="../source/code/load_cdf_files.html#load_cdf_files.cdf_to_pandas">[docs]</a><span class="k">def</span> <span class="nf">cdf_to_pandas</span><span class="p">(</span><span class="n">f_list</span><span class="p">,</span><span class="n">keys</span><span class="p">,</span><span class="n">craft</span><span class="p">,</span><span class="n">context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function which creates a formatted pandas dataframe for a given spacecraft and parameter (i.e. mag. field, plasma, or orbit location)</span>
+<span class="sd">   </span>
+<span class="sd">    Parameters:</span>
+<span class="sd">    ----------</span>
+<span class="sd">    flist: list</span>
+<span class="sd">        Full path list of cdf files</span>
+<span class="sd">    keys: list</span>
+<span class="sd">        Keys to retrieve from the CDF file </span>
+<span class="sd">    craft:  string</span>
+<span class="sd">        Spacecraft to created formatted text files for</span>
+<span class="sd">    context: string</span>
+<span class="sd">        Whether the keys refer to magnetic field, plasma, or orbital parameters</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1">#boltzman constant and proton mass for conversion of temp to speed</span>
+    <span class="n">amu</span> <span class="o">=</span> <span class="mf">1.660538921e-27</span>
+    <span class="n">mp</span>  <span class="o">=</span> <span class="mf">1.00727647</span><span class="o">*</span><span class="n">amu</span>
+    <span class="n">kb</span>  <span class="o">=</span> <span class="mf">1.3906488e-23</span>
+
+    <span class="c1">#oupt variable in header</span>
+    <span class="k">if</span> <span class="n">context</span> <span class="o">==</span><span class="s1">&#39;pls&#39;</span><span class="p">:</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Time&#39;</span><span class="p">,</span><span class="s1">&#39;SPEED&#39;</span><span class="p">,</span><span class="s1">&#39;Np&#39;</span><span class="p">,</span><span class="s1">&#39;Vth&#39;</span><span class="p">,</span><span class="s1">&#39;DQF&#39;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;mag&#39;</span><span class="p">:</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Time&#39;</span><span class="p">,</span><span class="s1">&#39;Bx&#39;</span><span class="p">,</span><span class="s1">&#39;By&#39;</span><span class="p">,</span><span class="s1">&#39;Bz&#39;</span><span class="p">,</span><span class="s1">&#39;DQF&#39;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;orb&#39;</span><span class="p">:</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Time&#39;</span><span class="p">,</span><span class="s1">&#39;GSEx&#39;</span><span class="p">,</span><span class="s1">&#39;GSEy&#39;</span><span class="p">,</span><span class="s1">&#39;GSEz&#39;</span><span class="p">]</span>
+
+
+    <span class="c1">#create initial data frame</span>
+    <span class="n">tab</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+
+    <span class="c1">#loop over all files and write text file</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">f_list</span><span class="p">:</span>
+
+        <span class="c1">#read cdffile</span>
+        <span class="n">cdf</span> <span class="o">=</span> <span class="n">pycdf</span><span class="o">.</span><span class="n">CDF</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+
+        <span class="c1">#######Plasma Parameters#########</span>
+        <span class="k">if</span> <span class="p">((</span><span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;pls&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">craft</span> <span class="o">==</span> <span class="s1">&#39;wind&#39;</span><span class="p">)):</span>
+            <span class="c1">#for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,float(cdf[keys[1]][k]),float(cdf[keys[2]][k]),float(cdf[keys[3]][k]),int(cdf[keys[4]][k])]</span>
+            <span class="c1">#Switched to effecienct array creation 2018/05/17 J. Prchlik</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">2</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">3</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">4</span><span class="p">]][</span><span class="o">...</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+        <span class="k">elif</span> <span class="p">((</span><span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;pls&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">craft</span> <span class="o">==</span> <span class="s1">&#39;dscovr&#39;</span><span class="p">)):</span>
+            <span class="n">SPEED</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cdf</span><span class="p">[</span><span class="s1">&#39;V_GSE&#39;</span><span class="p">][</span><span class="o">...</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+            <span class="c1">#for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(cdf[keys[3]][k]),int(cdf[keys[4]][k])]</span>
+            <span class="c1">#Switched to effecienct array creation 2018/05/17 J. Prchlik</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">SPEED</span><span class="p">,</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">2</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">3</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">4</span><span class="p">]][</span><span class="o">...</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+        <span class="k">elif</span> <span class="p">((</span><span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;pls&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">craft</span> <span class="o">==</span> <span class="s1">&#39;ace&#39;</span><span class="p">)):</span>
+            <span class="n">SPEED</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cdf</span><span class="p">[</span><span class="s1">&#39;V_GSE&#39;</span><span class="p">][</span><span class="o">...</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">Vth</span>   <span class="o">=</span> <span class="mf">1.E-3</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">kb</span><span class="o">/</span><span class="n">mp</span><span class="o">*</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">3</span><span class="p">]][</span><span class="o">...</span><span class="p">])</span> <span class="c1">#convert Thermal Temp to Speed</span>
+            <span class="c1">#for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(Vth[k]),0]</span>
+            <span class="c1">#Switched to effecienct array creation 2018/05/17 J. Prchlik</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">SPEED</span><span class="p">,</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">2</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">Vth</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Vth</span><span class="p">))])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+        <span class="k">elif</span> <span class="p">((</span><span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;pls&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="s1">&#39;themis&#39;</span> <span class="ow">in</span> <span class="n">craft</span><span class="p">)):</span>
+            <span class="n">SPEED</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">epoch</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_timedelta</span><span class="p">(</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">unit</span><span class="o">=</span><span class="s1">&#39;s&#39;</span><span class="p">)</span><span class="o">+</span><span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="s1">&#39;1970/01/01 00:00:00&#39;</span> <span class="p">)</span>
+            <span class="c1">#Switched to effecienct array creation 2018/05/03 J. Prchlik</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">epoch</span><span class="p">,</span><span class="n">SPEED</span><span class="p">,</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">2</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">3</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">0</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">4</span><span class="p">]][</span><span class="o">...</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+        <span class="k">elif</span> <span class="p">((</span><span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;pls&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">craft</span> <span class="o">==</span> <span class="s1">&#39;omni&#39;</span><span class="p">)):</span>
+            <span class="n">Vth</span>   <span class="o">=</span> <span class="mf">1.E-3</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">kb</span><span class="o">/</span><span class="n">mp</span><span class="o">*</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">3</span><span class="p">]][</span><span class="o">...</span><span class="p">])</span> <span class="c1">#convert Thermal Temp to Speed</span>
+            <span class="c1">#for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,SPEED[k],float(cdf[keys[2]][k]),float(Vth[k]),0]</span>
+            <span class="c1">#Switched to effecienct array creation 2018/05/17 J. Prchlik</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">2</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">Vth</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Vth</span><span class="p">))])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+
+
+
+        <span class="c1">#######MAG fields#########</span>
+        <span class="k">elif</span> <span class="p">((</span><span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;mag&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">craft</span> <span class="o">==</span> <span class="s1">&#39;wind&#39;</span><span class="p">)):</span>
+            <span class="c1">#decrease the wind cadence 10 s in magfield</span>
+            <span class="n">loopers</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">]),</span><span class="mi">90</span><span class="p">)</span> 
+            <span class="c1">#Update to do without looping  2018/05/17 J. Prchlik</span>
+            <span class="c1">#for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k][0],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()[</span><span class="n">loopers</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">0</span><span class="p">][</span><span class="n">loopers</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">1</span><span class="p">][</span><span class="n">loopers</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">2</span><span class="p">][</span><span class="n">loopers</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">2</span><span class="p">]][</span><span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()[</span><span class="n">loopers</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+            <span class="c1">#temp = pd.DataFrame(np.array([cdf[keys[0]][...],cdf[keys[1]][...][:,0],cdf[keys[1]][...][:,1],cdf[keys[1]][...][:,2],cdf[keys[2]][...]]).T,columns=header)</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+        <span class="k">elif</span> <span class="p">((</span><span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;mag&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">craft</span> <span class="o">==</span> <span class="s1">&#39;dscovr&#39;</span><span class="p">)):</span>
+            <span class="c1">#decrease the wind cadence 10 s in magfield</span>
+            <span class="c1">#Update to do without looping  2018/05/17 J. Prchlik</span>
+            <span class="c1">#loopers = range(0,len(cdf[keys[0]][...]),10) </span>
+            <span class="c1">#for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]</span>
+            <span class="c1">##cut the DSCOVR Mag. Time sampling down to 10s 2018/11/23 J. Prchlik </span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">0</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">1</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">2</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">2</span><span class="p">]][</span><span class="o">...</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">[::</span><span class="mi">10</span><span class="p">],</span><span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+        <span class="k">elif</span> <span class="p">((</span><span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;mag&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">craft</span> <span class="o">==</span> <span class="s1">&#39;ace&#39;</span><span class="p">)):</span>
+            <span class="c1">#for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]</span>
+            <span class="c1">#Update to do without looping  2018/05/17 J. Prchlik</span>
+            <span class="c1">#for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2],int(cdf[keys[2]][k])]</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">0</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">1</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">2</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">2</span><span class="p">]][</span><span class="o">...</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+        <span class="k">elif</span> <span class="p">((</span><span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;mag&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="s1">&#39;themis&#39;</span> <span class="ow">in</span> <span class="n">craft</span><span class="p">)):</span>
+            <span class="n">epoch</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_timedelta</span><span class="p">(</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">unit</span><span class="o">=</span><span class="s1">&#39;s&#39;</span><span class="p">)</span><span class="o">+</span><span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="s1">&#39;1970/01/01 00:00:00&#39;</span> <span class="p">)</span> <span class="c1">#Not corrected for leap seconds</span>
+            <span class="c1">#Switched to effecienct array creation 2018/05/03 J. Prchlik</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">epoch</span><span class="p">,</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">0</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">1</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">2</span><span class="p">],</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epoch</span><span class="p">))])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+
+
+        <span class="c1">#######Orbital Parameters#########</span>
+        <span class="c1">#Added orbital files 2018/01/31 J. Prchlik</span>
+        <span class="k">elif</span> <span class="p">((</span><span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;orb&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">craft</span> <span class="o">==</span> <span class="s1">&#39;wind&#39;</span><span class="p">)):</span>
+            <span class="c1">#for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]</span>
+            <span class="c1">#Switched to effecienct array creation 2018/05/03 J. Prchlik</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">0</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">1</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">2</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+        <span class="k">elif</span> <span class="p">((</span><span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;orb&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">craft</span> <span class="o">==</span> <span class="s1">&#39;dscovr&#39;</span><span class="p">)):</span>
+            <span class="c1">#only get orbit every 10 minutes</span>
+            <span class="c1">#loopers = range(0,len(cdf[keys[0]][...]),10) </span>
+            <span class="c1">#for k in loopers: tab.loc[len(tab)] = [cdf[keys[0]][k],(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]</span>
+            <span class="c1">#Switched to effecienct array creation 2018/05/03 J. Prchlik</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">0</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">1</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">2</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+        <span class="k">elif</span> <span class="p">((</span><span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;orb&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">craft</span> <span class="o">==</span> <span class="s1">&#39;ace&#39;</span><span class="p">)):</span>
+            <span class="c1">#for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]</span>
+            <span class="c1">#Switched to effecienct array creation 2018/05/03 J. Prchlik</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">0</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">1</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">2</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+        <span class="k">elif</span> <span class="p">((</span><span class="n">context</span> <span class="o">==</span> <span class="s1">&#39;orb&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="s1">&#39;themis&#39;</span> <span class="ow">in</span> <span class="n">craft</span><span class="p">)):</span>
+            <span class="c1">#for k,j in enumerate(cdf[keys[0]][...]): tab.loc[len(tab)] = [j,(cdf[keys[1]][k][0]),cdf[keys[1]][k][1],cdf[keys[1]][k][2]]</span>
+            <span class="c1">#Switched to effecienct array creation 2018/05/03 J. Prchlik</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">0</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">1</span><span class="p">],</span><span class="n">cdf</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="o">...</span><span class="p">][:,</span><span class="mi">2</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">tab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+
+
+
+        <span class="c1">#close cdf file</span>
+        <span class="n">cdf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="c1">#print(&#39;Completed {0}&#39;.format(i))</span>
+ 
+
+    <span class="k">return</span> <span class="n">tab</span></div>
+    <span class="c1">#close output file</span>
+    <span class="c1">####SWITCH TO PANDAS Tabling 2018/01/26 (J. Prchlik)</span>
+    <span class="c1">#Only do if there is a reason to write out a given file (2018/01/29) J. Prchlik</span>
+    <span class="c1">#out_fil.close()</span>
+    <span class="c1">#if write_out:</span>
+    <span class="c1">#    tab.to_csv(out_fil,index=None,sep=&#39; &#39;)</span>
+    <span class="c1">#    tab.drop_duplicates(subset=&#39;Time&#39;,keep=&#39;last&#39;,inplace=True)</span>
+    <span class="c1">#    tab.fillna(-9999.9,inplace=True)</span>
+    <span class="c1">#    tab[&#39;Time&#39;] = pd.to_datetime(tab[&#39;Time&#39;])</span>
+    <span class="c1">#    tab.sort_values(&#39;Time&#39;,inplace=True)</span>
+    <span class="c1">#    #drop if we some how get duplicates</span>
+    <span class="c1">#    tab.drop_duplicates(subset=&#39;Time&#39;,keep=&#39;last&#39;,inplace=True)</span>
+    <span class="c1">#    tab.to_csv(out_fil,index=None,sep=&#39; &#39;)</span>
+
+
+<div class="viewcode-block" id="day_list"><a class="viewcode-back" href="../source/code/load_cdf_files.html#load_cdf_files.day_list">[docs]</a><span class="k">def</span> <span class="nf">day_list</span><span class="p">(</span><span class="n">sday</span><span class="p">,</span><span class="n">eday</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a list of days including the start and end days</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sday: datetime object</span>
+<span class="sd">        Starting date to read in cdf files</span>
+<span class="sd">    eday: datetime object</span>
+<span class="sd">        Ending date to read in cdf files</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dates: list</span>
+<span class="sd">        list of days from sday to eday</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dates</span> <span class="o">=</span> <span class="p">[(</span><span class="n">sday</span><span class="o">+</span><span class="n">timedelta</span><span class="p">(</span><span class="n">n</span><span class="p">))</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y%m</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span>  <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">int</span><span class="p">((</span><span class="n">eday</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="o">-</span><span class="n">sday</span><span class="o">.</span><span class="n">date</span><span class="p">())</span><span class="o">.</span><span class="n">days</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">dates</span></div>
+
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../source/code/load_cdf_files.html#load_cdf_files.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">sday</span><span class="p">,</span><span class="n">eday</span><span class="p">,</span><span class="n">scrf</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;wind&#39;</span><span class="p">,</span><span class="s1">&#39;ace&#39;</span><span class="p">,</span><span class="s1">&#39;dscovr&#39;</span><span class="p">,</span><span class="s1">&#39;soho&#39;</span><span class="p">,</span><span class="s1">&#39;themis_a&#39;</span><span class="p">,</span><span class="s1">&#39;themis_b&#39;</span><span class="p">,</span><span class="s1">&#39;themis_c&#39;</span><span class="p">],</span><span class="n">nproc</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">pls</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">mag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">orb</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Python module for formatting cdf files downloaded via get_cdf_files (up one directory) into text files.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    stime: datetime object</span>
+<span class="sd">        Starting date to read in cdf files</span>
+<span class="sd">    etime: datetime object</span>
+<span class="sd">        Ending date to read in cdf files</span>
+<span class="sd">    scrf:  list,optional</span>
+<span class="sd">        List of spacecraft to created formatted text files for (default= [&#39;wind&#39;,&#39;ace&#39;,&#39;dscovr&#39;,&#39;soho&#39;,&#39;themis_a&#39;,&#39;themis_b&#39;,&#39;themis_c&#39;])</span>
+<span class="sd">    nproc: int, optional</span>
+<span class="sd">        Number of processors used to format files. Can be up to 1 processor per spacecraft in scrf (default = 1).</span>
+<span class="sd">    pls: boolean, optional</span>
+<span class="sd">        Create formatted plasma parameter file (Default = True).</span>
+<span class="sd">    mag: boolean, optional</span>
+<span class="sd">        Create formatted magnetic field file (Default = True).</span>
+<span class="sd">    orb: boolean, optional</span>
+<span class="sd">        Create formatted orbit file (Default = True).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    --------</span>
+<span class="sd">    outdict: dictionary</span>
+<span class="sd">        Dictionary of output parameters</span>
+<span class="sd">    </span>
+
+<span class="sd">    Example:</span>
+<span class="sd">    -------</span>
+<span class="sd">    import load_cdf_files as lcf</span>
+<span class="sd">    from datetime import datetime</span>
+
+<span class="sd">    stime = datetime(2017,01,06)</span>
+<span class="sd">    etime = datetime(2017,01,10)</span>
+
+<span class="sd">    out = lcf.main(stime,etime,scrf=[&#39;wind&#39;,&#39;ace&#39;,&#39;dscovr&#39;,&#39;themis_b&#39;],pls=True,mag=True,orb=True,nproc=4) </span>
+<span class="sd">    out = lcf.main(stime,etime,scrf=[&#39;ace&#39;],pls=True,mag=True,orb=True) </span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">lday</span> <span class="o">=</span> <span class="n">day_list</span><span class="p">(</span><span class="n">sday</span><span class="p">,</span><span class="n">eday</span><span class="p">)</span>
+    <span class="c1">#dictionary output</span>
+    <span class="n">outdict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1">#Do in parallel per spacecraft</span>
+    <span class="k">if</span> <span class="n">nproc</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1">#Add arguments to spacecraft name        </span>
+        <span class="n">arg_scrf</span> <span class="o">=</span><span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">scrf</span><span class="p">:</span> <span class="n">arg_scrf</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">i</span><span class="p">,</span><span class="n">pls</span><span class="p">,</span><span class="n">mag</span><span class="p">,</span><span class="n">orb</span><span class="p">,</span><span class="n">lday</span><span class="p">])</span>
+
+        <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="n">nproc</span><span class="p">)</span>
+        <span class="n">out</span>  <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">wrap_looper</span><span class="p">,</span><span class="n">arg_scrf</span><span class="p">)</span>
+        <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+        <span class="c1">#store in larger dictionary</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">out</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">outdict</span><span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;craft&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">i</span> 
+    <span class="c1">#Just loop if given 1 processor</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">scrf</span><span class="p">:</span> 
+            <span class="n">outdict</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">looper</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">pls</span><span class="p">,</span><span class="n">mag</span><span class="p">,</span><span class="n">orb</span><span class="p">,</span><span class="n">lday</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">outdict</span></div>
+
+    
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Jakub Prchlik
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+    <!-- Theme Analytics -->
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-XXXXXXX-1', 'auto');
+    ga('send', 'pageview');
+    </script>
+
+    
+   
+
+</body>
+</html>
