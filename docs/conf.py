@@ -21,6 +21,8 @@ import sys
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../'))
 sys.path.insert(0, os.path.abspath('../../'))
+sys.path.insert(0, os.path.abspath('../code/'))
+sys.path.insert(0, os.path.abspath('../cdf/'))
 
 
 # -- General configuration ------------------------------------------------
