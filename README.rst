@@ -1,6 +1,7 @@
 
 This archive contains programs for downloading and analyzing solar wind data from multiple spacecraft.
 Detailed science information may be found at https://sites.google.com/a/cfa.harvard.edu/jakub-prchlik/home/shock-finding.
+In addition, more coding information may be found at the associated `READTHEDOCS <https://solar-wind-matching.readthedocs.io/en/latest/index.html#indices-and-tables>`_ page.
 The directory structure is as follows:
 
 cdf
