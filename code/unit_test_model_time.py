@@ -5,6 +5,10 @@ import numpy as np
 
 #Test to make sure the plane solution works 2018/04/24 J. Prchlik
 class check_solution(unittest.TestCase):
+    """
+    A class that checks that you will recover a propagating input plane wave
+
+    """
     
     def test_plane_creation(self):
         #equation for plane 

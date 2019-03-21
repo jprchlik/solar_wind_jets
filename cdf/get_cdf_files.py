@@ -7,7 +7,23 @@ from multiprocessing import Pool
 
 
 def set_directory(craft,param):
+    """
+    A Look up function for the directory associated with different spacecraft and different measurements.
 
+    Parameters
+    ----------
+    craft: str
+        Spacecraft you are interested in downloading data for. Currently, it must be ace, dscovr, wind,
+        themis_a, themis_b, themis_c, or omni.
+    param: str
+        Type of observation you wish to get from NASA cdaw ftp archive. Currently, it must be
+        orb, plsm, mag, which stands for orbital, plasma, and magnetic field, respectively.
+    
+    Returns
+    -------
+    a_dir : str
+        The webdirectory associated with a given spacecraft and parameter
+    """
     #ACE directories
     if ((craft == 'ace') & (param == 'orb')):
         #Updated to orbit rather than atitude 2018/01/31 J. Prchlik
@@ -73,6 +89,22 @@ def set_directory(craft,param):
 
 #get list of years to look for data
 def return_years(start,end):
+    """
+    Get list of years to download data for.
+
+    Parameters
+    ----------
+    start: datetime object
+        The time to start downloading data as a datetime object
+    end: datetime object
+        The time to stop downloading data as a datetime object
+
+    Returns
+    -------
+    val: list
+       list of years to explore when downloading data.
+
+    """
     return range(start.year,end.year+1)
 
 #wrapper for download files program
@@ -149,7 +181,7 @@ def main(f_types=['mag','plsm','orb'],space_c=['ace','dscovr','wind'], #,'themis
     '''
     Python module for downloading cdf files from ftp archive to your local machine.
     
-    Parameters:
+    Parameters
     ----------
     f_types: list, optional
         List of parameters to download for ftp archive (default = ['mag','plsm','orb']).
@@ -168,7 +200,7 @@ def main(f_types=['mag','plsm','orb'],space_c=['ace','dscovr','wind'], #,'themis
         Number of processors to you to download files (Default = 1).
 
 
-    Example:
+    Example
     --------
     import get_cdf_files as gcf
     from datetime import datetime

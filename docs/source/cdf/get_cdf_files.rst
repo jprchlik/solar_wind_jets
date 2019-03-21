@@ -5,3 +5,5 @@ get\_cdf\_files module
     :members:
     :undoc-members:
     :show-inheritance:
+
+A simple script to download and format SOHO/CELIAS observations. 
