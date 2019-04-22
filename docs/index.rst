@@ -77,11 +77,11 @@ include several hours of solar wind observations for best results.
     dfmt = '{0:%Y/%m/%d %H:%M:%S}'
 
     #Interesting feature in the solar wind at Wind
-    twind1 = pd.to_datetime('2016/12/05 22:52:48')
+    twind1 = pd.to_datetime('2017/07/01 16:55:03')
 
     #Set up the time range you want to predict around the interesting features
-    start_t1 = dfmt.format(twind1-12.*window)
-    end_t1 = dfmt.format(twind1+12.*window)
+    start_t1 = dfmt.format(twind1-6.*window)
+    end_t1 = dfmt.format(twind1+18.*window)
 
 
 Now that you have a time range specified you will not pass that time range to the module time range class and 
@@ -99,7 +99,7 @@ init_read also cleans and puts the data into pandas.DataFrames.
 Once you tell the class to read in the information about the spacecraft,
 you may begin modifying the dtw_plane class object in other ways.
 Perhaps, one of the most useful is the parameter to use when comparing spacecraft observations.
-The default is to find the magnetic field component with the largest jump, but I have found
+The default is to find the magnetic field component with the largest jump, but I found
 the magnitude of the magnetic field is better for long term matching.
 As such, we can set the par keyword during the initial call to dtw_plane or by updating the par attribute later.
 
@@ -139,17 +139,40 @@ more information about making this cut.
 
 The inital plot will be ugly and not contain OMNI solar wind predictions.
 As such, run the omni_plot function on the class object to get a nice,
-perhaps publication worthy, plot.
+perhaps publication worthy, plot (Default = ../plots/omni_pred_YYYYMMDD_HHMMSS.png).
 
 .. code-block:: python
 
     #Create plot comparing OMNI and plane solution
     mtr.omni_plot(my_dtw1,hours=mdates.HourLocator(interval=4))
 
-.. image:: _static/omni_pred_20161205_105248.png
+.. image:: _static/omni_pred_20170701_105503.png
    :alt: OMNI plot
    :align: center
    :scale: 30%
+
+You can see that the OMNI prediction clearly fails to predict the dip in the solar wind flow speed near 02 UTC,
+but the plane propagating model does accurately predict the dip in solar wind speed.
+There are a few examples of this model accurately predicting the observed dips in solar wind speed,
+which are not predicted by OMNI, at `dtw_example_agu_2018.ipynb<https://github.com/jprchlik/solar_wind_matching/blob/master/code/dtw_example_agu_fall_2018.py>`_.
+
+Then you can make a movie of a set of planes propagating from the spacecraft to Earth.
+In the movie,
+a subset of planes are assigned are random color and plot as a they propagate in space.
+Also, the movie contains the location of 5 spacecraft: THEMIS-B - Orange, Up-pointing Triangle;
+Wind - Blue, Diamond; DSCVOR - Black, Circle; ACE - Red, Square; SOHO - Teal, Left-pointing Triangle.
+
+.. code-block:: python
+
+    #create a movie of propagating planes
+    mtr.plane_animation(my_dtw1) 
+
+The output for the movie will default to ../plots/boutique_ana/plane_ani_YYYYMMDD_HHMMSS.mp4.
+
+.. raw:: html
+
+    <video controls src="_static/plane_ani_20170701_105503.mp4"><video?
+
 
 Modules
 ~~~~~~~
