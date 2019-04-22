@@ -154,7 +154,7 @@ perhaps publication worthy, plot (Default = ../plots/omni_pred_YYYYMMDD_HHMMSS.p
 You can see that the OMNI prediction clearly fails to predict the dip in the solar wind flow speed near 02 UTC,
 but the plane propagating model does accurately predict the dip in solar wind speed.
 There are a few examples of this model accurately predicting the observed dips in solar wind speed,
-which are not predicted by OMNI, at `dtw_example_agu_2018.ipynb<https://github.com/jprchlik/solar_wind_matching/blob/master/code/dtw_example_agu_fall_2018.py>`_.
+which are not predicted by OMNI, at `dtw_example_agu_2018.ipynb <https://github.com/jprchlik/solar_wind_matching/blob/master/code/dtw_example_agu_fall_2018.py>`_.
 
 Then you can make a movie of a set of planes propagating from the spacecraft to Earth.
 In the movie,
