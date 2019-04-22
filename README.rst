@@ -6,7 +6,7 @@ The directory structure is as follows:
 
 cdf
 ---
-Database of cdf files downloaded from ftp://spdf.gsfc.nasa.gov/pub/data/. The except is SOHO CELIAS, which is currently done manually. 
+Database of cdf files downloaded from ftp://spdf.gsfc.nasa.gov/pub/data/. Note that SOHO/CELIAS data has its own program because it is not available at cdaw.
 
 code
 ----
