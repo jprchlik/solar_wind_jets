@@ -41,6 +41,7 @@ Conclusions/Future Work
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 We present six time periods and see qualitatively our method produces reasonable predictions of the solar wind at THEMIS-B. However, we still need to put the predictive power on a quantitative ground. We also show the importance of maintaining at least four spacecraft solar wind measuring spacecraft at L1. It allows for mathematically unique solutions if one assumes solar wind phase fronts are planes. While the planar assumption is useful for science, it may also improve solar wind predictions at Earth if all four spacecraft took high cadence and fidelity observations.
+See my `poster <https://github.com/jprchlik/solar_wind_matching/blob/master/solar_wind_predictions_L1.pptx>`_ from the Fall 2018 AGU meeting for more information.
 
 
 Code
